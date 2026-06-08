@@ -95,93 +95,96 @@
         <div class="lh-hero-map">
             <div class="india-map-container">
                 <img src="Images/MapChart_Map.png" class="india-map-img" alt="India Map showing NetworkFP Hub locations"/>
-                <!-- City pulse dots — positioned as % of image (calibrated to MapChart_Map.png) -->
-                <!-- Chandigarh: 30.7°N 76.8°E — Punjab/Haryana border, just south of Himachal -->
-                <div class="map-pin" style="left:31%;top:27%">
+                <!-- City pulse dots — calibrated to MapChart_Map.png
+                     Formula: left = 7 + (lng - 68.5) * 2.46
+                              top  = 4 + (37  - lat)  * 2.86
+                     Map bounds: 68.5°E→97°E (x 7%→77%), 37°N→8°N (y 4%→87%) -->
+                <!-- Chandigarh: 30.73°N 76.78°E -->
+                <div class="map-pin" style="left:27%;top:22%">
                     <div class="map-pin-pulse" style="animation-delay:1.6s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-right">Chandigarh</span>
                 </div>
-                <!-- Delhi NCR: 28.7°N 77.1°E — centre-north, Haryana/UP border -->
-                <div class="map-pin" style="left:33%;top:33%">
+                <!-- Delhi NCR: 28.61°N 77.21°E -->
+                <div class="map-pin" style="left:28%;top:28%">
                     <div class="map-pin-pulse" style="animation-delay:0s"></div>
                     <div class="map-pin-dot map-pin-dot--lg"></div>
                     <span class="map-pin-label lbl-right">Delhi NCR</span>
                 </div>
-                <!-- Jaipur: 26.9°N 75.8°E — eastern Rajasthan -->
-                <div class="map-pin" style="left:28%;top:38%">
+                <!-- Jaipur: 26.91°N 75.79°E -->
+                <div class="map-pin" style="left:25%;top:33%">
                     <div class="map-pin-pulse" style="animation-delay:0.5s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-left">Jaipur</span>
                 </div>
-                <!-- Lucknow: 26.8°N 80.9°E — central Uttar Pradesh -->
-                <div class="map-pin" style="left:44%;top:36%">
+                <!-- Lucknow: 26.85°N 80.95°E -->
+                <div class="map-pin" style="left:38%;top:33%">
                     <div class="map-pin-pulse" style="animation-delay:0.9s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-right">Lucknow</span>
                 </div>
-                <!-- Ahmedabad: 23.0°N 72.6°E — central Gujarat -->
-                <div class="map-pin" style="left:19%;top:49%">
+                <!-- Ahmedabad: 23.02°N 72.57°E -->
+                <div class="map-pin" style="left:17%;top:44%">
                     <div class="map-pin-pulse" style="animation-delay:0.3s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-right">Ahmedabad</span>
                 </div>
-                <!-- Bhopal: 23.2°N 77.4°E — central Madhya Pradesh -->
-                <div class="map-pin" style="left:36%;top:48%">
+                <!-- Bhopal: 23.26°N 77.41°E -->
+                <div class="map-pin" style="left:29%;top:43%">
                     <div class="map-pin-pulse" style="animation-delay:1.8s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-right">Bhopal</span>
                 </div>
-                <!-- Kolkata: 22.6°N 88.4°E — West Bengal, near Bangladesh border -->
-                <div class="map-pin" style="left:57%;top:48%">
+                <!-- Kolkata: 22.57°N 88.36°E -->
+                <div class="map-pin" style="left:56%;top:45%">
                     <div class="map-pin-pulse" style="animation-delay:0.8s"></div>
                     <div class="map-pin-dot map-pin-dot--lg"></div>
                     <span class="map-pin-label lbl-left">Kolkata</span>
                 </div>
-                <!-- Nagpur: 21.1°N 79.1°E — eastern Maharashtra / centre of India -->
-                <div class="map-pin" style="left:39%;top:53%">
+                <!-- Nagpur: 21.15°N 79.09°E -->
+                <div class="map-pin" style="left:33%;top:49%">
                     <div class="map-pin-pulse" style="animation-delay:1.2s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-right">Nagpur</span>
                 </div>
-                <!-- Mumbai: 19.1°N 72.9°E — west coast Maharashtra -->
-                <div class="map-pin" style="left:21%;top:59%">
+                <!-- Mumbai: 19.08°N 72.88°E -->
+                <div class="map-pin" style="left:18%;top:55%">
                     <div class="map-pin-pulse" style="animation-delay:0.4s"></div>
                     <div class="map-pin-dot map-pin-dot--lg"></div>
                     <span class="map-pin-label lbl-left">Mumbai</span>
                 </div>
-                <!-- Pune: 18.5°N 73.9°E — inland from Mumbai, western Maharashtra -->
-                <div class="map-pin" style="left:23%;top:62%">
+                <!-- Pune: 18.52°N 73.86°E -->
+                <div class="map-pin" style="left:20%;top:57%">
                     <div class="map-pin-pulse" style="animation-delay:0.7s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-right">Pune</span>
                 </div>
-                <!-- Vizag (Visakhapatnam): 17.7°N 83.3°E — north Andhra east coast -->
-                <div class="map-pin" style="left:48%;top:61%">
+                <!-- Vizag (Visakhapatnam): 17.69°N 83.30°E -->
+                <div class="map-pin" style="left:43%;top:59%">
                     <div class="map-pin-pulse" style="animation-delay:2.0s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-left">Vizag</span>
                 </div>
-                <!-- Hyderabad: 17.4°N 78.5°E — Telangana, south-central India -->
-                <div class="map-pin" style="left:37%;top:64%">
+                <!-- Hyderabad: 17.39°N 78.49°E -->
+                <div class="map-pin" style="left:32%;top:60%">
                     <div class="map-pin-pulse" style="animation-delay:1.0s"></div>
                     <div class="map-pin-dot map-pin-dot--lg"></div>
                     <span class="map-pin-label lbl-left">Hyderabad</span>
                 </div>
-                <!-- Bengaluru: 12.9°N 77.6°E — central Karnataka -->
-                <div class="map-pin" style="left:35%;top:73%">
+                <!-- Bengaluru: 12.97°N 77.59°E -->
+                <div class="map-pin" style="left:29%;top:73%">
                     <div class="map-pin-pulse" style="animation-delay:0.6s"></div>
                     <div class="map-pin-dot map-pin-dot--lg"></div>
                     <span class="map-pin-label lbl-left">Bengaluru</span>
                 </div>
-                <!-- Chennai: 13.1°N 80.3°E — Tamil Nadu east coast -->
-                <div class="map-pin" style="left:44%;top:73%">
+                <!-- Chennai: 13.08°N 80.27°E -->
+                <div class="map-pin" style="left:36%;top:72%">
                     <div class="map-pin-pulse" style="animation-delay:0.2s"></div>
                     <div class="map-pin-dot map-pin-dot--lg"></div>
                     <span class="map-pin-label lbl-right">Chennai</span>
                 </div>
-                <!-- Kochi: 9.9°N 76.3°E — mid Kerala west coast -->
-                <div class="map-pin" style="left:31%;top:81%">
+                <!-- Kochi: 9.93°N 76.27°E -->
+                <div class="map-pin" style="left:26%;top:81%">
                     <div class="map-pin-pulse" style="animation-delay:1.4s"></div>
                     <div class="map-pin-dot"></div>
                     <span class="map-pin-label lbl-left">Kochi</span>
