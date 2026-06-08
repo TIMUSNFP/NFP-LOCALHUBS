@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Become a NetworkFP Hub Leader — open your space for fellow MFDs to grow, connect, and thrive. Join 13,000+ Personal Finance Professionals across 130+ Indian cities.">
-    <meta property="og:title" content="NetworkFP Hub Leader Program | Give Back to India's MFD Community">
-    <meta property="og:description" content="India's most trusted career-accelerator for Personal Finance Professionals. Open your hub. Strengthen the profession. One city at a time.">
+    <meta name="description" content="NetworkFP Local Hubs — Bringing financial planners together to learn, collaborate, and grow across India. Join a thriving community of Personal Finance Professionals.">
+    <meta property="og:title" content="NetworkFP Local Hubs | 100+ Hubs. 1 Mission. Financial Wellbeing for Every Family.">
+    <meta property="og:description" content="NetworkFP Local Hubs bring financial planners together to learn, collaborate, grow, and create stronger communities across India.">
     <meta property="og:site_name" content="NetworkFP">
     <link rel="icon" type="image/png" href="Images/NetworkFP Logo.png">
-    <title>NetworkFP Hub Leader Program | India's Most Trusted Network for PFPs</title>
+    <title>NetworkFP Local Hubs | 100+ Hubs. 1 Mission.</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
@@ -22,13 +22,15 @@
         </div>
         <div class="nav-menu" id="navMenu">
             <a class="nav-link" onclick="showSection('landing'); closeMenu()">Home</a>
-            <a class="nav-link" onclick="scrollToFeatures(); closeMenu()">About</a>
-            <a class="nav-link" id="navRegisterLink" onclick="handleRegisterClick()">Register</a>
-            <a class="nav-link nav-link-admin-mobile" onclick="showSection('adminLogin'); closeMenu()">&#128274; Admin Login</a>
+            <a class="nav-link" onclick="scrollToSection('whatAreHubs'); closeMenu()">About Hubs</a>
+            <a class="nav-link" onclick="scrollToSection('powerCommunity'); closeMenu()">Community</a>
+            <a class="nav-link" onclick="scrollToSection('becomeLeader'); closeMenu()">Become a Leader</a>
         </div>
         <div class="nav-cta" id="navCta">
-            <button class="btn-admin-nav" onclick="showSection('adminLogin')" title="Admin Portal">&#128274; Admin</button>
-            <button class="btn-primary" id="navCtaBtn" onclick="handleNavCta()">Open My Hub</button>
+            <button class="btn-join-nav" disabled title="Launching after 100 hubs are established">
+                Join a Hub <span class="nav-soon-tag">Soon</span>
+            </button>
+            <button class="btn-primary" onclick="scrollToSection('becomeLeader')">Become a Hub Leader</button>
         </div>
         <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Toggle menu">
             <span></span><span></span><span></span>
@@ -39,503 +41,635 @@
 <!-- ══════════════════ LANDING PAGE ══════════════════ -->
 <section id="landing" class="page active">
 
-    <!-- ═══ HUB LEADER CONTENT (default mode) ═══ -->
-    <div id="hubLeaderContent">
+<!-- ═══════════════════════════════════════════
+     SECTION 1 — HERO
+═══════════════════════════════════════════ -->
+<div class="lh-hero" id="heroSection">
+    <div class="lh-hero-bg">
+        <div class="lh-hero-glow lh-glow-1"></div>
+        <div class="lh-hero-glow lh-glow-2"></div>
+        <div class="lh-hero-glow lh-glow-3"></div>
+    </div>
 
-    <!-- Hero -->
-    <div class="hero">
-        <div class="hero-bg-shape"></div>
-        <div class="hero-content">
-            <div class="hero-badge">India's Most Trusted Network for Personal Finance Professionals</div>
-            <h1 class="hero-title">
-                Be the Hub Your<br>
-                <span class="hero-title-accent">Community Deserves</span>
+    <div class="lh-hero-inner container">
+        <div class="lh-hero-content">
+            <div class="lh-hero-eyebrow">
+                <span class="lh-eyebrow-dot"></span>
+                India's Community of Financial Planners
+            </div>
+            <h1 class="lh-hero-title">
+                100+ Hubs.<br>
+                <span class="lh-hero-accent">1 Mission.</span>
             </h1>
-            <p class="hero-subtitle">
-                You've built your practice with competency, credibility, and grit.
-                Now open your door for others. Become a NetworkFP Hub Leader — and
-                create the space where fellow MFDs grow, connect, and never feel
-                alone in their journey. One hub. One community. One profession.
+            <p class="lh-hero-mission">Financial Wellbeing for Every Family.</p>
+            <p class="lh-hero-sub">
+                NetworkFP Local Hubs bring financial planners together to learn, collaborate, grow, and create stronger communities across India.
             </p>
-            <div class="hero-buttons">
-                <button class="btn-primary btn-lg" onclick="handleRegisterClick()">
-                    Open My Hub &rarr;
+            <div class="lh-hero-actions">
+                <button class="btn-primary btn-lg lh-cta-primary" onclick="scrollToSection('becomeLeader')">
+                    Become a Hub Leader &rarr;
                 </button>
-                <button class="btn-outline btn-lg" onclick="scrollToFeatures()">
-                    Why This Matters
+                <button class="lh-cta-disabled" disabled>
+                    Join a Hub
+                    <span class="lh-coming-badge">Launching after 100 hubs</span>
                 </button>
             </div>
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <span class="hs-num">1,600+</span>
-                    <span class="hs-lbl">ProMembers</span>
+            <div class="lh-hero-stats">
+                <div class="lh-stat">
+                    <span class="lh-stat-num">13,000+</span>
+                    <span class="lh-stat-lbl">Professionals</span>
                 </div>
-                <div class="hs-divider"></div>
-                <div class="hero-stat">
-                    <span class="hs-num">130+</span>
-                    <span class="hs-lbl">Cities Across India</span>
+                <div class="lh-stat-divider"></div>
+                <div class="lh-stat">
+                    <span class="lh-stat-num">130+</span>
+                    <span class="lh-stat-lbl">Cities Across India</span>
                 </div>
-                <div class="hs-divider"></div>
-                <div class="hero-stat">
-                    <span class="hs-num">13,000+</span>
-                    <span class="hs-lbl">Professionals</span>
+                <div class="lh-stat-divider"></div>
+                <div class="lh-stat">
+                    <span class="lh-stat-num">1,600+</span>
+                    <span class="lh-stat-lbl">ProMembers</span>
                 </div>
             </div>
         </div>
-        <div class="hero-visual">
-            <div class="hv-main-card hv-apply-card">
-                <div class="hv-apply-header">
-                    <span class="hv-apply-icon">🏠</span>
-                    <div>
-                        <div class="hv-card-header" style="padding:0;border:none;margin-bottom:2px;">Your Hub Leader Journey</div>
-                        <span class="hv-apply-sub">3 simple steps to get started</span>
-                    </div>
+
+        <div class="lh-hero-map">
+            <div class="india-map-container">
+                <img src="Images/MapChart_Map.png" class="india-map-img" alt="India Map showing NetworkFP Hub locations"/>
+                <!-- City pulse dots — positioned as % of image -->
+                <div class="map-pin" style="left:32%;top:24%">
+                    <div class="map-pin-pulse" style="animation-delay:1.6s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-right">Chandigarh</span>
                 </div>
-                <div class="hv-journey-steps">
-                    <div class="hv-step hv-step-done">
-                        <div class="hv-step-num done">&#10003;</div>
-                        <div class="hv-step-text">
-                            <strong>Submit Your Application</strong>
-                            <small>Takes less than 2 minutes</small>
-                        </div>
-                    </div>
-                    <div class="hv-step-connector"></div>
-                    <div class="hv-step hv-step-active">
-                        <div class="hv-step-num active">2</div>
-                        <div class="hv-step-text">
-                            <strong>Get Approved by NFP</strong>
-                            <small>Review within 2&ndash;3 business days</small>
-                        </div>
-                    </div>
-                    <div class="hv-step-connector"></div>
-                    <div class="hv-step hv-step-upcoming">
-                        <div class="hv-step-num upcoming">3</div>
-                        <div class="hv-step-text">
-                            <strong>Open Your Hub &amp; Inspire</strong>
-                            <small>Welcome your first MFDs</small>
-                        </div>
-                    </div>
+                <div class="map-pin" style="left:33%;top:30%">
+                    <div class="map-pin-pulse" style="animation-delay:0s"></div>
+                    <div class="map-pin-dot map-pin-dot--lg"></div>
+                    <span class="map-pin-label lbl-right">Delhi NCR</span>
                 </div>
-                <button class="hv-apply-cta" onclick="handleRegisterClick()">Apply Now &mdash; No Fee &rarr;</button>
-            </div>
-            <div class="hv-float-card fc1">
-                <span class="fc-icon">📍</span>
-                <div>
-                    <strong>Your City Needs a Hub Leader</strong>
-                    <small>130+ cities &mdash; more spots open</small>
+                <div class="map-pin" style="left:28%;top:36%">
+                    <div class="map-pin-pulse" style="animation-delay:0.5s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-left">Jaipur</span>
                 </div>
-            </div>
-            <div class="hv-float-card fc2">
-                <span class="fc-icon">⚡</span>
-                <div>
-                    <strong>Quick Application</strong>
-                    <small>Join 1,600+ ProMembers today</small>
+                <div class="map-pin" style="left:42%;top:35%">
+                    <div class="map-pin-pulse" style="animation-delay:0.9s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-right">Lucknow</span>
                 </div>
+                <div class="map-pin" style="left:20%;top:48%">
+                    <div class="map-pin-pulse" style="animation-delay:0.3s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-left">Ahmedabad</span>
+                </div>
+                <div class="map-pin" style="left:34%;top:47%">
+                    <div class="map-pin-pulse" style="animation-delay:1.8s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-right">Bhopal</span>
+                </div>
+                <div class="map-pin" style="left:57%;top:45%">
+                    <div class="map-pin-pulse" style="animation-delay:0.8s"></div>
+                    <div class="map-pin-dot map-pin-dot--lg"></div>
+                    <span class="map-pin-label lbl-left">Kolkata</span>
+                </div>
+                <div class="map-pin" style="left:37%;top:53%">
+                    <div class="map-pin-pulse" style="animation-delay:1.2s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-right">Nagpur</span>
+                </div>
+                <div class="map-pin" style="left:21%;top:58%">
+                    <div class="map-pin-pulse" style="animation-delay:0.4s"></div>
+                    <div class="map-pin-dot map-pin-dot--lg"></div>
+                    <span class="map-pin-label lbl-left">Mumbai</span>
+                </div>
+                <div class="map-pin" style="left:26%;top:62%">
+                    <div class="map-pin-pulse" style="animation-delay:0.7s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-right">Pune</span>
+                </div>
+                <div class="map-pin" style="left:46%;top:62%">
+                    <div class="map-pin-pulse" style="animation-delay:2.0s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-left">Vizag</span>
+                </div>
+                <div class="map-pin" style="left:36%;top:65%">
+                    <div class="map-pin-pulse" style="animation-delay:1.0s"></div>
+                    <div class="map-pin-dot map-pin-dot--lg"></div>
+                    <span class="map-pin-label lbl-right">Hyderabad</span>
+                </div>
+                <div class="map-pin" style="left:32%;top:76%">
+                    <div class="map-pin-pulse" style="animation-delay:0.6s"></div>
+                    <div class="map-pin-dot map-pin-dot--lg"></div>
+                    <span class="map-pin-label lbl-left">Bengaluru</span>
+                </div>
+                <div class="map-pin" style="left:42%;top:75%">
+                    <div class="map-pin-pulse" style="animation-delay:0.2s"></div>
+                    <div class="map-pin-dot map-pin-dot--lg"></div>
+                    <span class="map-pin-label lbl-right">Chennai</span>
+                </div>
+                <div class="map-pin" style="left:30%;top:85%">
+                    <div class="map-pin-pulse" style="animation-delay:1.4s"></div>
+                    <div class="map-pin-dot"></div>
+                    <span class="map-pin-label lbl-left">Kochi</span>
+                </div>
+                <div class="map-counter-pill">100+ Hubs Growing</div>
             </div>
         </div>
     </div>
 
-    <!-- Features -->
-    <section id="features" class="features-section">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-tag">Competency. Credibility. Community.</span>
-                <h2 class="section-title">What It Really Means to Be a NetworkFP Hub Leader</h2>
-                <p class="section-sub">The best Hub Leaders aren't chasing recognition. They've built their practice the right way — with knowledge, ethics, and a client-first mindset. And now they're opening their door so others can do the same.</p>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">🤲</span>
-                    </div>
-                    <h3>Pay It Forward</h3>
-                    <p>You've come far through experience, hard work, and the right guidance. Now be that guide for someone else. Your journey — the wins and the hard lessons — is exactly what a newer MFD around you needs to hear.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">🏠</span>
-                    </div>
-                    <h3>Their Safe, Professional Space</h3>
-                    <p>MFDs often work in isolation — no colleagues, no office camaraderie. Your hub changes that. It becomes the one place where they feel professionally understood, genuinely supported, and never alone.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">🌱</span>
-                    </div>
-                    <h3>Build Competency That Compounds</h3>
-                    <p>Every conversation at your hub plants a seed of knowledge. The guidance you share today shapes how someone advises their clients tomorrow — and that ripple touches thousands of families over a career.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">🔗</span>
-                    </div>
-                    <h3>Elevate the Entire Profession</h3>
-                    <p>NetworkFP was founded on one belief: a stronger profession leads to better client outcomes. When 13,000+ professionals raise the bar together, everyone — including your clients — wins.</p>
-                </div>
-            </div>
+    <div class="lh-hero-scroll-hint" onclick="scrollToSection('whatAreHubs')">
+        <span>Discover Local Hubs</span>
+        <div class="lh-scroll-arrow">&#8595;</div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2 — WHAT ARE LOCAL HUBS?
+═══════════════════════════════════════════ -->
+<section class="lh-what-section" id="whatAreHubs">
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag">Understanding the Movement</span>
+            <h2 class="lh-section-title">What Are Local Hubs?</h2>
+            <p class="lh-section-sub">Think of Local Hubs as NetworkFP's regional chapters — where members within a geography come together to grow professionally and personally.</p>
         </div>
-    </section>
 
-    <!-- Trust Banner -->
-    <section class="trust-banner-section">
-        <div class="container">
-            <div class="trust-banner">
-                <div class="trust-banner-quote">
-                    <span class="tb-quote-mark">&ldquo;</span>
-                    <p class="tb-quote-text">Within 6 months of completing the program, my AUM grew by 40% and client trust increased dramatically. The NetworkFP community is unlike anything else in this profession.</p>
-                    <div class="tb-attribution">
-                        <span class="tb-author">QPFP&reg; Certified Member</span>
-                        <span class="tb-role">Mutual Fund Distributor, Bengaluru</span>
-                    </div>
-                </div>
-                <div class="trust-banner-stats">
-                    <div class="tb-stat">
-                        <span class="tb-num">2,000+</span>
-                        <span class="tb-lbl">Success Stories</span>
-                    </div>
-                    <div class="tb-stat">
-                        <span class="tb-num">1,080+</span>
-                        <span class="tb-lbl">Verified Reviews</span>
-                    </div>
-                    <div class="tb-stat">
-                        <span class="tb-num">Since 1995</span>
-                        <span class="tb-lbl">Serving the Profession</span>
-                    </div>
-                </div>
+        <div class="lh-what-grid">
+            <div class="lh-what-card">
+                <div class="lh-what-icon">01</div>
+                <h3>Learn Together</h3>
+                <p>Access peer-driven learning sessions, case studies, and practitioner knowledge that elevates every member.</p>
             </div>
-        </div>
-    </section>
-
-    <!-- Benefits -->
-    <section class="benefits-section">
-        <div class="container">
-            <div class="benefits-layout">
-                <div class="benefits-visual">
-                    <div class="bv-card">
-                        <div class="bv-card-header">
-                            <span>What You're Signing Up For</span>
-                            <span class="bv-badge">Hub</span>
-                        </div>
-                        <div class="bv-items">
-                            <div class="bv-item"><span class="bv-check">✓</span>A peer who walks in and feels truly welcome</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>Real conversations — no seminars, no sales pitch</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>Knowledge from 30+ seasoned practitioners</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>Access to QPFP® tools, ProTools &amp; resources</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>MFDs who go home more confident, less stuck</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>The quiet pride of a profession made stronger</div>
-                        </div>
-                        <div class="bv-footer">This is what NetworkFP Hub Leaders deliver. Every month.</div>
-                    </div>
-                </div>
-                <div class="benefits-content">
-                    <span class="section-tag">The Mission That Drives Every Hub Leader</span>
-                    <h2 class="section-title">Client First. Community Always. Profession Forever.</h2>
-                    <div class="benefits-list">
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>🤲</span></div>
-                            <div class="benefit-text">
-                                <h4>Be the Person Someone Needed Earlier</h4>
-                                <p>Think of where you'd be if a seasoned professional had opened their door for you when you were starting out. NetworkFP was built on that very belief — since 1995. Now it's your turn.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>💬</span></div>
-                            <div class="benefit-text">
-                                <h4>Honest Conversations, Zero Sales Pressure</h4>
-                                <p>A NetworkFP Hub is not a seminar or a product pitch. It's MFDs talking openly — about clients, challenges, burnout, and breakthroughs. Backed by 13,000+ professionals who believe in a Client First approach.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>🎓</span></div>
-                            <div class="benefit-text">
-                                <h4>Back Your Hub with World-Class Resources</h4>
-                                <p>Hub Leaders get access to NetworkFP's full ecosystem — QPFP® certified knowledge, 50+ ProTools, calculators, client consultation formats, and 100+ hours of practitioner-led training to share with your community.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>🏡</span></div>
-                            <div class="benefit-text">
-                                <h4>Build a Legacy That Outlasts You</h4>
-                                <p>A hub you start today may run for years, touching hundreds of careers across 130+ Indian cities. That's a legacy no designation can match — built on your effort, your space, and your commitment to the profession.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="btn-primary btn-lg" onclick="handleRegisterClick()">Open My Hub &rarr;</button>
-                </div>
+            <div class="lh-what-card">
+                <div class="lh-what-icon">02</div>
+                <h3>Build Community</h3>
+                <p>Form genuine connections with fellow financial planners who understand your journey and share your values.</p>
             </div>
-        </div>
-    </section>
-
-    </div><!-- /#hubLeaderContent -->
-
-    <!-- ═══ PARTICIPANT CONTENT (participant mode) ═══ -->
-    <div id="participantContent" style="display:none">
-
-    <!-- Participant Hero -->
-    <div class="hero">
-        <div class="hero-bg-shape"></div>
-        <div class="hero-content">
-            <div class="hero-badge">Join a NetworkFP Hub in Your City</div>
-            <h1 class="hero-title">
-                Find Your Tribe.<br>
-                <span class="hero-title-accent">Grow Your Practice.</span>
-            </h1>
-            <p class="hero-subtitle">
-                Stop practicing in isolation. Connect with experienced MFDs who have
-                opened their doors for you — and join India's most trusted community of
-                Personal Finance Professionals. Real guidance. Real tools. Real growth.
-            </p>
-            <div class="hero-buttons">
-                <button class="btn-primary btn-lg" onclick="showSection('participantReg')">
-                    Find a Hub Near Me &rarr;
-                </button>
-                <button class="btn-outline btn-lg" onclick="scrollToParticipantFeatures()">
-                    What You'll Get
-                </button>
+            <div class="lh-what-card">
+                <div class="lh-what-icon">03</div>
+                <h3>Collaborate</h3>
+                <p>Exchange ideas, co-create solutions, and tackle challenges together with trusted peers in your region.</p>
             </div>
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <span class="hs-num">13,000+</span>
-                    <span class="hs-lbl">Professionals</span>
-                </div>
-                <div class="hs-divider"></div>
-                <div class="hero-stat">
-                    <span class="hs-num">130+</span>
-                    <span class="hs-lbl">Cities Across India</span>
-                </div>
-                <div class="hs-divider"></div>
-                <div class="hero-stat">
-                    <span class="hs-num">50+</span>
-                    <span class="hs-lbl">ProTools Included</span>
-                </div>
+            <div class="lh-what-card">
+                <div class="lh-what-icon">04</div>
+                <h3>Grow Professionally</h3>
+                <p>Sharpen your skills, expand your network, and accelerate your practice with community support behind you.</p>
             </div>
-        </div>
-        <div class="hero-visual">
-            <div class="hv-main-card hv-apply-card">
-                <div class="hv-apply-header">
-                    <span class="hv-apply-icon">🎓</span>
-                    <div>
-                        <div class="hv-card-header" style="padding:0;border:none;margin-bottom:2px;">Your Member Benefits</div>
-                        <span class="hv-apply-sub">Everything included when you join a hub</span>
-                    </div>
-                </div>
-                <div class="hv-member-benefits">
-                    <div class="hv-mb-item">
-                        <span class="hv-mb-icon">📚</span>
-                        <span>100+ hours practitioner-led training</span>
-                    </div>
-                    <div class="hv-mb-item">
-                        <span class="hv-mb-icon">🔧</span>
-                        <span>50+ ProTools &amp; calculators</span>
-                    </div>
-                    <div class="hv-mb-item">
-                        <span class="hv-mb-icon">💬</span>
-                        <span>Private Exchange with 1,000+ Q&amp;As</span>
-                    </div>
-                    <div class="hv-mb-item">
-                        <span class="hv-mb-icon">🏆</span>
-                        <span>QPFP&reg; certification pathway</span>
-                    </div>
-                </div>
-                <button class="hv-apply-cta" onclick="showSection('participantReg')">Find a Hub Near Me &rarr;</button>
-            </div>
-            <div class="hv-float-card fc1">
-                <span class="fc-icon">📍</span>
-                <div>
-                    <strong>Hubs Available Near You</strong>
-                    <small>130+ cities &mdash; find yours now</small>
-                </div>
-            </div>
-            <div class="hv-float-card fc2">
-                <span class="fc-icon">📈</span>
-                <div>
-                    <strong>40% AUM Growth</strong>
-                    <small>Reported by hub members</small>
-                </div>
+            <div class="lh-what-card">
+                <div class="lh-what-icon">05</div>
+                <h3>Develop Leaders</h3>
+                <p>Step up, share your expertise, and shape the financial planning profession in your city and beyond.</p>
             </div>
         </div>
     </div>
-
-    <!-- Participant Features -->
-    <section id="participantFeatures" class="features-section">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-tag">Learn. Network. Grow.</span>
-                <h2 class="section-title">Why Join a NetworkFP Hub?</h2>
-                <p class="section-sub">13,000+ professionals across 130+ cities have already made the move. Here's what happens when you stop practicing alone and start growing with India's most trusted PFP community.</p>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">🎓</span>
-                    </div>
-                    <h3>Learn from 30+ Seasoned Practitioners</h3>
-                    <p>Get access to industry veterans who share what actually works — covering client onboarding, NRI planning, tax strategies, insurance, and retirement. No theory. Just practical knowledge you can apply with your next client.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">🤝</span>
-                    </div>
-                    <h3>Break Out of Isolation</h3>
-                    <p>MFDs often work alone — no colleagues, no sounding board, no one who truly gets it. A NetworkFP Hub changes that. Walk in as a solo practitioner, walk out as part of India's most credible PFP community.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">📈</span>
-                    </div>
-                    <h3>Grow Your AUM &amp; Your Confidence</h3>
-                    <p>Hub members report 40% AUM growth within 6 months. When you're surrounded by the right professionals and equipped with 50+ battle-tested ProTools, your practice grows — and so does your impact on every client you serve.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-wrap">
-                        <span class="feature-icon">🏆</span>
-                    </div>
-                    <h3>Earn Credentials That Open Doors</h3>
-                    <p>Your hub is the gateway. Attend sessions, earn your ProMember badge, get listed in India's Advisor Directory, and unlock the QPFP&reg; certification path — building credibility that clients can see and trust.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Participant Trust Banner -->
-    <section class="trust-banner-section">
-        <div class="container">
-            <div class="trust-banner">
-                <div class="trust-banner-quote">
-                    <span class="tb-quote-mark">&ldquo;</span>
-                    <p class="tb-quote-text">I closed 4.5 Lakhs in life insurance premium from a single new client — all from applying what I learnt in my first NetworkFP hub session. This community doesn't just teach. It transforms the way you practice.</p>
-                    <div class="tb-attribution">
-                        <span class="tb-author">QPFP&reg; Certified Member</span>
-                        <span class="tb-role">Insurance Advisor &amp; MFD, Pune</span>
-                    </div>
-                </div>
-                <div class="trust-banner-stats">
-                    <div class="tb-stat">
-                        <span class="tb-num">12</span>
-                        <span class="tb-lbl">Live Workshops / Year</span>
-                    </div>
-                    <div class="tb-stat">
-                        <span class="tb-num">50+</span>
-                        <span class="tb-lbl">ProTools Included</span>
-                    </div>
-                    <div class="tb-stat">
-                        <span class="tb-num">&#8377;17,000<span style="font-size:18px;font-weight:600">/yr</span></span>
-                        <span class="tb-lbl">Full ProMembership</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Participant Benefits -->
-    <section class="benefits-section">
-        <div class="container">
-            <div class="benefits-layout">
-                <div class="benefits-visual">
-                    <div class="bv-card">
-                        <div class="bv-card-header">
-                            <span>Your Member Benefits</span>
-                            <span class="bv-badge">Member</span>
-                        </div>
-                        <div class="bv-items">
-                            <div class="bv-item"><span class="bv-check">✓</span>QPFP&reg; certified knowledge &amp; resources</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>50+ calculators, templates &amp; checklists</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>12 live case-driven workshops per year</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>Private Exchange with 1,000+ Q&amp;As</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>Verified ProMember badge &amp; expert certificates</div>
-                            <div class="bv-item"><span class="bv-check">✓</span>Priority listing in India's Advisor Directory</div>
-                        </div>
-                        <div class="bv-footer">One-time &#8377;599 fee. Join your hub today.</div>
-                    </div>
-                </div>
-                <div class="benefits-content">
-                    <span class="section-tag">Everything You Get When You Join</span>
-                    <h2 class="section-title">Your Hub. Your Growth. Your Profession.</h2>
-                    <div class="benefits-list">
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>📚</span></div>
-                            <div class="benefit-text">
-                                <h4>100+ Hours of Practice-Ready Learning</h4>
-                                <p>Each session is backed by NetworkFP's 14+ years of curriculum — from client onboarding to NRI planning, AI for finance, MF suitability, and tax strategies. Practical. Applicable. Immediately useful with your next client.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>🔧</span></div>
-                            <div class="benefit-text">
-                                <h4>50+ ProTools Built for MFDs Like You</h4>
-                                <p>Calculators, templates, client consultation formats, compliance checklists — all built by practitioners for practitioners. Stop reinventing the wheel every time a client asks a tough question. Start using what already works.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>💬</span></div>
-                            <div class="benefit-text">
-                                <h4>Private Exchange: Ask. Learn. Grow.</h4>
-                                <p>Get answers from 1,000+ archived Q&amp;As and a community of 250+ active ProMembers who genuinely respond. No spam, no noise — just vetted professionals helping each other navigate real-world practice challenges.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="benefit-icon-wrap"><span>🎯</span></div>
-                            <div class="benefit-text">
-                                <h4>A Clear Path to QPFP&reg; Certification</h4>
-                                <p>Your hub is step one. NetworkFP's full ecosystem — QPFP&reg; certification (India's first for PFPs), ProMembership at &#8377;17,000/yr, and the NFP National Summit — is your roadmap to becoming India's most credentialed financial professional.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="btn-primary btn-lg" onclick="showSection('participantReg')">Find a Hub in My City &rarr;</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    </div><!-- /#participantContent -->
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="footer-logo">
-                        <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-footer">
-                    </div>
-                    <p>India's most trusted career-accelerator for Personal Finance Professionals — built on Competency, Credibility, and Community since 1995. 13,000+ professionals. 130+ cities. One mission: Client First.</p>
-                    <div class="footer-social">
-                        <a class="fs-icon" href="https://www.linkedin.com/company/networkfp" target="_blank" rel="noopener" title="LinkedIn">in</a>
-                        <a class="fs-icon" href="https://twitter.com/networkfp" target="_blank" rel="noopener" title="Twitter / X">𝕏</a>
-                        <a class="fs-icon" href="https://www.youtube.com/@networkfp" target="_blank" rel="noopener" title="YouTube">▶</a>
-                    </div>
-                </div>
-                <div class="footer-col">
-                    <h4>Quick Links</h4>
-                    <a onclick="showSection('landing')">Home</a>
-                    <a id="footerRegisterLink" onclick="handleRegisterClick()">Register as Hub Leader</a>
-                    <a onclick="scrollToFeatures()">About Hub Program</a>
-                    <a onclick="showSection('adminLogin')">Admin Login</a>
-                </div>
-                <div class="footer-col">
-                    <h4>NetworkFP Programs</h4>
-                    <a href="https://www.networkfp.com/qpfp" target="_blank" rel="noopener">QPFP&reg; Certification</a>
-                    <a href="https://www.networkfp.com" target="_blank" rel="noopener">ProMembership</a>
-                    <a href="https://www.networkfp.com" target="_blank" rel="noopener">NFP National Summit</a>
-                    <a href="https://www.networkfp.com" target="_blank" rel="noopener">Free Basic Account</a>
-                </div>
-                <div class="footer-col">
-                    <h4>Contact Us</h4>
-                    <p>📧 hub@networkfp.com</p>
-                    <p>🌐 www.networkfp.com</p>
-                    <p>📍 Mumbai, Maharashtra</p>
-                    <p style="font-size:0.78rem;color:var(--light-text);margin-top:8px;">Serving India's PFP community since 1995</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 NetworkFP. All rights reserved. | Hub Leader Registration Portal &mdash; India's Most Trusted Network for Personal Finance Professionals</p>
-                <div class="footer-bottom-links">
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Use</a>
-                </div>
-            </div>
-        </div>
-    </footer>
 </section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3 — WHY LOCAL HUBS?
+═══════════════════════════════════════════ -->
+<section class="lh-why-section" id="whyLocalHubs">
+    <div class="container">
+        <div class="lh-why-layout">
+            <div class="lh-why-content">
+                <span class="lh-section-tag">The Case for Human Connection</span>
+                <h2 class="lh-section-title">Why Local Hubs?</h2>
+                <p class="lh-why-lead">As technology, AI, and digital interactions continue to grow, personal connection becomes even more valuable. The strongest learning often happens through peer-to-peer interaction.</p>
+
+                <div class="lh-why-list">
+                    <div class="lh-why-item">
+                        <div class="lh-why-check">&#10003;</div>
+                        <div>
+                            <strong>Learn from fellow practitioners</strong>
+                            <p>Real-world insights from peers who face the same challenges and opportunities as you.</p>
+                        </div>
+                    </div>
+                    <div class="lh-why-item">
+                        <div class="lh-why-check">&#10003;</div>
+                        <div>
+                            <strong>Exchange real-world experiences</strong>
+                            <p>Share what works, what doesn't, and discover strategies you'd never find in a textbook.</p>
+                        </div>
+                    </div>
+                    <div class="lh-why-item">
+                        <div class="lh-why-check">&#10003;</div>
+                        <div>
+                            <strong>Discuss challenges openly</strong>
+                            <p>Find a trusted space where honest conversations about practice realities are welcomed.</p>
+                        </div>
+                    </div>
+                    <div class="lh-why-item">
+                        <div class="lh-why-check">&#10003;</div>
+                        <div>
+                            <strong>Build trusted relationships</strong>
+                            <p>The professional bonds formed in Local Hubs often become the most valuable of your career.</p>
+                        </div>
+                    </div>
+                    <div class="lh-why-item">
+                        <div class="lh-why-check">&#10003;</div>
+                        <div>
+                            <strong>Stay accountable to professional growth</strong>
+                            <p>Regular meetups keep you motivated, on track, and committed to continuous improvement.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lh-why-visual">
+                <div class="lh-quote-block">
+                    <div class="lh-quote-icon" aria-hidden="true">&ldquo;</div>
+                    <p class="lh-quote-text">&ldquo;Technology scales knowledge.<br>Community accelerates growth.&rdquo;</p>
+                    <div class="lh-quote-footer">&#8212;&ensp;NetworkFP Philosophy</div>
+                </div>
+                <div class="lh-why-stats">
+                    <div class="lh-why-stat">
+                        <span class="lh-why-stat-num">4x</span>
+                        <span class="lh-why-stat-lbl">Faster professional growth with peer community</span>
+                    </div>
+                    <div class="lh-why-stat-divider"></div>
+                    <div class="lh-why-stat">
+                        <span class="lh-why-stat-num">87%</span>
+                        <span class="lh-why-stat-lbl">Of members credit community for their biggest breakthroughs</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 4 — THE POWER OF COMMUNITY
+═══════════════════════════════════════════ -->
+<section class="lh-community-section" id="powerCommunity">
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag">Real People. Real Connections.</span>
+            <h2 class="lh-section-title">The Power of Community</h2>
+            <p class="lh-community-hero-sub">
+                <strong>You are Independent, but Not Alone.</strong>
+            </p>
+            <p class="lh-section-sub">The best ideas, support systems, partnerships, and friendships often emerge when professionals come together consistently.</p>
+        </div>
+
+        <!-- Photo Carousel -->
+        <div class="lh-gallery-carousel" id="communityCarousel">
+            <div class="lh-gallery-track" id="galleryTrack">
+
+                <div class="lh-gallery-slide">
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 1.png');">
+                        <div class="lh-gallery-overlay">
+                            <span>Hub Meetup — Mumbai</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh-gallery-slide">
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 2.png');">
+                        <div class="lh-gallery-overlay">
+                            <span>Group Discussion — Pune</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh-gallery-slide">
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 3.png');">
+                        <div class="lh-gallery-overlay">
+                            <span>Networking Session — Bengaluru</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh-gallery-slide">
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 4.png');">
+                        <div class="lh-gallery-overlay">
+                            <span>Workshop — Delhi NCR</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh-gallery-slide">
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 5.png');">
+                        <div class="lh-gallery-overlay">
+                            <span>Member Interactions — Chennai</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lh-gallery-slide">
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 6.png');">
+                        <div class="lh-gallery-overlay">
+                            <span>Community Gathering — Hyderabad</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <button class="lh-gallery-btn lh-gallery-prev" onclick="galleryPrev()" aria-label="Previous">&#8592;</button>
+            <button class="lh-gallery-btn lh-gallery-next" onclick="galleryNext()" aria-label="Next">&#8594;</button>
+
+            <div class="lh-gallery-dots" id="galleryDots"></div>
+        </div>
+
+        <!-- Community Values Row -->
+        <div class="lh-community-values">
+            <div class="lh-cv-item">
+                <span>Peer Learning</span>
+            </div>
+            <div class="lh-cv-divider"></div>
+            <div class="lh-cv-item">
+                <span>Mutual Support</span>
+            </div>
+            <div class="lh-cv-divider"></div>
+            <div class="lh-cv-item">
+                <span>Open Dialogue</span>
+            </div>
+            <div class="lh-cv-divider"></div>
+            <div class="lh-cv-item">
+                <span>Shared Growth</span>
+            </div>
+            <div class="lh-cv-divider"></div>
+            <div class="lh-cv-item">
+                <span>Lasting Bonds</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 5 — WHO ARE LOCAL HUBS BUILT FOR?
+═══════════════════════════════════════════ -->
+<section class="lh-for-section" id="builtForMembers">
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag">Eligibility</span>
+            <h2 class="lh-section-title">Built for NetworkFP Members</h2>
+            <p class="lh-section-sub">Local Hubs are exclusively designed for active members of the NetworkFP community.</p>
+        </div>
+
+        <div class="lh-for-cards">
+            <div class="lh-for-card lh-for-card-primary">
+                <div class="lh-for-icon">01</div>
+                <h3>Active NetworkFP Members</h3>
+                <p>ProMembers who are actively engaged with the NetworkFP ecosystem and committed to professional growth.</p>
+                <div class="lh-for-tag">Eligible</div>
+            </div>
+            <div class="lh-for-card lh-for-card-primary">
+                <div class="lh-for-icon">02</div>
+                <h3>QPFP Certificants</h3>
+                <p>Professionals who hold India's premier Qualified Personal Finance Professional certification, demonstrating commitment to excellence.</p>
+                <div class="lh-for-tag">Eligible</div>
+            </div>
+        </div>
+
+        <p class="lh-for-note">Not yet a member? <a href="https://www.networkfp.com" target="_blank" rel="noopener" class="lh-link">Explore NetworkFP Membership</a> to join India's most trusted community of financial planners.</p>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 6 — WHAT DOES IT MEAN TO BE PART OF A HUB?
+═══════════════════════════════════════════ -->
+<section class="lh-means-section" id="whatItMeans">
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag">Hub Membership</span>
+            <h2 class="lh-section-title">What Does It Mean to Be Part of a Hub?</h2>
+            <p class="lh-section-sub">Being part of a Local Hub is a commitment to yourself, your peers, and the profession.</p>
+        </div>
+
+        <div class="lh-means-grid">
+            <div class="lh-means-card">
+                <div class="lh-means-num">01</div>
+                <h3>Committed to Learning</h3>
+                <p>Learn continuously with peers who face similar challenges and opportunities. Every session is an investment in your professional future.</p>
+            </div>
+            <div class="lh-means-card lh-means-card-accent">
+                <div class="lh-means-num">02</div>
+                <h3>Quarterly Meetups</h3>
+                <p>Meet at least once every quarter with members in your region. Consistent, structured gatherings that build real relationships over time.</p>
+            </div>
+            <div class="lh-means-card">
+                <div class="lh-means-num">03</div>
+                <h3>Buddy &amp; Mentor Support</h3>
+                <p>Be open to learning, mentoring, and being mentored as part of the community. Give what you have. Receive what you need.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 7 — WHERE CAN A HUB BE CREATED?
+═══════════════════════════════════════════ -->
+<section class="lh-where-section" id="whereHubs">
+    <div class="container">
+        <div class="lh-where-layout">
+            <div class="lh-where-content">
+                <span class="lh-section-tag">Coverage</span>
+                <h2 class="lh-section-title">Where Can a Local Hub Be Started?</h2>
+                <p class="lh-where-lead">A Local Hub can be initiated in any city, region, or locality that has at least <strong>5 active NetworkFP Members.</strong></p>
+                <p class="lh-where-sub">The goal is to ensure every financial planner in India, no matter where they are, has access to a supportive local community.</p>
+
+                <div class="lh-city-grid">
+                    <span class="lh-city-chip">Mumbai</span>
+                    <span class="lh-city-chip">Pune</span>
+                    <span class="lh-city-chip">Bengaluru</span>
+                    <span class="lh-city-chip">Chennai</span>
+                    <span class="lh-city-chip">Hyderabad</span>
+                    <span class="lh-city-chip">Delhi NCR</span>
+                    <span class="lh-city-chip">Ahmedabad</span>
+                    <span class="lh-city-chip">Kolkata</span>
+                    <span class="lh-city-chip">Jaipur</span>
+                    <span class="lh-city-chip">Kochi</span>
+                    <span class="lh-city-chip">Chandigarh</span>
+                    <span class="lh-city-chip lh-city-chip-more">+ Your City</span>
+                </div>
+
+                <p class="lh-where-note">These are examples only. Any city or locality with 5+ active members can start a hub.</p>
+            </div>
+
+            <div class="lh-where-visual">
+                <div class="lh-growth-card">
+                    <h3>A Growing Network</h3>
+                    <p>Each new hub expands our collective reach, bringing financial wellness closer to every family in India.</p>
+                    <div class="lh-growth-bar-wrap">
+                        <div class="lh-growth-bar-label">
+                            <span>Progress to 100 Hubs</span>
+                            <span class="lh-growth-pct">Growing</span>
+                        </div>
+                        <div class="lh-growth-bar-track">
+                            <div class="lh-growth-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="lh-growth-milestones">
+                        <div class="lh-milestone lh-milestone-done">
+                            <span class="lh-ms-dot"></span>
+                            <span>Program Launched</span>
+                        </div>
+                        <div class="lh-milestone lh-milestone-active">
+                            <span class="lh-ms-dot"></span>
+                            <span>Hub Leader Applications Open</span>
+                        </div>
+                        <div class="lh-milestone">
+                            <span class="lh-ms-dot"></span>
+                            <span>100 Hubs Established</span>
+                        </div>
+                        <div class="lh-milestone">
+                            <span class="lh-ms-dot"></span>
+                            <span>Member Join Portal Opens</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 8 — BECOME A HUB LEADER
+═══════════════════════════════════════════ -->
+<section class="lh-leader-section" id="becomeLeader">
+    <div class="lh-leader-bg">
+        <div class="lh-leader-glow"></div>
+    </div>
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag lh-tag-light">Hub Leadership</span>
+            <h2 class="lh-section-title lh-title-light">Lead Your Local Community</h2>
+            <p class="lh-section-sub lh-sub-light">Help bring members together, facilitate learning, and strengthen the profession in your region.</p>
+        </div>
+
+        <div class="lh-leader-eligibility">
+            <h3 class="lh-elig-heading">Eligibility Criteria</h3>
+            <div class="lh-elig-cards">
+                <div class="lh-elig-card">
+                    <div class="lh-elig-num">01</div>
+                    <h4>Minimum 3 Years</h4>
+                    <p>At least 3 years of active NetworkFP Membership, demonstrating sustained commitment to the profession.</p>
+                </div>
+                <div class="lh-elig-card">
+                    <div class="lh-elig-num">02</div>
+                    <h4>Office Space Ready</h4>
+                    <p>Has an office or venue capable of hosting at least 4 Personal Finance Professionals comfortably.</p>
+                </div>
+                <div class="lh-elig-card">
+                    <div class="lh-elig-num">03</div>
+                    <h4>Believes in Community</h4>
+                    <p>Genuinely believes in the power of community and is committed to showing up consistently for peers.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="lh-leader-cta-wrap">
+            <p class="lh-leader-cta-copy">Ready to lead? Your community needs you.</p>
+            <button class="btn-primary btn-lg lh-apply-btn" onclick="showSection('registration')">
+                Apply to Become a Hub Leader &rarr;
+            </button>
+            <p class="lh-apply-note">No fee. Takes less than 2 minutes. Review within 2&ndash;3 business days.</p>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 9 — JOIN A HUB
+═══════════════════════════════════════════ -->
+<section class="lh-join-section" id="joinAHub">
+    <div class="container">
+        <div class="lh-join-card">
+            <div class="lh-join-content">
+                <h2 class="lh-join-title">Want to Join a Local Hub?</h2>
+                <p class="lh-join-desc">All active NetworkFP Members and QPFP Certificants will soon be able to discover and join their nearest Local Hub — connect, learn, and grow together.</p>
+                <div class="lh-join-actions">
+                    <button class="lh-join-btn-disabled" disabled>
+                        Join a Hub
+                        <span class="lh-join-badge">Coming Soon</span>
+                    </button>
+                </div>
+                <p class="lh-join-note">
+                    Membership access opens once 100 Local Hubs are established across India.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 10 — FINAL COMMUNITY CTA
+═══════════════════════════════════════════ -->
+<section class="lh-final-cta" id="finalCta">
+    <div class="lh-final-bg">
+        <div class="lh-final-glow lh-final-glow-1"></div>
+        <div class="lh-final-glow lh-final-glow-2"></div>
+    </div>
+    <div class="container">
+        <div class="lh-final-inner">
+            <span class="lh-final-eyebrow">The NetworkFP Promise</span>
+            <h2 class="lh-final-title">Together, We Grow Stronger.</h2>
+            <p class="lh-final-desc">Local Hubs are more than meetings. They are communities of professionals committed to helping each other succeed while advancing financial wellbeing for every family.</p>
+            <div class="lh-final-actions">
+                <button class="lh-final-btn-primary" onclick="scrollToSection('becomeLeader')">
+                    Become a Hub Leader &rarr;
+                </button>
+                <button class="lh-final-btn-secondary" disabled>
+                    Join a Hub
+                    <span class="lh-final-soon">Coming Soon</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-footer">
+                </div>
+                <p>India's most trusted career-accelerator for Personal Finance Professionals — built on Competency, Credibility, and Community. 13,000+ professionals. 130+ cities. One mission: Financial Wellbeing for Every Family.</p>
+                <div class="footer-social">
+                    <a class="fs-icon" href="https://www.linkedin.com/company/networkfp" target="_blank" rel="noopener" title="LinkedIn">in</a>
+                    <a class="fs-icon" href="https://twitter.com/networkfp" target="_blank" rel="noopener" title="Twitter / X">𝕏</a>
+                    <a class="fs-icon" href="https://www.youtube.com/@networkfp" target="_blank" rel="noopener" title="YouTube">▶</a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Local Hubs</h4>
+                <a onclick="scrollToSection('whatAreHubs')">What Are Local Hubs?</a>
+                <a onclick="scrollToSection('whyLocalHubs')">Why Local Hubs?</a>
+                <a onclick="scrollToSection('powerCommunity')">Power of Community</a>
+                <a onclick="scrollToSection('becomeLeader')">Become a Hub Leader</a>
+            </div>
+            <div class="footer-col">
+                <h4>NetworkFP Programs</h4>
+                <a href="https://www.networkfp.com/qpfp" target="_blank" rel="noopener">QPFP&reg; Certification</a>
+                <a href="https://www.networkfp.com" target="_blank" rel="noopener">ProMembership</a>
+                <a href="https://www.networkfp.com" target="_blank" rel="noopener">NFP National Summit</a>
+                <a href="https://www.networkfp.com" target="_blank" rel="noopener">Free Basic Account</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contact Us</h4>
+                <p>hub@networkfp.com</p>
+                <p>www.networkfp.com</p>
+                <p>Mumbai, Maharashtra</p>
+                <p style="font-size:0.78rem;color:var(--light-text);margin-top:8px;">Serving India's PFP community since 1995</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 NetworkFP. All rights reserved. | Local Hubs — India's Community of Financial Planners</p>
+            <div class="footer-bottom-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Use</a>
+                <a onclick="showSection('adminLogin')" style="opacity:0.4;font-size:11px;">Admin</a>
+            </div>
+        </div>
+    </div>
+</footer>
+</section><!-- /#landing -->
+
 
 <!-- ══════════════════ REGISTRATION ══════════════════ -->
 <section id="registration" class="page">
@@ -554,7 +688,7 @@
                 <div class="rs-line" id="rsLine1"></div>
                 <div class="rs-check" id="rsCheck2"><span class="rsc-num">2</span><span>Hub / Venue Details</span></div>
                 <div class="rs-line" id="rsLine2"></div>
-                <div class="rs-check" id="rsCheck3"><span class="rsc-num">✓</span><span>Submit Application</span></div>
+                <div class="rs-check" id="rsCheck3"><span class="rsc-num">&#10003;</span><span>Submit Application</span></div>
             </div>
             <div class="rs-note">
                 <strong>Need help?</strong><br>
@@ -610,7 +744,7 @@
                 <div class="form-step-header">
                     <span class="step-chip">Step 2 of 2</span>
                     <h2>Hub / Venue Details</h2>
-                    <p>Tell us about the space where you plan to bring MFDs together.</p>
+                    <p>Tell us about the space where you plan to bring members together.</p>
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
@@ -618,47 +752,20 @@
                         <div class="select-wrap">
                             <select id="city" class="form-input">
                                 <option value="">-- Select Your City --</option>
-                                <option>Agra</option>
-                                <option>Ahmedabad</option>
-                                <option>Amritsar</option>
-                                <option>Aurangabad</option>
-                                <option>Bengaluru</option>
-                                <option>Bhopal</option>
-                                <option>Bhubaneswar</option>
-                                <option>Chandigarh</option>
-                                <option>Chennai</option>
-                                <option>Coimbatore</option>
-                                <option>Delhi</option>
-                                <option>Faridabad</option>
-                                <option>Gurugram</option>
-                                <option>Guwahati</option>
-                                <option>Hyderabad</option>
-                                <option>Indore</option>
-                                <option>Jaipur</option>
-                                <option>Jodhpur</option>
-                                <option>Kochi</option>
-                                <option>Kolkata</option>
-                                <option>Lucknow</option>
-                                <option>Ludhiana</option>
-                                <option>Mangalore</option>
-                                <option>Meerut</option>
-                                <option>Mumbai</option>
-                                <option>Mysuru</option>
-                                <option>Nagpur</option>
-                                <option>Nashik</option>
-                                <option>Navi Mumbai</option>
-                                <option>Noida</option>
-                                <option>Patna</option>
-                                <option>Pune</option>
-                                <option>Raipur</option>
-                                <option>Rajkot</option>
-                                <option>Surat</option>
-                                <option>Thane</option>
-                                <option>Thiruvananthapuram</option>
-                                <option>Vadodara</option>
-                                <option>Varanasi</option>
-                                <option>Vijayawada</option>
-                                <option>Visakhapatnam</option>
+                                <option>Agra</option><option>Ahmedabad</option><option>Amritsar</option>
+                                <option>Aurangabad</option><option>Bengaluru</option><option>Bhopal</option>
+                                <option>Bhubaneswar</option><option>Chandigarh</option><option>Chennai</option>
+                                <option>Coimbatore</option><option>Delhi</option><option>Faridabad</option>
+                                <option>Gurugram</option><option>Guwahati</option><option>Hyderabad</option>
+                                <option>Indore</option><option>Jaipur</option><option>Jodhpur</option>
+                                <option>Kochi</option><option>Kolkata</option><option>Lucknow</option>
+                                <option>Ludhiana</option><option>Mangalore</option><option>Meerut</option>
+                                <option>Mumbai</option><option>Mysuru</option><option>Nagpur</option>
+                                <option>Nashik</option><option>Navi Mumbai</option><option>Noida</option>
+                                <option>Patna</option><option>Pune</option><option>Raipur</option>
+                                <option>Rajkot</option><option>Surat</option><option>Thane</option>
+                                <option>Thiruvananthapuram</option><option>Vadodara</option><option>Varanasi</option>
+                                <option>Vijayawada</option><option>Visakhapatnam</option>
                             </select>
                         </div>
                         <span class="err-msg" id="cityErr"></span>
@@ -671,7 +778,7 @@
                     <div class="form-group full">
                         <label for="address">Full Address <span class="req">*</span></label>
                         <textarea id="address" class="form-input form-textarea" rows="2" placeholder="e.g. Flat 12, Seawoods Grand Central, Sector 40, Kharghar"></textarea>
-                        <p class="form-hint">This is used to pin your hub accurately on the map for participants to find you.</p>
+                        <p class="form-hint">This is used to pin your hub accurately on the map for members to find you.</p>
                         <span class="err-msg" id="addressErr"></span>
                     </div>
                     <div class="form-group">
@@ -711,13 +818,11 @@
                         <div class="radio-group">
                             <label class="radio-label">
                                 <input type="radio" name="hostedBefore" value="Yes" id="hostedYes">
-                                <span class="radio-custom"></span>
-                                Yes
+                                <span class="radio-custom"></span>Yes
                             </label>
                             <label class="radio-label">
                                 <input type="radio" name="hostedBefore" value="No" id="hostedNo" checked>
-                                <span class="radio-custom"></span>
-                                No
+                                <span class="radio-custom"></span>No
                             </label>
                         </div>
                     </div>
@@ -727,18 +832,15 @@
                         <div class="radio-group">
                             <label class="radio-label">
                                 <input type="radio" name="hostingFrequency" value="One Time Only" id="freqOnce" checked>
-                                <span class="radio-custom"></span>
-                                One Time Only
+                                <span class="radio-custom"></span>One Time Only
                             </label>
                             <label class="radio-label">
                                 <input type="radio" name="hostingFrequency" value="Multiple Times" id="freqMultiple">
-                                <span class="radio-custom"></span>
-                                Multiple Times
+                                <span class="radio-custom"></span>Multiple Times
                             </label>
                             <label class="radio-label">
                                 <input type="radio" name="hostingFrequency" value="Open to Either" id="freqEither">
-                                <span class="radio-custom"></span>
-                                Open to Either
+                                <span class="radio-custom"></span>Open to Either
                             </label>
                         </div>
                     </div>
@@ -760,7 +862,7 @@
                 <div class="success-check">&#10003;</div>
             </div>
             <h2>Application Submitted!</h2>
-            <p class="success-tagline">Thank you for stepping up for the MFD community. Your application is now under review by the NetworkFP team — we'll be in touch within 2-3 business days.</p>
+            <p class="success-tagline">Thank you for stepping up for the community. Your application is now under review by the NetworkFP team — we'll be in touch within 2-3 business days.</p>
             <div class="success-details" id="successDetails"></div>
             <div class="success-actions">
                 <button class="btn-primary" onclick="showSection('landing')">Back to Home</button>
@@ -783,7 +885,7 @@
                 <div>
                     <span class="section-tag">Find Your Hub</span>
                     <h1 class="ppage-title">Discover NetworkFP Hubs Near You</h1>
-                    <p class="ppage-sub">Connect with QPFP&reg;-certified and ProMember MFDs who have opened their doors for you. Find a hub in your city, join the conversation, and never practice in isolation again.</p>
+                    <p class="ppage-sub">Connect with QPFP&reg;-certified and ProMember professionals who have opened their doors for you. Find a hub in your city, join the conversation, and never practice in isolation again.</p>
                 </div>
             </div>
             <div class="hub-search-bar">
@@ -797,10 +899,7 @@
         </div>
     </div>
 
-    <!-- Side-by-side: Map (left) + Hubs List & Form (right) -->
     <div class="participant-body">
-
-        <!-- LEFT: Map -->
         <div class="pb-map-col">
             <div id="hubMap" class="hub-map"></div>
             <div class="map-count-badge" id="mapCountBadge">0 hubs</div>
@@ -811,10 +910,7 @@
             </div>
         </div>
 
-        <!-- RIGHT: Hub list then Registration Form -->
         <div class="pb-list-col">
-
-            <!-- Hub Cards Panel -->
             <div class="hubs-panel">
                 <div class="hubs-panel-hdr">
                     <h3>Available Hubs <span class="hub-count-pill" id="hubCountPill">0</span></h3>
@@ -832,15 +928,12 @@
                 </div>
             </div>
 
-            <!-- Registration Form Panel (hidden until Register button clicked) -->
             <div class="reg-form-panel hidden" id="regFormPanel">
                 <div class="rfp-form-wrap" id="rfpFormWrap">
                     <div class="selected-hub-card" id="selectedHubCard"></div>
-
                     <div class="rfp-form-body">
                         <h3>Your Details</h3>
                         <p class="rfp-form-sub">Fill in your details to confirm your spot at this hub.</p>
-
                         <div class="form-group">
                             <label for="pName">Full Name <span class="req">*</span></label>
                             <input type="text" id="pName" class="form-input" placeholder="Your full name" autocomplete="name">
@@ -872,17 +965,14 @@
                         </div>
                         <div class="form-group">
                             <label for="pNote">Why do you want to join? <span class="opt-label">(Optional)</span></label>
-                            <textarea id="pNote" class="form-input form-textarea" rows="3" placeholder="Tell the Hub Leader a bit about yourself or what you're hoping to get from this hub..."></textarea>
+                            <textarea id="pNote" class="form-input form-textarea" rows="3" placeholder="Tell the Hub Leader a bit about yourself..."></textarea>
                         </div>
                         <button class="btn-primary full-w" onclick="submitParticipant()">Confirm My Registration &rarr;</button>
                     </div>
                 </div>
             </div>
-
-        </div><!-- /.pb-list-col -->
-
-    </div><!-- /.participant-body -->
-
+        </div>
+    </div>
 </section>
 
 <!-- ══════════════════ PARTICIPANT SUCCESS ══════════════════ -->
@@ -910,9 +1000,6 @@
             <div class="login-logo">
                 <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-login">
             </div>
-            <div class="login-icon-wrap">
-                <span>🔐</span>
-            </div>
             <h2>Admin Portal</h2>
             <p class="login-sub">Sign in to manage Hub Leader applications</p>
             <div class="form-group">
@@ -929,9 +1016,7 @@
                 <span class="err-msg" id="adminPasswordErr"></span>
             </div>
             <button class="btn-primary full-w" onclick="adminLogin()">Sign In to Admin Portal</button>
-            <div class="login-hint">
-                <span>Demo credentials: admin@networkfp.com / admin123</span>
-            </div>
+            <div class="login-hint"><span>Demo credentials: admin@networkfp.com / admin123</span></div>
             <button class="btn-back-link" onclick="showSection('landing')">&larr; Back to Website</button>
         </div>
     </div>
@@ -940,11 +1025,7 @@
 <!-- ══════════════════ ADMIN DASHBOARD ══════════════════ -->
 <section id="adminDashboard" class="page">
     <div class="admin-layout">
-
-        <!-- Sidebar Overlay (mobile) -->
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-        <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sb-logo">
                 <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-sidebar">
@@ -953,30 +1034,22 @@
             <nav class="sb-nav">
                 <div class="sb-section-label">Hub Leaders</div>
                 <a class="sb-link active" id="navApplications" onclick="showAdminTab('applications', this)">
-                    <span class="sb-icon">📋</span>
                     <span>Applications</span>
                 </a>
                 <a class="sb-link" id="navAnalytics" onclick="showAdminTab('analytics', this)">
-                    <span class="sb-icon">📊</span>
                     <span>Analytics</span>
                 </a>
                 <a class="sb-link" onclick="exportCSV()">
-                    <span class="sb-icon">📥</span>
                     <span>Export CSV</span>
                 </a>
-
                 <div class="sb-section-label" style="margin-top:12px">Participants</div>
                 <a class="sb-link" id="navParticipants" onclick="showAdminTab('participants', this)">
-                    <span class="sb-icon">&#128100;</span>
-                    <span>Registrations</span>
+                    <span class="sb-icon">&#128100;</span><span>Registrations</span>
                 </a>
                 <a class="sb-link" onclick="exportParticipantsCSV()">
-                    <span class="sb-icon">📥</span>
                     <span>Export CSV</span>
                 </a>
             </nav>
-
-            <!-- Registration Mode Toggle -->
             <div class="reg-mode-block">
                 <div class="rmb-label">Registration Mode</div>
                 <div class="rmb-desc" id="rmbDesc">Hub leaders can register</div>
@@ -997,7 +1070,6 @@
                     <span id="rmbStatusText">Hub Leader mode active</span>
                 </div>
             </div>
-
             <div class="sb-footer">
                 <div class="sb-user">
                     <div class="sb-avatar">A</div>
@@ -1010,10 +1082,7 @@
             </div>
         </aside>
 
-        <!-- Main -->
         <main class="admin-main" id="adminMain">
-
-            <!-- Topbar -->
             <div class="admin-topbar">
                 <button class="sb-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">&#9776;</button>
                 <h1 class="admin-page-title" id="adminPageTitle">Applications</h1>
@@ -1025,43 +1094,24 @@
 
             <!-- Applications Tab -->
             <div id="tabApplications" class="admin-tab">
-                <!-- Stats -->
                 <div class="stats-grid">
                     <div class="stat-card sc-total">
-                        <div class="sc-icon">📋</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="statTotal">0</span>
-                            <span class="sc-lbl">Total Applications</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="statTotal">0</span><span class="sc-lbl">Total Applications</span></div>
                         <div class="sc-trend">All Time</div>
                     </div>
                     <div class="stat-card sc-pending">
-                        <div class="sc-icon">⏳</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="statPending">0</span>
-                            <span class="sc-lbl">Pending Approvals</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="statPending">0</span><span class="sc-lbl">Pending Approvals</span></div>
                         <div class="sc-trend">Awaiting Review</div>
                     </div>
                     <div class="stat-card sc-approved">
-                        <div class="sc-icon">✅</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="statApproved">0</span>
-                            <span class="sc-lbl">Approved Leaders</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="statApproved">0</span><span class="sc-lbl">Approved Leaders</span></div>
                         <div class="sc-trend">Active Hubs</div>
                     </div>
                     <div class="stat-card sc-rejected">
-                        <div class="sc-icon">❌</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="statRejected">0</span>
-                            <span class="sc-lbl">Rejected</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="statRejected">0</span><span class="sc-lbl">Rejected</span></div>
                         <div class="sc-trend">Not Approved</div>
                     </div>
                 </div>
-
-                <!-- Search & Filter -->
                 <div class="filter-bar">
                     <div class="search-box">
                         <span class="search-icon">&#128269;</span>
@@ -1075,34 +1125,20 @@
                         <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
                     </div>
                 </div>
-
-                <!-- Table -->
                 <div class="table-wrap-outer" id="hubTableOuter">
                 <div class="table-wrap" id="hubTableWrap">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Reg. ID</th>
-                                <th>Full Name</th>
-                                <th>Email</th>
-                                <th>Mobile</th>
-                                <th>Membership</th>
-                                <th>City</th>
-                                <th>Area</th>
-                                <th>Address</th>
-                                <th>Venue</th>
-                                <th>Capacity</th>
-                                <th>Hosted Before</th>
-                                <th>Hosting Frequency</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>Reg. ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
+                                <th>Membership</th><th>City</th><th>Area</th><th>Address</th>
+                                <th>Venue</th><th>Capacity</th><th>Hosted Before</th>
+                                <th>Hosting Frequency</th><th>Date</th><th>Status</th><th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody"></tbody>
                     </table>
                     <div class="table-empty" id="tableEmpty">
-                        <div class="te-icon">📭</div>
                         <h3>No applications found</h3>
                         <p>No records match your current search or filter criteria.</p>
                     </div>
@@ -1135,43 +1171,24 @@
 
             <!-- Participants Tab -->
             <div id="tabParticipants" class="admin-tab hidden">
-                <!-- Participant Stats -->
                 <div class="stats-grid">
                     <div class="stat-card sc-total">
-                        <div class="sc-icon">&#128100;</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="pStatTotal">0</span>
-                            <span class="sc-lbl">Total Participants</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="pStatTotal">0</span><span class="sc-lbl">Total Participants</span></div>
                         <div class="sc-trend">All Registrations</div>
                     </div>
                     <div class="stat-card sc-approved">
-                        <div class="sc-icon">✅</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="pStatConfirmed">0</span>
-                            <span class="sc-lbl">Confirmed</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="pStatConfirmed">0</span><span class="sc-lbl">Confirmed</span></div>
                         <div class="sc-trend">Active Participants</div>
                     </div>
                     <div class="stat-card sc-rejected">
-                        <div class="sc-icon">&#128683;</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="pStatCancelled">0</span>
-                            <span class="sc-lbl">Cancelled</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="pStatCancelled">0</span><span class="sc-lbl">Cancelled</span></div>
                         <div class="sc-trend">Withdrawn</div>
                     </div>
                     <div class="stat-card sc-pending">
-                        <div class="sc-icon">&#127968;</div>
-                        <div class="sc-body">
-                            <span class="sc-val" id="pStatHubs">0</span>
-                            <span class="sc-lbl">Hubs with Participants</span>
-                        </div>
+                        <div class="sc-body"><span class="sc-val" id="pStatHubs">0</span><span class="sc-lbl">Hubs with Participants</span></div>
                         <div class="sc-trend">Active Hubs</div>
                     </div>
                 </div>
-
-                <!-- Search & Filter -->
                 <div class="filter-bar">
                     <div class="search-box">
                         <span class="search-icon">&#128269;</span>
@@ -1183,27 +1200,16 @@
                         <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
                         <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
                     </div>
-                    <button class="btn-export" onclick="exportParticipantsCSV()">&#128229; Export CSV</button>
+                    <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
                 </div>
-
-                <!-- Participants Table -->
                 <div class="table-wrap-outer" id="partTableOuter">
                 <div class="table-wrap" id="partTableWrap">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Participant ID</th>
-                                <th>Full Name</th>
-                                <th>Email</th>
-                                <th>Mobile</th>
-                                <th>Membership</th>
-                                <th>Hub Leader</th>
-                                <th>Hub City</th>
-                                <th>Hub Area</th>
-                                <th>Note</th>
-                                <th>Registered On</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>Participant ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
+                                <th>Membership</th><th>Hub Leader</th><th>Hub City</th><th>Hub Area</th>
+                                <th>Note</th><th>Registered On</th><th>Status</th><th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="pTableBody"></tbody>
@@ -1226,7 +1232,7 @@
 <!-- ══════════════════ CONFIRM MODAL ══════════════════ -->
 <div class="modal-overlay" id="confirmOverlay">
     <div class="modal">
-        <div class="modal-emoji" id="modalEmoji">⚠️</div>
+        <div class="modal-emoji" id="modalEmoji">!</div>
         <h3 id="modalTitle">Confirm Action</h3>
         <p id="modalMessage">Are you sure you want to proceed?</p>
         <div class="modal-btns">

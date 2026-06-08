@@ -26,7 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
     handleNavbarScroll();
     checkAdminSession();
     bindMobileInputs();
+    initGallery();
+    initGrowthBar();
 });
+
+function initGrowthBar() {
+    const bar = document.querySelector('.lh-growth-bar-fill');
+    if (!bar) return;
+    setTimeout(() => { bar.style.width = bar.dataset.width || '35%'; }, 600);
+}
 
 function handleNavbarScroll() {
     const navbar = document.getElementById('navbar');
@@ -77,7 +85,7 @@ function showSection(id) {
 function scrollToFeatures() {
     showSection('landing');
     setTimeout(() => {
-        const el = document.getElementById('features');
+        const el = document.getElementById('whatAreHubs');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
 }
@@ -85,9 +93,78 @@ function scrollToFeatures() {
 function scrollToParticipantFeatures() {
     showSection('landing');
     setTimeout(() => {
-        const el = document.getElementById('participantFeatures');
+        const el = document.getElementById('joinAHub');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
+}
+
+function scrollToSection(sectionId) {
+    if (!document.getElementById('landing').classList.contains('active')) {
+        showSection('landing');
+    }
+    setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+            const navH = document.getElementById('navbar').offsetHeight || 90;
+            const top = el.getBoundingClientRect().top + window.pageYOffset - navH;
+            window.scrollTo({ top, behavior: 'smooth' });
+        }
+    }, 50);
+}
+
+// ═══════════════════ GALLERY CAROUSEL ═══════════════════
+let galleryIndex = 0;
+let galleryTotal = 0;
+let galleryAutoplay = null;
+
+function initGallery() {
+    const track = document.getElementById('galleryTrack');
+    const dotsEl = document.getElementById('galleryDots');
+    if (!track || !dotsEl) return;
+
+    galleryTotal = track.querySelectorAll('.lh-gallery-slide').length;
+    if (galleryTotal === 0) return;
+
+    dotsEl.innerHTML = '';
+    for (let i = 0; i < galleryTotal; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'lh-gallery-dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+        dot.addEventListener('click', () => goToSlide(i));
+        dotsEl.appendChild(dot);
+    }
+
+    goToSlide(0);
+    startGalleryAutoplay();
+}
+
+function goToSlide(idx) {
+    const track = document.getElementById('galleryTrack');
+    if (!track) return;
+    galleryIndex = (idx + galleryTotal) % galleryTotal;
+    track.style.transform = 'translateX(-' + (galleryIndex * 100) + '%)';
+    document.querySelectorAll('.lh-gallery-dot').forEach((d, i) => {
+        d.classList.toggle('active', i === galleryIndex);
+    });
+}
+
+function galleryNext() {
+    goToSlide(galleryIndex + 1);
+    resetGalleryAutoplay();
+}
+
+function galleryPrev() {
+    goToSlide(galleryIndex - 1);
+    resetGalleryAutoplay();
+}
+
+function startGalleryAutoplay() {
+    galleryAutoplay = setInterval(() => galleryNext(), 4500);
+}
+
+function resetGalleryAutoplay() {
+    clearInterval(galleryAutoplay);
+    startGalleryAutoplay();
 }
 
 // ═══════════════════ NAVBAR MOBILE ═══════════════════
