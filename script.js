@@ -6,6 +6,120 @@
 
 'use strict';
 
+// ═══════════════════ HERO MAP — CITY DATA & PROJECTION ═══════════════════
+// MapChart_Map.png calibration (mainland India only; A&N Islands shown as inset by MapChart):
+//   lngLeft  68.0°E  → xLeft   7.5%   |   lngRight 97.4°E → xRight 71.5%
+//   latTop   37.0°N  → yTop    4.0%   |   latBottom 8.0°N → yBottom 87.0%
+//   scale_x = (71.5−7.5)/(97.4−68.0) = 2.18 %/°   scale_y = (87−4)/(37−8) = 2.86 %/°
+const _M = { lngL:68.0, xL:7.5, lngR:97.4, xR:71.5, latT:37.0, yT:4.0, latB:8.0, yB:87.0 };
+
+function latlngToPercent(lat, lng) {
+    const x = _M.xL + (lng - _M.lngL) / (_M.lngR - _M.lngL) * (_M.xR - _M.xL);
+    const y = _M.yT + (_M.latT - lat) / (_M.latT - _M.latB) * (_M.yB - _M.yT);
+    return { x: +x.toFixed(2), y: +y.toFixed(2) };
+}
+
+const HUB_CITIES = [
+    { name:'Chandigarh',  lat:30.73, lng:76.78, delay:1.6, lg:false, lbl:'right' },
+    { name:'Delhi NCR',   lat:28.61, lng:77.21, delay:0.0, lg:true,  lbl:'right' },
+    { name:'Jaipur',      lat:26.91, lng:75.79, delay:0.5, lg:false, lbl:'left'  },
+    { name:'Lucknow',     lat:26.85, lng:80.95, delay:0.9, lg:false, lbl:'right' },
+    { name:'Ahmedabad',   lat:23.02, lng:72.57, delay:0.3, lg:false, lbl:'right' },
+    { name:'Bhopal',      lat:23.26, lng:77.41, delay:1.8, lg:false, lbl:'right' },
+    { name:'Kolkata',     lat:22.57, lng:88.36, delay:0.8, lg:true,  lbl:'left'  },
+    { name:'Nagpur',      lat:21.15, lng:79.09, delay:1.2, lg:false, lbl:'right' },
+    { name:'Mumbai',      lat:19.08, lng:72.88, delay:0.4, lg:true,  lbl:'left'  },
+    { name:'Pune',        lat:18.52, lng:73.86, delay:0.7, lg:false, lbl:'right' },
+    { name:'Hyderabad',   lat:17.39, lng:78.49, delay:1.0, lg:true,  lbl:'left'  },
+    { name:'Vizag',       lat:17.69, lng:83.30, delay:2.0, lg:false, lbl:'left'  },
+    { name:'Bengaluru',   lat:12.97, lng:77.59, delay:0.6, lg:true,  lbl:'left'  },
+    { name:'Chennai',     lat:13.08, lng:80.27, delay:0.2, lg:true,  lbl:'right' },
+    { name:'Kochi',       lat: 9.93, lng:76.27, delay:1.4, lg:false, lbl:'left'  },
+];
+
+function renderHeroMapPins() {
+    const container = document.getElementById('heroMapPins');
+    if (!container) return;
+    container.innerHTML = HUB_CITIES.map(c => {
+        const { x, y } = latlngToPercent(c.lat, c.lng);
+        const dot = c.lg ? 'map-pin-dot map-pin-dot--lg' : 'map-pin-dot';
+        return `<div class="map-pin" style="left:${x}%;top:${y}%">` +
+               `<div class="map-pin-pulse" style="animation-delay:${c.delay}s"></div>` +
+               `<div class="${dot}"></div>` +
+               `<span class="map-pin-label lbl-${c.lbl}">${c.name}</span>` +
+               `</div>`;
+    }).join('');
+}
+
+// ═══════════════════ SVG MAP — GEOJSON RENDERING ═══════════════════
+// viewBox  "0 0 590 650"  covers 68–97.5°E × 8–37°N (India's full extent)
+// Equirectangular projection: x = (lng-68)/29.5×590, y = (37-lat)/29×650
+// Pin percentages use the same formula ÷ SVG dimensions, so they align exactly.
+const SVG_MAP = { W:590, H:650, lngMin:68.0, lngMax:97.5, latMin:8.0, latMax:37.0 };
+
+function svgPt(lng, lat) {
+    const x = (lng - SVG_MAP.lngMin) / (SVG_MAP.lngMax - SVG_MAP.lngMin) * SVG_MAP.W;
+    const y = (SVG_MAP.latMax - lat) / (SVG_MAP.latMax - SVG_MAP.latMin) * SVG_MAP.H;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+}
+
+function ringToD(ring) {
+    return 'M' + ring.map(([lng, lat]) => svgPt(lng, lat)).join('L') + 'Z';
+}
+
+function geomToD(geom) {
+    if (geom.type === 'Polygon')
+        return geom.coordinates.map(ringToD).join(' ');
+    if (geom.type === 'MultiPolygon')
+        return geom.coordinates.map(poly => poly.map(ringToD).join(' ')).join(' ');
+    return '';
+}
+
+async function initSVGMap() {
+    const svgEl    = document.getElementById('indiaMapSvg');
+    const grp      = document.getElementById('indiaStatesGroup');
+    const fallback = document.getElementById('indiaMapFallback');
+    if (!svgEl || !grp) { renderHeroMapPins(); return; }
+
+    try {
+        const res = await fetch(
+            'https://cdn.jsdelivr.net/gh/geohacker/india@master/state/india_state.geojson',
+            { cache: 'force-cache' }
+        );
+        if (!res.ok) throw new Error(res.status);
+        const geo = await res.json();
+
+        const NS   = 'http://www.w3.org/2000/svg';
+        const frag = document.createDocumentFragment();
+        geo.features.forEach(f => {
+            if (!f.geometry) return;
+            const d = geomToD(f.geometry);
+            if (!d) return;
+            const path = document.createElementNS(NS, 'path');
+            path.setAttribute('d', d);
+            path.classList.add('india-state');
+            const name = (f.properties?.NAME_1 || f.properties?.state_name || f.properties?.name || '').trim();
+            if (name) path.dataset.state = name;
+            frag.appendChild(path);
+        });
+        grp.appendChild(frag);
+
+        // Align _M so pin x%/y% directly match SVG geographic coordinates
+        _M.lngL = SVG_MAP.lngMin;  _M.xL = 0.0;
+        _M.lngR = SVG_MAP.lngMax;  _M.xR = 100.0;
+        _M.latT = SVG_MAP.latMax;  _M.yT = 0.0;
+        _M.latB = SVG_MAP.latMin;  _M.yB = 100.0;
+
+    } catch (err) {
+        console.warn('[IndiaMap] GeoJSON unavailable — PNG fallback active:', err.message);
+        svgEl.style.display = 'none';
+        if (fallback) fallback.style.display = 'block';
+        // _M stays as MapChart calibration — correct for the PNG image
+    }
+
+    renderHeroMapPins();
+}
+
 // ═══════════════════ CONSTANTS ═══════════════════
 const ADMIN_EMAIL       = 'admin@networkfp.com';
 const ADMIN_PASSWORD    = 'admin123';
@@ -28,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindMobileInputs();
     initGallery();
     initGrowthBar();
+    renderHeroMapPins();
 });
 
 function initGrowthBar() {
@@ -1067,7 +1182,18 @@ function updateModeUI(mode) {
     // Update navbar CTA button
     const navBtn = document.getElementById('navCtaBtn');
     if (navBtn) {
-        navBtn.textContent = mode === 'participant' ? 'Find a Hub' : 'Open My Hub';
+        if (mode === 'participant') {
+            navBtn.textContent = 'Find a Hub';
+            navBtn.onclick = () => showSection('participantReg');
+        } else {
+            navBtn.textContent = 'Become a Hub Leader';
+            navBtn.onclick = () => scrollToSection('becomeLeader');
+        }
+    }
+    // Hide "Become a Leader" nav link in participant mode (it scrolls to a hidden section)
+    const navBecomeLeaderLink = document.getElementById('navBecomeLeaderLink');
+    if (navBecomeLeaderLink) {
+        navBecomeLeaderLink.style.display = mode === 'participant' ? 'none' : '';
     }
     // Update nav Register link label
     const navRegLink = document.getElementById('navRegisterLink');
@@ -1117,6 +1243,10 @@ function applyModeToBanner(mode) {
     if (hubContent)  hubContent.style.display  = mode === 'participant' ? 'none'  : 'block';
     if (partContent) partContent.style.display = mode === 'participant' ? 'block' : 'none';
 
+    // Hide hub-leader-only sections in participant mode
+    const becomeLeader = document.getElementById('becomeLeader');
+    if (becomeLeader) becomeLeader.style.display = mode === 'participant' ? 'none' : '';
+
     // Mode indicator banner
     let banner = document.getElementById('modeBanner');
     if (!banner) {
@@ -1139,7 +1269,7 @@ function applyModeToBanner(mode) {
 function initModeOnLoad() {
     const mode = getRegistrationMode();
     updateModeUI(mode);
-    if (mode === 'participant') applyModeToBanner(mode);
+    applyModeToBanner(mode);
 }
 
 // ═══════════════════════════════════════════════════════════════

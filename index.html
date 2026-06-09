@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="NetworkFP Local Hubs — Bringing financial planners together to learn, collaborate, and grow across India. Join a thriving community of Personal Finance Professionals.">
+    <meta name="description" content="NetworkFP Local Hubs — Bringing Personal Finance Professionals together to learn, collaborate, and grow across India. Join a thriving community of 22,000+ PFPs.">
     <meta property="og:title" content="NetworkFP Local Hubs | 100+ Hubs. 1 Mission. Financial Wellbeing for Every Family.">
-    <meta property="og:description" content="NetworkFP Local Hubs bring financial planners together to learn, collaborate, grow, and create stronger communities across India.">
+    <meta property="og:description" content="NetworkFP Local Hubs bring Personal Finance Professionals together to learn, collaborate, grow, and create stronger communities across India.">
     <meta property="og:site_name" content="NetworkFP">
     <link rel="icon" type="image/png" href="Images/NetworkFP Logo.png">
     <title>NetworkFP Local Hubs | 100+ Hubs. 1 Mission.</title>
@@ -24,13 +24,13 @@
             <a class="nav-link" onclick="showSection('landing'); closeMenu()">Home</a>
             <a class="nav-link" onclick="scrollToSection('whatAreHubs'); closeMenu()">About Hubs</a>
             <a class="nav-link" onclick="scrollToSection('powerCommunity'); closeMenu()">Community</a>
-            <a class="nav-link" onclick="scrollToSection('becomeLeader'); closeMenu()">Become a Leader</a>
+            <a class="nav-link" id="navBecomeLeaderLink" onclick="scrollToSection('becomeLeader'); closeMenu()">Become a Leader</a>
         </div>
         <div class="nav-cta" id="navCta">
             <button class="btn-join-nav" disabled title="Launching after 100 hubs are established">
                 Join a Hub <span class="nav-soon-tag">Soon</span>
             </button>
-            <button class="btn-primary" onclick="scrollToSection('becomeLeader')">Become a Hub Leader</button>
+            <button class="btn-primary" id="navCtaBtn" onclick="scrollToSection('becomeLeader')">Become a Hub Leader</button>
         </div>
         <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Toggle menu">
             <span></span><span></span><span></span>
@@ -52,10 +52,11 @@
     </div>
 
     <div class="lh-hero-inner container">
-        <div class="lh-hero-content">
+        <!-- Hub Leader mode hero content -->
+        <div class="lh-hero-content" id="hubLeaderContent">
             <div class="lh-hero-eyebrow">
                 <span class="lh-eyebrow-dot"></span>
-                India's Community of Financial Planners
+                India's Community of Personal Finance Professionals
             </div>
             <h1 class="lh-hero-title">
                 100+ Hubs.<br>
@@ -63,7 +64,7 @@
             </h1>
             <p class="lh-hero-mission">Financial Wellbeing for Every Family.</p>
             <p class="lh-hero-sub">
-                NetworkFP Local Hubs bring financial planners together to learn, collaborate, grow, and create stronger communities across India.
+                NetworkFP Local Hubs bring Personal Finance Professionals together to learn, collaborate, grow, and create stronger communities across India.
             </p>
             <div class="lh-hero-actions">
                 <button class="btn-primary btn-lg lh-cta-primary" onclick="scrollToSection('becomeLeader')">
@@ -76,18 +77,55 @@
             </div>
             <div class="lh-hero-stats">
                 <div class="lh-stat">
-                    <span class="lh-stat-num">13,000+</span>
-                    <span class="lh-stat-lbl">Professionals</span>
+                    <span class="lh-stat-num">22,000+</span>
+                    <span class="lh-stat-lbl">PFPs</span>
                 </div>
                 <div class="lh-stat-divider"></div>
                 <div class="lh-stat">
-                    <span class="lh-stat-num">130+</span>
+                    <span class="lh-stat-num">1,800+</span>
+                    <span class="lh-stat-lbl">NFP Members</span>
+                </div>
+                <div class="lh-stat-divider"></div>
+                <div class="lh-stat">
+                    <span class="lh-stat-num">150+</span>
                     <span class="lh-stat-lbl">Cities Across India</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Participant mode hero content (shown when participant mode is active) -->
+        <div class="lh-hero-content" id="participantContent" style="display:none">
+            <div class="lh-hero-eyebrow">
+                <span class="lh-eyebrow-dot"></span>
+                Find Your Financial Community
+            </div>
+            <h1 class="lh-hero-title">
+                Find a Hub.<br>
+                <span class="lh-hero-accent">Grow Together.</span>
+            </h1>
+            <p class="lh-hero-mission">Financial Wellbeing for Every Family.</p>
+            <p class="lh-hero-sub">
+                Connect with QPFP&reg;-certified Personal Finance Professionals hosting local meetups in your city. Join a NetworkFP Local Hub and never practice in isolation again.
+            </p>
+            <div class="lh-hero-actions">
+                <button class="btn-primary btn-lg lh-cta-primary" onclick="showSection('participantReg')">
+                    Find a Hub Near You &rarr;
+                </button>
+            </div>
+            <div class="lh-hero-stats">
+                <div class="lh-stat">
+                    <span class="lh-stat-num">22,000+</span>
+                    <span class="lh-stat-lbl">PFPs</span>
+                </div>
                 <div class="lh-stat-divider"></div>
                 <div class="lh-stat">
-                    <span class="lh-stat-num">1,600+</span>
-                    <span class="lh-stat-lbl">ProMembers</span>
+                    <span class="lh-stat-num">1,800+</span>
+                    <span class="lh-stat-lbl">NFP Members</span>
+                </div>
+                <div class="lh-stat-divider"></div>
+                <div class="lh-stat">
+                    <span class="lh-stat-num">150+</span>
+                    <span class="lh-stat-lbl">Cities Across India</span>
                 </div>
             </div>
         </div>
@@ -95,100 +133,8 @@
         <div class="lh-hero-map">
             <div class="india-map-container">
                 <img src="Images/MapChart_Map.png" class="india-map-img" alt="India Map showing NetworkFP Hub locations"/>
-                <!-- City pulse dots — calibrated to MapChart_Map.png
-                     Formula: left = 7 + (lng - 68.5) * 2.46
-                              top  = 4 + (37  - lat)  * 2.86
-                     Map bounds: 68.5°E→97°E (x 7%→77%), 37°N→8°N (y 4%→87%) -->
-                <!-- Chandigarh: 30.73°N 76.78°E -->
-                <div class="map-pin" style="left:27%;top:22%">
-                    <div class="map-pin-pulse" style="animation-delay:1.6s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-right">Chandigarh</span>
-                </div>
-                <!-- Delhi NCR: 28.61°N 77.21°E -->
-                <div class="map-pin" style="left:28%;top:28%">
-                    <div class="map-pin-pulse" style="animation-delay:0s"></div>
-                    <div class="map-pin-dot map-pin-dot--lg"></div>
-                    <span class="map-pin-label lbl-right">Delhi NCR</span>
-                </div>
-                <!-- Jaipur: 26.91°N 75.79°E -->
-                <div class="map-pin" style="left:25%;top:33%">
-                    <div class="map-pin-pulse" style="animation-delay:0.5s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-left">Jaipur</span>
-                </div>
-                <!-- Lucknow: 26.85°N 80.95°E -->
-                <div class="map-pin" style="left:38%;top:33%">
-                    <div class="map-pin-pulse" style="animation-delay:0.9s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-right">Lucknow</span>
-                </div>
-                <!-- Ahmedabad: 23.02°N 72.57°E -->
-                <div class="map-pin" style="left:17%;top:44%">
-                    <div class="map-pin-pulse" style="animation-delay:0.3s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-right">Ahmedabad</span>
-                </div>
-                <!-- Bhopal: 23.26°N 77.41°E -->
-                <div class="map-pin" style="left:29%;top:43%">
-                    <div class="map-pin-pulse" style="animation-delay:1.8s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-right">Bhopal</span>
-                </div>
-                <!-- Kolkata: 22.57°N 88.36°E -->
-                <div class="map-pin" style="left:56%;top:45%">
-                    <div class="map-pin-pulse" style="animation-delay:0.8s"></div>
-                    <div class="map-pin-dot map-pin-dot--lg"></div>
-                    <span class="map-pin-label lbl-left">Kolkata</span>
-                </div>
-                <!-- Nagpur: 21.15°N 79.09°E -->
-                <div class="map-pin" style="left:33%;top:49%">
-                    <div class="map-pin-pulse" style="animation-delay:1.2s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-right">Nagpur</span>
-                </div>
-                <!-- Mumbai: 19.08°N 72.88°E -->
-                <div class="map-pin" style="left:18%;top:55%">
-                    <div class="map-pin-pulse" style="animation-delay:0.4s"></div>
-                    <div class="map-pin-dot map-pin-dot--lg"></div>
-                    <span class="map-pin-label lbl-left">Mumbai</span>
-                </div>
-                <!-- Pune: 18.52°N 73.86°E -->
-                <div class="map-pin" style="left:20%;top:57%">
-                    <div class="map-pin-pulse" style="animation-delay:0.7s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-right">Pune</span>
-                </div>
-                <!-- Vizag (Visakhapatnam): 17.69°N 83.30°E -->
-                <div class="map-pin" style="left:43%;top:59%">
-                    <div class="map-pin-pulse" style="animation-delay:2.0s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-left">Vizag</span>
-                </div>
-                <!-- Hyderabad: 17.39°N 78.49°E -->
-                <div class="map-pin" style="left:32%;top:60%">
-                    <div class="map-pin-pulse" style="animation-delay:1.0s"></div>
-                    <div class="map-pin-dot map-pin-dot--lg"></div>
-                    <span class="map-pin-label lbl-left">Hyderabad</span>
-                </div>
-                <!-- Bengaluru: 12.97°N 77.59°E -->
-                <div class="map-pin" style="left:29%;top:73%">
-                    <div class="map-pin-pulse" style="animation-delay:0.6s"></div>
-                    <div class="map-pin-dot map-pin-dot--lg"></div>
-                    <span class="map-pin-label lbl-left">Bengaluru</span>
-                </div>
-                <!-- Chennai: 13.08°N 80.27°E -->
-                <div class="map-pin" style="left:36%;top:72%">
-                    <div class="map-pin-pulse" style="animation-delay:0.2s"></div>
-                    <div class="map-pin-dot map-pin-dot--lg"></div>
-                    <span class="map-pin-label lbl-right">Chennai</span>
-                </div>
-                <!-- Kochi: 9.93°N 76.27°E -->
-                <div class="map-pin" style="left:26%;top:81%">
-                    <div class="map-pin-pulse" style="animation-delay:1.4s"></div>
-                    <div class="map-pin-dot"></div>
-                    <span class="map-pin-label lbl-left">Kochi</span>
-                </div>
+                <!-- Pins injected by renderHeroMapPins() in script.js from HUB_CITIES lat/lng data -->
+                <div id="heroMapPins"></div>
                 <div class="map-counter-pill">100+ Hubs Growing</div>
             </div>
         </div>
@@ -209,7 +155,7 @@
         <div class="lh-section-header">
             <span class="lh-section-tag">Understanding the Movement</span>
             <h2 class="lh-section-title">What Are Local Hubs?</h2>
-            <p class="lh-section-sub">Think of Local Hubs as NetworkFP's regional chapters — where members within a geography come together to grow professionally and personally.</p>
+            <p class="lh-section-sub">Think of Local Hubs as NetworkFP's regional chapters, where NFP members within a geography come together to grow professionally and personally, by learning together and working towards a common goal of Financial Wellbeing for every Family in India.</p>
         </div>
 
         <div class="lh-what-grid">
@@ -221,7 +167,7 @@
             <div class="lh-what-card">
                 <div class="lh-what-icon">02</div>
                 <h3>Build Community</h3>
-                <p>Form genuine connections with fellow financial planners who understand your journey and share your values.</p>
+                <p>Form genuine connections with fellow Personal Finance Professionals who understand your journey and share your values.</p>
             </div>
             <div class="lh-what-card">
                 <div class="lh-what-icon">03</div>
@@ -335,109 +281,64 @@
             <div class="lh-gallery-track" id="galleryTrack">
 
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 5.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Mumbai — Ruchika Mohite</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Mumbai — Ruchika Mohite</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 5.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 1.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Delhi — Pankaj Gera</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Delhi — Pankaj Gera</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 1.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 2.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Kochi — Jagatheesh Pai</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Kochi — Jagatheesh Pai</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 2.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 3.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Pune — Harshavardhan Bhusari</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Pune — Harshavardhan Bhusari</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 3.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 4.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Navi Mumbai — Vinay Kumar Singh</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Navi Mumbai — Vinay Kumar Singh</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 4.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 6.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Mumbai — Neeraj Bahal &amp; Nisha Sanghvi</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Mumbai — Neeraj Bahal &amp; Nisha Sanghvi</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 6.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 7.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Aurangabad — Keran Nanivadekar</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Aurangabad — Keran Nanivadekar</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 7.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 8.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Mumbai — Prasad Chitre</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Mumbai — Prasad Chitre</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 8.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 9.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Gurgaon — Neeraj Chauhan</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Gurgaon — Neeraj Chauhan</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 9.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 10.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Mumbai — Prashant Shah</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Mumbai — Prashant Shah</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 10.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 11.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Kolkata — Rajesh Koradia &amp; Abhishek Mohta</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Kolkata — Rajesh Koradia &amp; Abhishek Mohta</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 11.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 12.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Chandigarh — Sandeep Sahni</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Chandigarh — Sandeep Sahni</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 12.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 13.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Thane — Steven Fernandes</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Thane — Steven Fernandes</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 13.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 14.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Bangalore — Trupti Wani</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Bangalore — Trupti Wani</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 14.png');"></div>
                 </div>
                 <div class="lh-gallery-slide">
-                    <div class="lh-gallery-img" style="background-image: url('Images/community - 15.png');">
-                        <div class="lh-gallery-overlay">
-                            <span>Guwahati — Ram Shah</span>
-                        </div>
-                    </div>
+                    <div class="lh-gallery-slide-label"><span>Guwahati — Ram Shah</span></div>
+                    <div class="lh-gallery-img" style="background-image: url('Images/community - 15.png');"></div>
                 </div>
 
             </div>
@@ -475,32 +376,56 @@
 
 
 <!-- ═══════════════════════════════════════════
+     SECTION 4B — LAST EDITION PHOTOS
+═══════════════════════════════════════════ -->
+<section class="lh-edition-section" id="lastEdition">
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag">Last Edition Highlights</span>
+            <h2 class="lh-section-title">Local Hubs in Action</h2>
+            <p class="lh-section-sub">Real meetups, real connections — a glimpse into our previous Local Hubs gatherings across India.</p>
+        </div>
+        <div class="lh-edition-grid">
+            <img src="Images/community - 1.png" alt="Delhi Hub meetup">
+            <img src="Images/community - 3.png" alt="Pune Hub meetup">
+            <img src="Images/community - 5.png" alt="Mumbai Hub meetup">
+            <img src="Images/community - 7.png" alt="Aurangabad Hub meetup">
+            <img src="Images/community - 9.png" alt="Gurgaon Hub meetup">
+            <img src="Images/community - 11.png" alt="Kolkata Hub meetup">
+            <img src="Images/community - 12.png" alt="Chandigarh Hub meetup">
+            <img src="Images/community - 13.png" alt="Thane Hub meetup">
+            <img src="Images/community - 15.png" alt="Guwahati Hub meetup">
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
      SECTION 5 — WHO ARE LOCAL HUBS BUILT FOR?
 ═══════════════════════════════════════════ -->
 <section class="lh-for-section" id="builtForMembers">
     <div class="container">
         <div class="lh-section-header">
             <span class="lh-section-tag">Eligibility</span>
-            <h2 class="lh-section-title">Built for NetworkFP Members</h2>
-            <p class="lh-section-sub">Local Hubs are exclusively designed for active members of the NetworkFP community.</p>
+            <h2 class="lh-section-title">Who Can Join?</h2>
         </div>
 
         <div class="lh-for-cards">
             <div class="lh-for-card lh-for-card-primary">
                 <div class="lh-for-icon">01</div>
-                <h3>Active NetworkFP Members</h3>
-                <p>ProMembers who are actively engaged with the NetworkFP ecosystem and committed to professional growth.</p>
+                <h3>Active NFP Members</h3>
+                <p>ProMembers actively engaged with the NetworkFP ecosystem.</p>
                 <div class="lh-for-tag">Eligible</div>
             </div>
             <div class="lh-for-card lh-for-card-primary">
                 <div class="lh-for-icon">02</div>
                 <h3>QPFP Certificants</h3>
-                <p>Professionals who hold India's premier Qualified Personal Finance Professional certification, demonstrating commitment to excellence.</p>
+                <p>Professionals holding India's premier Personal Finance Professional certification.</p>
                 <div class="lh-for-tag">Eligible</div>
             </div>
         </div>
 
-        <p class="lh-for-note">Not yet a member? <a href="https://www.networkfp.com" target="_blank" rel="noopener" class="lh-link">Explore NetworkFP Membership</a> to join India's most trusted community of financial planners.</p>
+        <p class="lh-for-note">Not yet a member? <a href="https://www.networkfp.com" target="_blank" rel="noopener" class="lh-link">Explore NetworkFP Membership</a> to join India's most trusted community of Personal Finance Professionals.</p>
     </div>
 </section>
 
@@ -659,7 +584,7 @@
         <div class="lh-join-card">
             <div class="lh-join-content">
                 <h2 class="lh-join-title">Want to Join a Local Hub?</h2>
-                <p class="lh-join-desc">All active NetworkFP Members and QPFP Certificants will soon be able to discover and join their nearest Local Hub — connect, learn, and grow together.</p>
+                <p class="lh-join-desc">All active NetworkFP Members and QPFP Certificants will soon be able to discover and join their nearest Local Hub — connect, learn, and grow together as Personal Finance Professionals.</p>
                 <div class="lh-join-actions">
                     <button class="lh-join-btn-disabled" disabled>
                         Join a Hub
@@ -710,7 +635,7 @@
                 <div class="footer-logo">
                     <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-footer">
                 </div>
-                <p>India's most trusted career-accelerator for Personal Finance Professionals — built on Competency, Credibility, and Community. 13,000+ professionals. 130+ cities. One mission: Financial Wellbeing for Every Family.</p>
+                <p>India's most trusted career-accelerator for Personal Finance Professionals — built on Competency, Credibility, and Community. 22,000+ PFPs. 150+ cities. One mission: Financial Wellbeing for Every Family.</p>
                 <div class="footer-social">
                     <a class="fs-icon" href="https://www.linkedin.com/company/networkfp" target="_blank" rel="noopener" title="LinkedIn">in</a>
                     <a class="fs-icon" href="https://twitter.com/networkfp" target="_blank" rel="noopener" title="Twitter / X">𝕏</a>
@@ -740,7 +665,7 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 NetworkFP. All rights reserved. | Local Hubs — India's Community of Financial Planners</p>
+            <p>&copy; 2026 NetworkFP. All rights reserved. | Local Hubs — India's Community of Personal Finance Professionals</p>
             <div class="footer-bottom-links">
                 <a href="#">Privacy Policy</a>
                 <a href="#">Terms of Use</a>
@@ -763,7 +688,7 @@
                 <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-sidebar">
             </div>
             <h3>Hub Leader Program</h3>
-            <p>Complete the 2-step application to become an official NetworkFP Hub Leader — and join a community of 13,000+ Personal Finance Professionals committed to a Client First India.</p>
+            <p>Complete the 2-step application to become an official NetworkFP Hub Leader — and join a community of 22,000+ Personal Finance Professionals committed to a Client First India.</p>
             <div class="rs-checklist">
                 <div class="rs-check active" id="rsCheck1"><span class="rsc-num">1</span><span>Personal Details</span></div>
                 <div class="rs-line" id="rsLine1"></div>
@@ -966,7 +891,7 @@
                 <div>
                     <span class="section-tag">Find Your Hub</span>
                     <h1 class="ppage-title">Discover NetworkFP Hubs Near You</h1>
-                    <p class="ppage-sub">Connect with QPFP&reg;-certified and ProMember professionals who have opened their doors for you. Find a hub in your city, join the conversation, and never practice in isolation again.</p>
+                    <p class="ppage-sub">Connect with QPFP&reg;-certified and ProMember Personal Finance Professionals who have opened their doors for you. Find a hub in your city, join the conversation, and never practice in isolation again.</p>
                 </div>
             </div>
             <div class="hub-search-bar">
