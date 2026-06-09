@@ -2789,13 +2789,19 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* India Map */
 .lh-hero-map {
     flex-shrink: 0;
-    width: 420px;
+    width: 500px;
 }
 
 .india-map-container {
     position: relative;
     display: block;
     width: 100%;
+}
+#heroMapPins {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
 }
 .india-map-img {
     width: 100%;
@@ -2807,33 +2813,32 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .map-pin {
     position: absolute;
     transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+.map-pin-dot {
+    width: 6px;
+    height: 6px;
+    background: #ff4500;
+    border-radius: 50%;
+    position: relative;
     z-index: 2;
+    box-shadow: 0 0 5px #ff4500, 0 0 10px rgba(255,69,0,0.6);
 }
 .map-pin-pulse {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 16px;
-    height: 16px;
-    margin-left: -8px;
-    margin-top: -8px;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
     border-radius: 50%;
-    border: 1.5px solid var(--brand);
-    animation: mapPulsePin 3s ease-out infinite;
+    border: 1.5px solid #ff4500;
+    animation: mapPulse 2.8s ease-out infinite;
     pointer-events: none;
 }
-@keyframes mapPulsePin {
-    0%   { transform: scale(1); opacity: 0.9; }
-    100% { transform: scale(3.2); opacity: 0; }
-}
-.map-pin-dot {
-    width: 7px;
-    height: 7px;
-    background: var(--brand);
-    border-radius: 50%;
-    position: relative;
-    z-index: 2;
-    box-shadow: 0 0 7px var(--brand), 0 0 14px rgba(255,80,0,0.45);
+@keyframes mapPulse {
+    0%   { transform: scale(1);   opacity: 0.85; }
+    100% { transform: scale(3.0); opacity: 0; }
 }
 .map-pin-dot--lg {
     width: 9px;
@@ -2845,10 +2850,9 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     transform: translateY(-50%);
     font-size: 8.5px;
     font-weight: 700;
-    color: rgba(255,255,255,0.78);
+    color: rgba(255,255,255,0.82);
     white-space: nowrap;
     letter-spacing: 0.3px;
-    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     pointer-events: none;
     text-shadow: 0 1px 4px rgba(0,0,0,0.9);
 }
@@ -3535,57 +3539,110 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-title-light { color: #ffffff; }
 .lh-sub-light { color: rgba(255,255,255,0.6); }
 
-.lh-leader-eligibility { margin-bottom: 56px; }
+.lh-leader-eligibility { margin-bottom: 28px; }
 .lh-elig-heading {
     text-align: center;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.4);
-    margin-bottom: 28px;
+    margin-bottom: 14px;
 }
 .lh-elig-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    gap: 10px;
 }
 .lh-elig-card {
-    background: rgba(255,255,255,0.05);
-    border: 1.5px solid rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 36px 28px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
     text-align: center;
     transition: all 0.25s;
 }
 .lh-elig-card:hover {
     background: rgba(255,80,0,0.08);
     border-color: rgba(255,80,0,0.3);
-    transform: translateY(-4px);
+    transform: translateY(-2px);
 }
 .lh-elig-num {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 2px;
     color: var(--brand);
-    margin-bottom: 12px;
-    display: block;
-}
-.lh-elig-icon {
-    font-size: 36px;
-    margin-bottom: 16px;
+    margin-bottom: 6px;
     display: block;
 }
 .lh-elig-card h4 {
-    font-size: 17px;
+    font-size: 13px;
     font-weight: 700;
     color: #ffffff;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
 }
 .lh-elig-card p {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.5;
+}
+
+/* ── When Is the Local Hub section ── */
+.lh-when-section {
+    padding: 64px 0;
+    background: var(--surface);
+}
+.lh-when-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    background: rgba(255,80,0,0.07);
+    border: 1.5px solid rgba(255,80,0,0.25);
+    border-radius: 24px;
+    padding: 40px 56px;
+    max-width: 560px;
+    margin: 0 auto;
+}
+.lh-when-date-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+}
+.lh-when-day {
+    font-size: 72px;
+    font-weight: 800;
+    color: var(--brand);
+    line-height: 1;
+}
+.lh-when-month {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-top: 4px;
+}
+.lh-when-divider {
+    width: 1.5px;
+    height: 80px;
+    background: rgba(255,80,0,0.3);
+    flex-shrink: 0;
+}
+.lh-when-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.lh-when-time {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+.lh-when-note {
     font-size: 14px;
-    color: rgba(255,255,255,0.55);
-    line-height: 1.65;
+    color: #1a1a1a;
 }
 
 .lh-leader-cta-wrap {
@@ -3794,7 +3851,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     .lh-hero-sub { max-width: 100%; }
     .lh-hero-actions { justify-content: center; }
     .lh-hero-stats { justify-content: center; }
-    .lh-hero-map { width: 100%; max-width: 380px; }
+    .lh-hero-map { width: 100%; max-width: 460px; }
     .lh-what-grid { grid-template-columns: repeat(3, 1fr); }
     .lh-why-layout { grid-template-columns: 1fr; gap: 48px; }
     .lh-why-visual { position: static; }

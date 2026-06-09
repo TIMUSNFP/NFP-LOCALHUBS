@@ -7,11 +7,12 @@
 'use strict';
 
 // ═══════════════════ HERO MAP — CITY DATA & PROJECTION ═══════════════════
-// MapChart_Map.png calibration (mainland India only; A&N Islands shown as inset by MapChart):
-//   lngLeft  68.0°E  → xLeft   7.5%   |   lngRight 97.4°E → xRight 71.5%
+// MapChart_Map.png calibration anchored on the Kolkata star marker (88.36°E → x≈68.8%)
+// and Saurashtra western tip (68.2°E → x≈8.1%); Kanyakumari tip (8.08°N → y≈92.7%):
+//   lngLeft  68.0°E  → xLeft   7.5%   |   lngRight 97.4°E → xRight 96.0%
 //   latTop   37.0°N  → yTop    4.0%   |   latBottom 8.0°N → yBottom 87.0%
-//   scale_x = (71.5−7.5)/(97.4−68.0) = 2.18 %/°   scale_y = (87−4)/(37−8) = 2.86 %/°
-const _M = { lngL:68.0, xL:7.5, lngR:97.4, xR:71.5, latT:37.0, yT:4.0, latB:8.0, yB:87.0 };
+//   scale_x = (96.0−7.5)/(97.4−68.0) = 3.01 %/°   scale_y = (87−4)/(37−8) = 2.86 %/°
+const _M = { lngL:68.0, xL:7.5, lngR:97.4, xR:96.0, latT:37.0, yT:4.0, latB:8.0, yB:87.0 };
 
 function latlngToPercent(lat, lng) {
     const x = _M.xL + (lng - _M.lngL) / (_M.lngR - _M.lngL) * (_M.xR - _M.xL);
@@ -20,21 +21,21 @@ function latlngToPercent(lat, lng) {
 }
 
 const HUB_CITIES = [
-    { name:'Chandigarh',  lat:30.73, lng:76.78, delay:1.6, lg:false, lbl:'right' },
-    { name:'Delhi NCR',   lat:28.61, lng:77.21, delay:0.0, lg:true,  lbl:'right' },
-    { name:'Jaipur',      lat:26.91, lng:75.79, delay:0.5, lg:false, lbl:'left'  },
-    { name:'Lucknow',     lat:26.85, lng:80.95, delay:0.9, lg:false, lbl:'right' },
-    { name:'Ahmedabad',   lat:23.02, lng:72.57, delay:0.3, lg:false, lbl:'right' },
-    { name:'Bhopal',      lat:23.26, lng:77.41, delay:1.8, lg:false, lbl:'right' },
-    { name:'Kolkata',     lat:22.57, lng:88.36, delay:0.8, lg:true,  lbl:'left'  },
-    { name:'Nagpur',      lat:21.15, lng:79.09, delay:1.2, lg:false, lbl:'right' },
-    { name:'Mumbai',      lat:19.08, lng:72.88, delay:0.4, lg:true,  lbl:'left'  },
-    { name:'Pune',        lat:18.52, lng:73.86, delay:0.7, lg:false, lbl:'right' },
-    { name:'Hyderabad',   lat:17.39, lng:78.49, delay:1.0, lg:true,  lbl:'left'  },
-    { name:'Vizag',       lat:17.69, lng:83.30, delay:2.0, lg:false, lbl:'left'  },
-    { name:'Bengaluru',   lat:12.97, lng:77.59, delay:0.6, lg:true,  lbl:'left'  },
-    { name:'Chennai',     lat:13.08, lng:80.27, delay:0.2, lg:true,  lbl:'right' },
-    { name:'Kochi',       lat: 9.93, lng:76.27, delay:1.4, lg:false, lbl:'left'  },
+    { name:'Chandigarh', lat:30.73, lng:76.78, delay:1.6, lg:false, lbl:'right' },
+    { name:'Delhi NCR',  lat:28.61, lng:77.21, delay:0.0, lg:true,  lbl:'right' },
+    { name:'Jaipur',     lat:26.91, lng:75.79, delay:0.5, lg:false, lbl:'left'  },
+    { name:'Lucknow',    lat:26.85, lng:80.95, delay:0.9, lg:false, lbl:'right' },
+    { name:'Ahmedabad',  lat:23.02, lng:72.57, delay:0.3, lg:false, lbl:'left'  },
+    { name:'Bhopal',     lat:23.26, lng:77.41, delay:1.8, lg:false, lbl:'right' },
+    { name:'Kolkata',    lat:22.57, lng:88.36, delay:0.8, lg:true,  lbl:'left'  },
+    { name:'Nagpur',     lat:21.15, lng:79.09, delay:1.2, lg:false, lbl:'right' },
+    { name:'Mumbai',     lat:19.08, lng:72.88, delay:0.4, lg:true,  lbl:'left'  },
+    { name:'Pune',       lat:18.52, lng:73.86, delay:0.7, lg:false, lbl:'right' },
+    { name:'Hyderabad',  lat:17.39, lng:78.49, delay:1.0, lg:true,  lbl:'left'  },
+    { name:'Vizag',      lat:17.69, lng:83.30, delay:2.0, lg:false, lbl:'left'  },
+    { name:'Bengaluru',  lat:12.97, lng:77.59, delay:0.6, lg:true,  lbl:'left'  },
+    { name:'Chennai',    lat:13.08, lng:80.27, delay:0.2, lg:true,  lbl:'right' },
+    { name:'Kochi',      lat: 9.93, lng:76.27, delay:1.4, lg:false, lbl:'left'  },
 ];
 
 function renderHeroMapPins() {
@@ -51,74 +52,77 @@ function renderHeroMapPins() {
     }).join('');
 }
 
-// ═══════════════════ SVG MAP — GEOJSON RENDERING ═══════════════════
-// viewBox  "0 0 590 650"  covers 68–97.5°E × 8–37°N (India's full extent)
-// Equirectangular projection: x = (lng-68)/29.5×590, y = (37-lat)/29×650
-// Pin percentages use the same formula ÷ SVG dimensions, so they align exactly.
-const SVG_MAP = { W:590, H:650, lngMin:68.0, lngMax:97.5, latMin:8.0, latMax:37.0 };
+// ═══════════════════ LEAFLET MAP ═══════════════════
+function initLeafletMap() {
+    if (typeof L === 'undefined') { renderHeroMapPins(); return; }
+    const mapEl = document.getElementById('indiaLeafletMap');
+    if (!mapEl) return;
 
-function svgPt(lng, lat) {
-    const x = (lng - SVG_MAP.lngMin) / (SVG_MAP.lngMax - SVG_MAP.lngMin) * SVG_MAP.W;
-    const y = (SVG_MAP.latMax - lat) / (SVG_MAP.latMax - SVG_MAP.latMin) * SVG_MAP.H;
-    return x.toFixed(1) + ',' + y.toFixed(1);
+    const map = L.map('indiaLeafletMap', {
+        zoomControl: false,
+        attributionControl: false,
+        scrollWheelZoom: false,
+        dragging: false,
+        touchZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        fadeAnimation: false,
+        zoomAnimation: false
+    });
+
+    // fitBounds twice: once now, once after layout settles (aspect-ratio CSS needs a frame to apply)
+    const INDIA_BOUNDS = [[6.5, 67.0], [37.5, 97.5]];
+    map.fitBounds(INDIA_BOUNDS, { animate: false, padding: [8, 8] });
+    requestAnimationFrame(() => {
+        map.invalidateSize();
+        map.fitBounds(INDIA_BOUNDS, { animate: false, padding: [8, 8] });
+    });
+
+    // No tile layer — ocean is transparent (hero gradient shows through).
+    // GeoJSON draws India states in white, exactly like MapChart_Map.png.
+    const GEO_URLS = [
+        'https://cdn.jsdelivr.net/gh/geohacker/india@master/state/india_state.geojson',
+        'https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson'
+    ];
+    (async () => {
+        for (const url of GEO_URLS) {
+            try {
+                const r = await fetch(url, { cache: 'force-cache' });
+                if (!r.ok) continue;
+                const geo = await r.json();
+                L.geoJSON(geo, {
+                    style: {
+                        fillColor:   '#1e1b2e',
+                        fillOpacity: 0.94,
+                        color:       'rgba(255,255,255,0.38)',
+                        weight:      0.85,
+                        opacity:     1
+                    }
+                }).addTo(map);
+                break;
+            } catch (_) { /* try next url */ }
+        }
+    })();
+
+    _addLeafletPins(map);
 }
 
-function ringToD(ring) {
-    return 'M' + ring.map(([lng, lat]) => svgPt(lng, lat)).join('L') + 'Z';
-}
-
-function geomToD(geom) {
-    if (geom.type === 'Polygon')
-        return geom.coordinates.map(ringToD).join(' ');
-    if (geom.type === 'MultiPolygon')
-        return geom.coordinates.map(poly => poly.map(ringToD).join(' ')).join(' ');
-    return '';
-}
-
-async function initSVGMap() {
-    const svgEl    = document.getElementById('indiaMapSvg');
-    const grp      = document.getElementById('indiaStatesGroup');
-    const fallback = document.getElementById('indiaMapFallback');
-    if (!svgEl || !grp) { renderHeroMapPins(); return; }
-
-    try {
-        const res = await fetch(
-            'https://cdn.jsdelivr.net/gh/geohacker/india@master/state/india_state.geojson',
-            { cache: 'force-cache' }
-        );
-        if (!res.ok) throw new Error(res.status);
-        const geo = await res.json();
-
-        const NS   = 'http://www.w3.org/2000/svg';
-        const frag = document.createDocumentFragment();
-        geo.features.forEach(f => {
-            if (!f.geometry) return;
-            const d = geomToD(f.geometry);
-            if (!d) return;
-            const path = document.createElementNS(NS, 'path');
-            path.setAttribute('d', d);
-            path.classList.add('india-state');
-            const name = (f.properties?.NAME_1 || f.properties?.state_name || f.properties?.name || '').trim();
-            if (name) path.dataset.state = name;
-            frag.appendChild(path);
+function _addLeafletPins(map) {
+    HUB_CITIES.forEach(c => {
+        const dotSize = c.lg ? 9 : 7;
+        const icon = L.divIcon({
+            html: `<div class="map-pin-pulse" style="animation-delay:${c.delay}s"></div>` +
+                  `<div class="${c.lg ? 'map-pin-dot map-pin-dot--lg' : 'map-pin-dot'}"></div>` +
+                  `<span class="map-pin-label lbl-${c.lbl}">${c.name}</span>`,
+            className: 'lf-pin-wrapper',
+            iconSize:   [dotSize, dotSize],
+            iconAnchor: [dotSize / 2, dotSize / 2]
         });
-        grp.appendChild(frag);
-
-        // Align _M so pin x%/y% directly match SVG geographic coordinates
-        _M.lngL = SVG_MAP.lngMin;  _M.xL = 0.0;
-        _M.lngR = SVG_MAP.lngMax;  _M.xR = 100.0;
-        _M.latT = SVG_MAP.latMax;  _M.yT = 0.0;
-        _M.latB = SVG_MAP.latMin;  _M.yB = 100.0;
-
-    } catch (err) {
-        console.warn('[IndiaMap] GeoJSON unavailable — PNG fallback active:', err.message);
-        svgEl.style.display = 'none';
-        if (fallback) fallback.style.display = 'block';
-        // _M stays as MapChart calibration — correct for the PNG image
-    }
-
-    renderHeroMapPins();
+        L.marker([c.lat, c.lng], { icon, interactive: false }).addTo(map);
+    });
 }
+
 
 // ═══════════════════ CONSTANTS ═══════════════════
 const ADMIN_EMAIL       = 'admin@networkfp.com';

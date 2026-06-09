@@ -10,7 +10,6 @@
     <link rel="icon" type="image/png" href="Images/NetworkFP Logo.png">
     <title>NetworkFP Local Hubs | 100+ Hubs. 1 Mission.</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 
@@ -132,8 +131,7 @@
 
         <div class="lh-hero-map">
             <div class="india-map-container">
-                <img src="Images/MapChart_Map.png" class="india-map-img" alt="India Map showing NetworkFP Hub locations"/>
-                <!-- Pins injected by renderHeroMapPins() in script.js from HUB_CITIES lat/lng data -->
+                <img class="india-map-img" src="Images/MapChart_Map.png" alt="India Map">
                 <div id="heroMapPins"></div>
                 <div class="map-counter-pill">100+ Hubs Growing</div>
             </div>
@@ -183,6 +181,30 @@
                 <div class="lh-what-icon">05</div>
                 <h3>Develop Leaders</h3>
                 <p>Step up, share your expertise, and shape the financial planning profession in your city and beyond.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2B — WHEN IS THE LOCAL HUB?
+═══════════════════════════════════════════ -->
+<section class="lh-when-section" id="whenIsHub">
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag">Save the Date</span>
+            <h2 class="lh-section-title">When Is the Local Hub?</h2>
+        </div>
+        <div class="lh-when-card">
+            <div class="lh-when-date-block">
+                <span class="lh-when-day">24</span>
+                <span class="lh-when-month">July</span>
+            </div>
+            <div class="lh-when-divider"></div>
+            <div class="lh-when-details">
+                <p class="lh-when-time">&#128336; 10:00 AM &ndash; 2:00 PM</p>
+                <p class="lh-when-note">NetworkFP Local Hub &mdash; Second Edition</p>
             </div>
         </div>
     </div>
@@ -732,9 +754,8 @@
                             <select id="membership" class="form-input">
                                 <option value="">-- Select Membership Type --</option>
                                 <option value="QPFP Certificant">QPFP Certificant</option>
-                                <option value="CFP Professional">CFP Professional</option>
-                                <option value="ProMember">ProMember</option>
-                                <option value="Both CFP &amp; QPFP">Both CFP &amp; QPFP</option>
+                                <option value="NFP Member">NFP Member</option>
+                                <option value="Both NFP ProMember &amp; QPFP Certificant">Both NFP ProMember &amp; QPFP Certificant</option>
                             </select>
                         </div>
                         <span class="err-msg" id="membershipErr"></span>
@@ -837,8 +858,8 @@
                         <p class="form-hint">Let us know your availability for hosting future NetworkFP LocalHub sessions.</p>
                         <div class="radio-group">
                             <label class="radio-label">
-                                <input type="radio" name="hostingFrequency" value="One Time Only" id="freqOnce" checked>
-                                <span class="radio-custom"></span>One Time Only
+                                <input type="radio" name="hostingFrequency" value="Only host on 24 July" id="freqOnce" checked>
+                                <span class="radio-custom"></span>Only host on 24 July
                             </label>
                             <label class="radio-label">
                                 <input type="radio" name="hostingFrequency" value="Multiple Times" id="freqMultiple">
@@ -1260,7 +1281,6 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
