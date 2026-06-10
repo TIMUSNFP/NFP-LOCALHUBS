@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   NetworkFP Hub Leader Portal — Complete JavaScript
+   NFP Circles — Complete JavaScript
    Features: Multi-step form, localStorage, Admin CRUD,
              Search/Filter, CSV Export, Toasts, Modals
 ══════════════════════════════════════════════════════ */
@@ -808,7 +808,7 @@ function confirmApprove(id) {
     pendingAction = 'approve';
     openConfirmModal(
         'Approve Application',
-        `Approve the application from <strong>${escHtml(reg.fullName)}</strong> (${escHtml(reg.city)})? This will grant them Hub Leader status.`,
+        `Approve the application from <strong>${escHtml(reg.fullName)}</strong> (${escHtml(reg.city)})? This will grant them Circle Host status.`,
         '✅',
         executeApprove,
         'Approve'
@@ -899,7 +899,7 @@ function viewDetails(id) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Hub / Venue Details</h4>
+            <h4>Circle / Venue Details</h4>
             <div class="detail-grid">
                 <div class="detail-item">
                     <label>City</label>
@@ -930,7 +930,7 @@ function viewDetails(id) {
                     <span>${reg.hostedBefore}</span>
                 </div>
                 <div class="detail-item">
-                    <label>Willing to Host LocalHub</label>
+                    <label>Willing to Host NFP Circle</label>
                     <span>${escHtml(reg.hostingFrequency || '—')}</span>
                 </div>
             </div>
@@ -1007,7 +1007,7 @@ function exportCSV() {
     const link    = document.createElement('a');
     const ts      = new Date().toISOString().slice(0, 10);
     link.href     = url;
-    link.download = `NFP_HubLeader_Applications_${ts}.csv`;
+    link.download = `NFP_CircleHost_Applications_${ts}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1158,7 +1158,7 @@ function setRegistrationMode(mode) {
     showToast(
         mode === 'participant'
             ? 'Participant registration mode is now active on the public site.'
-            : 'Hub Leader registration mode is now active.',
+            : 'Circle Host registration mode is now active.',
         'success'
     );
 }
@@ -1176,21 +1176,21 @@ function updateModeUI(mode) {
     if (mode === 'participant') {
         if (statusDot)  statusDot.style.background  = '#60A5FA';
         if (statusText) statusText.textContent = 'Participant mode active';
-        if (desc)       desc.textContent = 'Participants can find & join hubs';
+        if (desc)       desc.textContent = 'Participants can find & join Circles';
     } else {
         if (statusDot)  statusDot.style.background  = var_primary();
-        if (statusText) statusText.textContent = 'Hub Leader mode active';
-        if (desc)       desc.textContent = 'Hub leaders can register';
+        if (statusText) statusText.textContent = 'Circle Host mode active';
+        if (desc)       desc.textContent = 'Circle Hosts can register';
     }
 
     // Update navbar CTA button
     const navBtn = document.getElementById('navCtaBtn');
     if (navBtn) {
         if (mode === 'participant') {
-            navBtn.textContent = 'Find a Hub';
+            navBtn.textContent = 'Find a Circle';
             navBtn.onclick = () => showSection('participantReg');
         } else {
-            navBtn.textContent = 'Become a Hub Leader';
+            navBtn.textContent = 'Host a Circle';
             navBtn.onclick = () => scrollToSection('becomeLeader');
         }
     }
@@ -1202,12 +1202,12 @@ function updateModeUI(mode) {
     // Update nav Register link label
     const navRegLink = document.getElementById('navRegisterLink');
     if (navRegLink) {
-        navRegLink.textContent = mode === 'participant' ? 'Find a Hub' : 'Register';
+        navRegLink.textContent = mode === 'participant' ? 'Find a Circle' : 'Register';
     }
     // Update footer register link
     const footerRegLink = document.getElementById('footerRegisterLink');
     if (footerRegLink) {
-        footerRegLink.textContent = mode === 'participant' ? 'Find a Hub Near You' : 'Register as Hub Leader';
+        footerRegLink.textContent = mode === 'participant' ? 'Find a Circle Near You' : 'Register as Circle Host';
     }
 }
 
@@ -1262,7 +1262,7 @@ function applyModeToBanner(mode) {
     if (mode === 'participant') {
         banner.innerHTML = `
             &#128100; <strong>Participant Mode</strong> is active &mdash; the site now shows member-focused content.
-            <button onclick="showSection('participantReg')">View Hub Finder</button>
+            <button onclick="showSection('participantReg')">View Circle Finder</button>
         `;
         banner.classList.add('visible');
     } else {
@@ -1452,7 +1452,7 @@ function refreshMapMarkers() {
     filteredHubs    = [...allApprovedHubs];
 
     const badge = document.getElementById('mapCountBadge');
-    if (badge) badge.textContent = `${allApprovedHubs.length} hub${allApprovedHubs.length !== 1 ? 's' : ''}`;
+    if (badge) badge.textContent = `${allApprovedHubs.length} circle${allApprovedHubs.length !== 1 ? 's' : ''}`;
 
     const placed = new Map();
 
@@ -1485,7 +1485,7 @@ function buildHubPopupHTML(hub) {
     const isPending = hub.status === 'Pending';
     return `
         <div class="hub-popup">
-            <div class="hp-header">&#127968; ${escHtml(hub.fullName)}'s Hub
+            <div class="hp-header">&#127968; ${escHtml(hub.fullName)}'s Circle
                 ${isPending ? '<span class="hp-pending-badge">Opening Soon</span>' : ''}
             </div>
             <div class="hp-body">
@@ -1495,8 +1495,8 @@ function buildHubPopupHTML(hub) {
                 <div class="hp-row"><span class="hp-icon">🎓</span><span>${escHtml(hub.membership)}</span></div>
             </div>
             ${isPending
-                ? '<div class="hp-pending-note">This hub is awaiting NFP approval. Registration will open shortly.</div>'
-                : `<button class="hp-btn" onclick="selectHubById('${escHtml(hub.id)}')">Register at This Hub &rarr;</button>`
+                ? '<div class="hp-pending-note">This Circle is awaiting NFP approval. Registration will open shortly.</div>'
+                : `<button class="hp-btn" onclick="selectHubById('${escHtml(hub.id)}')">Join This Circle &rarr;</button>`
             }
         </div>
     `;
@@ -1521,7 +1521,7 @@ function filterHubs() {
         else m.setOpacity(match ? 1 : 0.25);
     });
     const badge = document.getElementById('mapCountBadge');
-    if (badge) badge.textContent = `${filteredHubs.length} hub${filteredHubs.length !== 1 ? 's' : ''}`;
+    if (badge) badge.textContent = `${filteredHubs.length} circle${filteredHubs.length !== 1 ? 's' : ''}`;
     renderHubCards(filteredHubs);
 
     // If exactly one city matches, zoom there
@@ -1552,7 +1552,7 @@ function renderHubCards(hubs) {
     if (!el) return;
     if (countPill) countPill.textContent = hubs.length;
     if (!hubs.length) {
-        el.innerHTML = `<div class="no-hubs-msg"><div style="font-size:36px">🗺️</div><p>No approved hubs found${document.getElementById('hubCitySearch')?.value ? ' for this search' : ' yet'}. Check back soon!</p></div>`;
+        el.innerHTML = `<div class="no-hubs-msg"><div style="font-size:36px">🗺️</div><p>No approved Circles found${document.getElementById('hubCitySearch')?.value ? ' for this search' : ' yet'}. Check back soon!</p></div>`;
         return;
     }
     el.innerHTML = hubs.map(hub => {
@@ -1564,7 +1564,7 @@ function renderHubCards(hubs) {
              onclick="${isPending ? '' : `highlightHubOnMap('${escHtml(hub.id)}')`}">
             <div class="hci-top">
                 <div>
-                    <div class="hci-name">&#127968; ${escHtml(hub.fullName)}'s Hub</div>
+                    <div class="hci-name">&#127968; ${escHtml(hub.fullName)}'s Circle</div>
                     <div class="hci-city">📍 ${escHtml(hub.address ? hub.address + ', ' + hub.city : hub.area + ', ' + hub.city)}</div>
                 </div>
                 <span class="hci-badge${isPending ? ' hci-badge-pending' : ''}">
@@ -1579,7 +1579,7 @@ function renderHubCards(hubs) {
             ${isPending
                 ? '<div class="hci-pending-note">Awaiting NFP approval — check back soon</div>'
                 : `<button class="hci-btn" onclick="event.stopPropagation(); selectHubById('${escHtml(hub.id)}')">
-                    Register at This Hub &rarr;
+                    Join This Circle &rarr;
                    </button>`
             }
         </div>`;
@@ -1618,14 +1618,14 @@ function selectHubById(hubId) {
     if (hubCard) {
         hubCard.innerHTML = `
             <div class="shc-label">You're registering at</div>
-            <div class="shc-name">&#127968; ${escHtml(hub.fullName)}'s Hub</div>
+            <div class="shc-name">&#127968; ${escHtml(hub.fullName)}'s Circle</div>
             <div class="shc-detail">📍 ${escHtml(hub.area)}, ${escHtml(hub.city)} &mdash; ${escHtml(hub.venueType)}</div>
             <div class="shc-tags">
                 <span class="shc-tag">👥 ${escHtml(hub.capacity)}</span>
                 <span class="shc-tag">🎓 ${escHtml(hub.membership)}</span>
                 ${hub.hostedBefore === 'Yes' ? '<span class="shc-tag">✅ Experienced Host</span>' : ''}
             </div>
-            <button class="shc-change" onclick="deselectHub()">↩ Change Hub</button>
+            <button class="shc-change" onclick="deselectHub()">↩ Change Circle</button>
         `;
     }
 
@@ -1652,7 +1652,7 @@ function resetMapView() {
     hubMarkers.forEach(m => m.setOpacity(1));
     renderHubCards(filteredHubs);
     const badge = document.getElementById('mapCountBadge');
-    if (badge) badge.textContent = `${allApprovedHubs.length} hub${allApprovedHubs.length !== 1 ? 's' : ''}`;
+    if (badge) badge.textContent = `${allApprovedHubs.length} circle${allApprovedHubs.length !== 1 ? 's' : ''}`;
 }
 
 function findNearMe() {
@@ -1676,10 +1676,10 @@ function findNearMe() {
             });
 
             if (closest) {
-                showToast(`Nearest hub found in ${closest.city}!`, 'success');
+                showToast(`Nearest Circle found in ${closest.city}!`, 'success');
                 setTimeout(() => selectHubById(closest.id), 800);
             } else {
-                showToast('No hubs near you yet. Check back soon!', 'info');
+                showToast('No Circles near you yet. Check back soon!', 'info');
             }
         },
         () => showToast('Could not get your location. Please allow location access.', 'error')
@@ -1745,7 +1745,7 @@ function validateParticipantForm() {
         valid = false;
     }
     if (!selectedHubId) {
-        showToast('Please select a hub from the map or list first.', 'warning');
+        showToast('Please select a Circle from the map or list first.', 'warning');
         valid = false;
     }
     return valid;
@@ -1755,7 +1755,7 @@ function submitParticipant() {
     if (!validateParticipantForm()) return;
 
     const hub  = allApprovedHubs.find(h => h.id === selectedHubId);
-    if (!hub) { showToast('Selected hub not found. Please choose again.', 'error'); return; }
+    if (!hub) { showToast('Selected Circle not found. Please choose again.', 'error'); return; }
 
     const note = document.getElementById('pNote')?.value.trim() || '';
     const participant = {
@@ -1788,15 +1788,15 @@ function showParticipantSuccess(p, hub) {
         el.innerHTML = `
             <div class="sd-row"><span class="sd-label">Participant ID</span><span class="sd-value sd-reg-id">${p.id}</span></div>
             <div class="sd-row"><span class="sd-label">Your Name</span><span class="sd-value">${escHtml(p.fullName)}</span></div>
-            <div class="sd-row"><span class="sd-label">Hub Leader</span><span class="sd-value">${escHtml(hub.fullName)}</span></div>
-            <div class="sd-row"><span class="sd-label">Hub Location</span><span class="sd-value">${escHtml(hub.area)}, ${escHtml(hub.city)}</span></div>
+            <div class="sd-row"><span class="sd-label">Circle Host</span><span class="sd-value">${escHtml(hub.fullName)}</span></div>
+            <div class="sd-row"><span class="sd-label">Circle Location</span><span class="sd-value">${escHtml(hub.area)}, ${escHtml(hub.city)}</span></div>
             <div class="sd-row"><span class="sd-label">Venue Type</span><span class="sd-value">${escHtml(hub.venueType)}</span></div>
             <div class="sd-row"><span class="sd-label">Registered On</span><span class="sd-value">${formatDate(p.registeredAt)}</span></div>
             <div class="sd-row"><span class="sd-label">Status</span><span class="sd-value"><span class="badge badge-approved">Confirmed</span></span></div>
         `;
     }
     showSection('participantSuccess');
-    showToast('You are successfully registered at this hub!', 'success');
+    showToast('You are successfully registered at this Circle!', 'success');
 }
 
 function resetParticipantForm() {
@@ -1882,7 +1882,7 @@ function renderParticipantTable(parts) {
             <td class="td-email">${escHtml(p.email)}</td>
             <td>${escHtml(p.mobile)}</td>
             <td>${escHtml(p.membership)}</td>
-            <td class="td-name">${escHtml(p.hubLeader)}'s Hub</td>
+            <td class="td-name">${escHtml(p.hubLeader)}'s Circle</td>
             <td>${escHtml(p.hubCity)}</td>
             <td>${escHtml(p.hubArea)}</td>
             <td style="max-width:160px;white-space:normal;font-size:12px;color:var(--muted)">${escHtml(p.note || '—')}</td>
@@ -1958,9 +1958,9 @@ function viewParticipantDetails(id) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Hub Details</h4>
+            <h4>Circle Details</h4>
             <div class="detail-grid">
-                <div class="detail-item"><label>Hub Leader</label><span>${escHtml(p.hubLeader)}</span></div>
+                <div class="detail-item"><label>Circle Host</label><span>${escHtml(p.hubLeader)}</span></div>
                 <div class="detail-item"><label>City</label><span>${escHtml(p.hubCity)}</span></div>
                 <div class="detail-item"><label>Area</label><span>${escHtml(p.hubArea)}</span></div>
                 <div class="detail-item"><label>Venue Type</label><span>${escHtml(p.hubVenue || '—')}</span></div>
@@ -1974,7 +1974,7 @@ function viewParticipantDetails(id) {
 function exportParticipantsCSV() {
     const parts = getParticipants();
     if (!parts.length) { showToast('No participant data to export.', 'warning'); return; }
-    const headers = ['Participant ID','Full Name','Email','Mobile','Membership','Hub Leader','Hub City','Hub Area','Hub Venue','Note','Registration Date','Status'];
+    const headers = ['Participant ID','Full Name','Email','Mobile','Membership','Circle Host','Circle City','Circle Area','Circle Venue','Note','Registration Date','Status'];
     const rows = parts.map(p => [
         p.id, p.fullName, p.email, p.mobile, p.membership,
         p.hubLeader, p.hubCity, p.hubArea, p.hubVenue || '',
