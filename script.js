@@ -21,21 +21,21 @@ function latlngToPercent(lat, lng) {
 }
 
 const HUB_CITIES = [
-    { name:'Chandigarh', lat:30.73, lng:76.78, delay:1.6, lg:false, lbl:'right' },
-    { name:'Delhi NCR',  lat:28.61, lng:77.21, delay:0.0, lg:true,  lbl:'right' },
-    { name:'Jaipur',     lat:26.91, lng:75.79, delay:0.5, lg:false, lbl:'left'  },
-    { name:'Lucknow',    lat:26.40, lng:81.10, delay:0.9, lg:false, lbl:'right' },
-    { name:'Ahmedabad',  lat:23.02, lng:72.57, delay:0.3, lg:false, lbl:'left'  },
-    { name:'Bhopal',     lat:23.26, lng:77.41, delay:1.8, lg:false, lbl:'right' },
-    { name:'Kolkata',    lat:22.57, lng:88.36, delay:0.8, lg:true,  lbl:'left'  },
-    { name:'Nagpur',     lat:21.15, lng:79.09, delay:1.2, lg:false, lbl:'right' },
-    { name:'Mumbai',     lat:18.50, lng:72.82, delay:0.4, lg:true,  lbl:'left'  },
-    { name:'Pune',       lat:18.52, lng:73.86, delay:0.7, lg:false, lbl:'right' },
-    { name:'Hyderabad',  lat:17.39, lng:78.49, delay:1.0, lg:true,  lbl:'left'  },
-    { name:'Vizag',      lat:17.69, lng:83.30, delay:2.0, lg:false, lbl:'left'  },
-    { name:'Bengaluru',  lat:12.97, lng:77.59, delay:0.6, lg:true,  lbl:'left'  },
-    { name:'Chennai',    lat:13.08, lng:80.27, delay:0.2, lg:true,  lbl:'right' },
-    { name:'Kochi',      lat: 9.93, lng:76.27, delay:1.4, lg:false, lbl:'left'  },
+    { name:'Chandigarh' , lat:28.35, lng:77.26, delay:1.6, lg:false, lbl:'right'  },
+    { name:'Delhi NCR'  , lat:26.42, lng:77.08, delay:0.0, lg:true , lbl:'right'  },
+    { name:'Jaipur'     , lat:24.11, lng:75.94, delay:0.5, lg:false, lbl:'left'  },
+    { name:'Lucknow'    , lat:24.53, lng:80.74, delay:0.9, lg:false, lbl:'right'  },
+    { name:'Ahmedabad'  , lat:20.50, lng:71.50, delay:0.3, lg:false, lbl:'left'  },
+    { name:'Bhopal'     , lat:20.50, lng:76.66, delay:1.8, lg:false, lbl:'right'  },
+    { name:'Kolkata'    , lat:20.50, lng:88.72, delay:0.8, lg:true , lbl:'left'  },
+    { name:'Nagpur'     , lat:18.25, lng:78.46, delay:1.2, lg:false, lbl:'right'  },
+    { name:'Mumbai'     , lat:15.99, lng:71.80, delay:0.4, lg:true , lbl:'left'  },
+    { name:'Pune'       , lat:15.84, lng:73.06, delay:0.7, lg:false, lbl:'right'  },
+    { name:'Hyderabad'  , lat:14.89, lng:78.64, delay:1.0, lg:true , lbl:'left'  },
+    { name:'Vizag'      , lat:14.89, lng:83.50, delay:2.0, lg:false, lbl:'left'  },
+    { name:'Bengaluru'  , lat: 9.97, lng:77.44, delay:0.6, lg:true , lbl:'left'  },
+    { name:'Chennai'    , lat:10.23, lng:80.32, delay:0.2, lg:true , lbl:'right'  },
+    { name:'Kochi'      , lat: 6.83, lng:75.52, delay:1.4, lg:false, lbl:'left'  }
 ];
 
 function renderHeroMapPins() {
