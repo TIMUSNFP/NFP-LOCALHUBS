@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="NFP Circles — Bringing Personal Finance Professionals together to learn, collaborate, and grow across India. Join a thriving community of 22,000+ PFPs.">
-    <meta property="og:title" content="NFP Circles | 100+ Circles. 1 Mission. Financial Wellbeing for Every Family.">
-    <meta property="og:description" content="NFP Circles bring Personal Finance Professionals together to learn, collaborate, grow, and create stronger communities across India.">
+    <meta name="description" content="NFP Circles — Find and join a local NFP Circle near you. Connect with QPFP-certified Personal Finance Professionals across India.">
+    <meta property="og:title" content="NFP Circles | Find a Circle. Grow Together.">
+    <meta property="og:description" content="Connect with QPFP-certified Personal Finance Professionals hosting local meetups in your city. Join an NFP Circle and never practice in isolation again.">
     <meta property="og:site_name" content="NetworkFP">
     <link rel="icon" type="image/png" href="Images/NetworkFP Logo.png">
-    <title>NFP Circles | 100+ Circles. 1 Mission.</title>
+    <title>NFP Circles | Find a Circle Near You</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
@@ -24,13 +24,9 @@
             <a class="nav-link" onclick="showSection('landing'); closeMenu()">Home</a>
             <a class="nav-link" onclick="scrollToSection('whatAreHubs'); closeMenu()">About Circles</a>
             <a class="nav-link" onclick="scrollToSection('powerCommunity'); closeMenu()">Community</a>
-            <a class="nav-link" id="navBecomeLeaderLink" onclick="scrollToSection('becomeLeader'); closeMenu()">Become a Host</a>
         </div>
         <div class="nav-cta" id="navCta">
-            <button class="btn-join-nav" disabled title="Launching after 100 Circles are established">
-                Join a Circle <span class="nav-soon-tag">Soon</span>
-            </button>
-            <button class="btn-primary" id="navCtaBtn" onclick="scrollToSection('becomeLeader')">Host a Circle</button>
+            <button class="btn-primary" id="navCtaBtn" onclick="showSection('participantReg')">Find a Circle</button>
         </div>
         <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Toggle menu">
             <span></span><span></span><span></span>
@@ -52,51 +48,9 @@
     </div>
 
     <div class="lh-hero-inner container">
-        <!-- Hub Leader mode hero content -->
-        <div class="lh-hero-content" id="hubLeaderContent">
+        <!-- Participant hero content -->
+        <div class="lh-hero-content" id="participantContent">
             <div class="lh-hero-eyebrow">
-                <span class="lh-eyebrow-dot"></span>
-                India's Community of Personal Finance Professionals
-            </div>
-            <h1 class="lh-hero-title">
-                100+ Circles.<br>
-                <span class="lh-hero-accent">1 Mission.</span>
-            </h1>
-            <p class="lh-hero-mission">Financial Wellbeing for Every Family.</p>
-            <p class="lh-hero-sub">
-                NFP Circles bring Personal Finance Professionals together to learn, collaborate, grow, and create stronger communities across India.
-            </p>
-            <div class="lh-hero-actions">
-                <button class="btn-primary btn-lg lh-cta-primary" onclick="scrollToSection('becomeLeader')">
-                    Host a Circle &rarr;
-                </button>
-                <button class="lh-cta-disabled" disabled>
-                    Join a Circle
-                    <span class="lh-coming-badge">Launching after 100 Circles</span>
-                </button>
-            </div>
-            <div class="lh-hero-stats">
-                <div class="lh-stat">
-                    <span class="lh-stat-num">22,000+</span>
-                    <span class="lh-stat-lbl">PFPs</span>
-                </div>
-                <div class="lh-stat-divider"></div>
-                <div class="lh-stat">
-                    <span class="lh-stat-num">1,800+</span>
-                    <span class="lh-stat-lbl">NFP Members</span>
-                </div>
-                <div class="lh-stat-divider"></div>
-                <div class="lh-stat">
-                    <span class="lh-stat-num">150+</span>
-                    <span class="lh-stat-lbl">Cities Across India</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Participant mode hero content (shown when participant mode is active) -->
-        <div class="lh-hero-content" id="participantContent" style="display:none">
-            <div class="lh-hero-eyebrow">
-                <span class="lh-eyebrow-dot"></span>
                 Find Your Financial Community
             </div>
             <h1 class="lh-hero-title">
@@ -189,78 +143,6 @@
 
 
 <!-- ═══════════════════════════════════════════
-     SECTION 2B — HOW IT WORKS
-═══════════════════════════════════════════ -->
-<section class="lh-journey-section" id="howItWorks">
-    <div class="container">
-        <div class="lh-section-header">
-            <span class="lh-section-tag">Simple Process</span>
-            <h2 class="lh-section-title">How to Get Started</h2>
-            <p class="lh-section-sub">Hosting an NFP Circle takes just four steps — from application to your first session in the community.</p>
-        </div>
-        <div class="lh-journey-timeline">
-            <div class="lh-jt-line"></div>
-            <div class="lh-journey-steps">
-                <div class="lh-journey-step">
-                    <div class="lh-js-circle lh-jc-amber">📝</div>
-                    <span class="lh-js-step-label">STEP 01</span>
-                    <h3>Apply to Host</h3>
-                    <p>Submit a quick 2-minute application. No fee, no friction.</p>
-                </div>
-                <div class="lh-journey-step">
-                    <div class="lh-js-circle lh-jc-orange">✅</div>
-                    <span class="lh-js-step-label">STEP 02</span>
-                    <h3>Get Approved</h3>
-                    <p>NFP reviews your application within 2–3 business days.</p>
-                </div>
-                <div class="lh-journey-step">
-                    <div class="lh-js-circle lh-jc-blue">🏠</div>
-                    <span class="lh-js-step-label">STEP 03</span>
-                    <h3>Open Your Space</h3>
-                    <p>Prepare a venue that comfortably seats 4+ members.</p>
-                </div>
-                <div class="lh-journey-step">
-                    <div class="lh-js-circle lh-jc-green">🌱</div>
-                    <span class="lh-js-step-label">STEP 04</span>
-                    <h3>Host &amp; Grow</h3>
-                    <p>Bring members together every quarter and grow the community.</p>
-                </div>
-            </div>
-        </div>
-        <div class="lh-journey-cta">
-            <button class="btn-primary btn-lg lh-cta-primary" onclick="scrollToSection('becomeLeader')">
-                Apply to Host a Circle &rarr;
-            </button>
-        </div>
-    </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════
-     SECTION 2C — WHEN IS THE LOCAL HUB?
-═══════════════════════════════════════════ -->
-<section class="lh-when-section" id="whenIsHub">
-    <div class="container">
-        <div class="lh-section-header">
-            <span class="lh-section-tag">Save the Date</span>
-            <h2 class="lh-section-title">When Is the NFP Circle?</h2>
-        </div>
-        <div class="lh-when-card">
-            <div class="lh-when-date-block">
-                <span class="lh-when-day">29</span>
-                <span class="lh-when-month">July</span>
-            </div>
-            <div class="lh-when-divider"></div>
-            <div class="lh-when-details">
-                <p class="lh-when-time">&#128336; 10:00 AM &ndash; 2:00 PM</p>
-                <p class="lh-when-note">NFP Circle &mdash; Second Edition</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════
      SECTION 3 — WHY LOCAL HUBS?
 ═══════════════════════════════════════════ -->
 <section class="lh-why-section" id="whyLocalHubs">
@@ -329,6 +211,36 @@
                 </div>
             </div>
         </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3B — WHO CAN JOIN?
+═══════════════════════════════════════════ -->
+<section class="lh-for-section" id="builtForMembers">
+    <div class="container">
+        <div class="lh-section-header">
+            <span class="lh-section-tag">Eligibility</span>
+            <h2 class="lh-section-title">Who Can Join?</h2>
+        </div>
+
+        <div class="lh-for-cards">
+            <div class="lh-for-card lh-for-card-primary">
+                <div class="lh-for-icon"><img src="Images/NFP PRO Membership.png" alt="NFP ProMembership" class="lh-for-img"></div>
+                <h3>Active NFP Members</h3>
+                <p>ProMembers actively engaged with the NetworkFP ecosystem.</p>
+                <div class="lh-for-tag">Eligible</div>
+            </div>
+            <div class="lh-for-card lh-for-card-primary">
+                <div class="lh-for-icon"><img src="Images/QPFP logo.png" alt="QPFP Certificant" class="lh-for-img"></div>
+                <h3>QPFP Certificants</h3>
+                <p>Professionals holding India's premier Personal Finance Professional certification.</p>
+                <div class="lh-for-tag">Eligible</div>
+            </div>
+        </div>
+
+        <p class="lh-for-note">Not yet a member? <a href="https://www.networkfp.com" target="_blank" rel="noopener" class="lh-link">Explore NetworkFP Membership</a> to join India's most trusted community of Personal Finance Professionals.</p>
     </div>
 </section>
 
@@ -755,236 +667,6 @@
 </section>
 
 
-<!-- ═══════════════════════════════════════════
-     SECTION 5 — WHO ARE LOCAL HUBS BUILT FOR?
-═══════════════════════════════════════════ -->
-<section class="lh-for-section" id="builtForMembers">
-    <div class="container">
-        <div class="lh-section-header">
-            <span class="lh-section-tag">Eligibility</span>
-            <h2 class="lh-section-title">Who Can Join?</h2>
-        </div>
-
-        <div class="lh-for-cards">
-            <div class="lh-for-card lh-for-card-primary">
-                <div class="lh-for-icon">✅</div>
-                <h3>Active NFP Members</h3>
-                <p>ProMembers actively engaged with the NetworkFP ecosystem.</p>
-                <div class="lh-for-tag">Eligible</div>
-            </div>
-            <div class="lh-for-card lh-for-card-primary">
-                <div class="lh-for-icon">🎓</div>
-                <h3>QPFP Certificants</h3>
-                <p>Professionals holding India's premier Personal Finance Professional certification.</p>
-                <div class="lh-for-tag">Eligible</div>
-            </div>
-        </div>
-
-        <p class="lh-for-note">Not yet a member? <a href="https://www.networkfp.com" target="_blank" rel="noopener" class="lh-link">Explore NetworkFP Membership</a> to join India's most trusted community of Personal Finance Professionals.</p>
-    </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════
-     SECTION 6 — WHAT DOES IT MEAN TO BE PART OF A HUB?
-═══════════════════════════════════════════ -->
-<section class="lh-means-section" id="whatItMeans">
-    <div class="container">
-        <div class="lh-section-header">
-            <span class="lh-section-tag">Circle Membership</span>
-            <h2 class="lh-section-title">What Does It Mean to Be Part of a Circle?</h2>
-            <p class="lh-section-sub">Being part of an NFP Circle is a commitment to yourself, your peers, and the profession.</p>
-        </div>
-
-        <div class="lh-means-grid">
-            <div class="lh-means-card">
-                <div class="lh-means-num">01</div>
-                <div class="lh-means-icon">📚</div>
-                <h3>Committed to Learning</h3>
-                <p>Learn continuously with peers who face similar challenges and opportunities. Every session is an investment in your professional future.</p>
-            </div>
-            <div class="lh-means-card lh-means-card-accent">
-                <div class="lh-means-num">02</div>
-                <div class="lh-means-icon">📅</div>
-                <h3>Quarterly Meetups</h3>
-                <p>Meet at least once every quarter with members in your region. Consistent, structured gatherings that build real relationships over time.</p>
-            </div>
-            <div class="lh-means-card">
-                <div class="lh-means-num">03</div>
-                <div class="lh-means-icon">🤝</div>
-                <h3>Buddy &amp; Mentor Support</h3>
-                <p>Be open to learning, mentoring, and being mentored as part of the community. Give what you have. Receive what you need.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════
-     SECTION 7 — WHERE CAN A HUB BE CREATED?
-═══════════════════════════════════════════ -->
-<section class="lh-where-section" id="whereHubs">
-    <div class="container">
-        <div class="lh-where-layout">
-            <div class="lh-where-content">
-                <span class="lh-section-tag">Coverage</span>
-                <h2 class="lh-section-title">Where Can an NFP Circle Be Started?</h2>
-                <p class="lh-where-lead">An NFP Circle can be started in any city, region, or locality that has at least <strong>5 active NetworkFP Members.</strong></p>
-                <p class="lh-where-sub">The goal is to ensure every financial planner in India, no matter where they are, has access to a supportive local community.</p>
-
-                <div class="lh-city-grid">
-                    <span class="lh-city-chip">Mumbai</span>
-                    <span class="lh-city-chip">Pune</span>
-                    <span class="lh-city-chip">Bengaluru</span>
-                    <span class="lh-city-chip">Chennai</span>
-                    <span class="lh-city-chip">Hyderabad</span>
-                    <span class="lh-city-chip">Delhi NCR</span>
-                    <span class="lh-city-chip">Ahmedabad</span>
-                    <span class="lh-city-chip">Kolkata</span>
-                    <span class="lh-city-chip">Jaipur</span>
-                    <span class="lh-city-chip">Kochi</span>
-                    <span class="lh-city-chip">Chandigarh</span>
-                    <span class="lh-city-chip lh-city-chip-more">+ Your City</span>
-                </div>
-
-                <p class="lh-where-note">These are examples only. Any city or locality with 5+ active members can start a Circle.</p>
-            </div>
-
-            <div class="lh-where-visual">
-                <div class="lh-growth-card">
-                    <h3>A Growing Network</h3>
-                    <p>Each new hub expands our collective reach, bringing financial wellness closer to every family in India.</p>
-                    <div class="lh-growth-bar-wrap">
-                        <div class="lh-growth-bar-label">
-                            <span>Progress to 100 Circles</span>
-                            <span class="lh-growth-pct">Growing</span>
-                        </div>
-                        <div class="lh-growth-bar-track">
-                            <div class="lh-growth-bar-fill"></div>
-                        </div>
-                    </div>
-                    <div class="lh-growth-milestones">
-                        <div class="lh-milestone lh-milestone-done">
-                            <span class="lh-ms-dot"></span>
-                            <span>Program Launched</span>
-                        </div>
-                        <div class="lh-milestone lh-milestone-active">
-                            <span class="lh-ms-dot"></span>
-                            <span>Circle Host Applications Open</span>
-                        </div>
-                        <div class="lh-milestone">
-                            <span class="lh-ms-dot"></span>
-                            <span>100 Circles Established</span>
-                        </div>
-                        <div class="lh-milestone">
-                            <span class="lh-ms-dot"></span>
-                            <span>Member Join Portal Opens</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════
-     SECTION 8 — BECOME A HUB LEADER
-═══════════════════════════════════════════ -->
-<section class="lh-leader-section" id="becomeLeader">
-    <div class="lh-leader-bg">
-        <div class="lh-leader-glow"></div>
-    </div>
-    <div class="container">
-        <div class="lh-section-header">
-            <span class="lh-section-tag lh-tag-light">Circle Hosting</span>
-            <h2 class="lh-section-title lh-title-light">Lead Your Local Community</h2>
-            <p class="lh-section-sub lh-sub-light">Help bring members together, facilitate learning, and strengthen the profession in your region.</p>
-        </div>
-
-        <div class="lh-leader-eligibility">
-            <h3 class="lh-elig-heading">Eligibility Criteria</h3>
-            <div class="lh-elig-cards">
-                <div class="lh-elig-card">
-                    <div class="lh-elig-num">01</div>
-                    <h4>Minimum 3 Years</h4>
-                    <p>At least 3 years of active NetworkFP Membership, demonstrating sustained commitment to the profession.</p>
-                </div>
-                <div class="lh-elig-card">
-                    <div class="lh-elig-num">02</div>
-                    <h4>Office Space Ready</h4>
-                    <p>Has an office or venue capable of hosting at least 4 Personal Finance Professionals comfortably.</p>
-                </div>
-                <div class="lh-elig-card">
-                    <div class="lh-elig-num">03</div>
-                    <h4>Believes in Community</h4>
-                    <p>Genuinely believes in the power of community and is committed to showing up consistently for peers.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="lh-leader-cta-wrap">
-            <p class="lh-leader-cta-copy">Ready to lead? Your community needs you.</p>
-            <button class="btn-primary btn-lg lh-apply-btn" onclick="showSection('registration')">
-                Apply to Host a Circle &rarr;
-            </button>
-            <p class="lh-apply-note">No fee. Takes less than 2 minutes. Review within 2&ndash;3 business days.</p>
-        </div>
-    </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════
-     SECTION 9 — JOIN A HUB
-═══════════════════════════════════════════ -->
-<section class="lh-join-section" id="joinAHub">
-    <div class="container">
-        <div class="lh-join-card">
-            <div class="lh-join-content">
-                <h2 class="lh-join-title">Want to Join an NFP Circle?</h2>
-                <p class="lh-join-desc">All active NetworkFP Members and QPFP Certificants will soon be able to discover and join their nearest NFP Circle — connect, learn, and grow together as Personal Finance Professionals.</p>
-                <div class="lh-join-actions">
-                    <button class="lh-join-btn-disabled" disabled>
-                        Join a Circle
-                        <span class="lh-join-badge">Coming Soon</span>
-                    </button>
-                </div>
-                <p class="lh-join-note">
-                    Membership access opens once 100 NFP Circles are established across India.
-                </p>
-            </div>
-        </div>
-    </div>
-</section>
-
-
-<!-- ═══════════════════════════════════════════
-     SECTION 10 — FINAL COMMUNITY CTA
-═══════════════════════════════════════════ -->
-<section class="lh-final-cta" id="finalCta">
-    <div class="lh-final-bg">
-        <div class="lh-final-glow lh-final-glow-1"></div>
-        <div class="lh-final-glow lh-final-glow-2"></div>
-    </div>
-    <div class="container">
-        <div class="lh-final-inner">
-            <span class="lh-final-eyebrow">The NetworkFP Promise</span>
-            <h2 class="lh-final-title">Together, We Grow Stronger.</h2>
-            <p class="lh-final-desc">NFP Circles are more than meetings. They are communities of professionals committed to helping each other succeed while advancing financial wellbeing for every family.</p>
-            <div class="lh-final-actions">
-                <button class="lh-final-btn-primary" onclick="scrollToSection('becomeLeader')">
-                    Host a Circle &rarr;
-                </button>
-                <button class="lh-final-btn-secondary" disabled>
-                    Join a Circle
-                    <span class="lh-final-soon">Coming Soon</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</section>
-
-
 <!-- Footer -->
 <footer class="footer">
     <div class="container">
@@ -1005,7 +687,7 @@
                 <a onclick="scrollToSection('whatAreHubs')">What Are NFP Circles?</a>
                 <a onclick="scrollToSection('whyLocalHubs')">Why NFP Circles?</a>
                 <a onclick="scrollToSection('powerCommunity')">Power of Community</a>
-                <a onclick="scrollToSection('becomeLeader')">Host a Circle</a>
+                <a onclick="showSection('participantReg')">Find a Circle</a>
             </div>
             <div class="footer-col">
                 <h4>NetworkFP Programs</h4>
@@ -1027,7 +709,6 @@
             <div class="footer-bottom-links">
                 <a href="#">Privacy Policy</a>
                 <a href="#">Terms of Use</a>
-                <a onclick="showSection('adminLogin')" style="opacity:0.4;font-size:11px;">Admin</a>
             </div>
         </div>
     </div>
@@ -1035,210 +716,11 @@
 </section><!-- /#landing -->
 
 
-<!-- ══════════════════ REGISTRATION ══════════════════ -->
-<section id="registration" class="page">
-    <div class="page-topbar">
-        <button class="btn-back" onclick="showSection('landing')">&larr; Back to Home</button>
-    </div>
-    <div class="reg-wrapper">
-        <div class="reg-sidebar">
-            <div class="rs-logo">
-                <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-sidebar">
-            </div>
-            <h3>Circle Host Program</h3>
-            <p>Complete the 2-step application to become an official NFP Circle Host — and join a community of 22,000+ Personal Finance Professionals committed to a Client First India.</p>
-            <div class="rs-checklist">
-                <div class="rs-check active" id="rsCheck1"><span class="rsc-num">1</span><span>Personal Details</span></div>
-                <div class="rs-line" id="rsLine1"></div>
-                <div class="rs-check" id="rsCheck2"><span class="rsc-num">2</span><span>Circle / Venue Details</span></div>
-                <div class="rs-line" id="rsLine2"></div>
-                <div class="rs-check" id="rsCheck3"><span class="rsc-num">&#10003;</span><span>Submit Application</span></div>
-            </div>
-            <div class="rs-note">
-                <strong>Need help?</strong><br>
-                hub@networkfp.com
-            </div>
-        </div>
-
-        <div class="reg-form-area">
-            <!-- Step 1 -->
-            <div class="form-step" id="step1">
-                <div class="form-step-header">
-                    <span class="step-chip">Step 1 of 2</span>
-                    <h2>Personal Details</h2>
-                    <p>Please provide your personal and membership information.</p>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group full">
-                        <label for="fullName">Full Name <span class="req">*</span></label>
-                        <input type="text" id="fullName" class="form-input" placeholder="As registered with NFP" autocomplete="name">
-                        <span class="err-msg" id="fullNameErr"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email ID <span class="req">*</span></label>
-                        <input type="email" id="email" class="form-input" placeholder="your@email.com" autocomplete="email">
-                        <span class="err-msg" id="emailErr"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="mobile">Mobile Number <span class="req">*</span></label>
-                        <input type="tel" id="mobile" class="form-input" placeholder="10-digit mobile number" maxlength="10" autocomplete="tel">
-                        <span class="err-msg" id="mobileErr"></span>
-                    </div>
-                    <div class="form-group full">
-                        <label for="membership">Membership Type <span class="req">*</span></label>
-                        <div class="select-wrap">
-                            <select id="membership" class="form-input">
-                                <option value="">-- Select Membership Type --</option>
-                                <option value="QPFP Certificant">QPFP Certificant</option>
-                                <option value="NFP Member">NFP Member</option>
-                                <option value="Both NFP ProMember &amp; QPFP Certificant">Both NFP ProMember &amp; QPFP Certificant</option>
-                            </select>
-                        </div>
-                        <span class="err-msg" id="membershipErr"></span>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-primary" onclick="validateStep1()">Continue to Step 2 &rarr;</button>
-                </div>
-            </div>
-
-            <!-- Step 2 -->
-            <div class="form-step hidden" id="step2">
-                <div class="form-step-header">
-                    <span class="step-chip">Step 2 of 2</span>
-                    <h2>Circle / Venue Details</h2>
-                    <p>Tell us about the space where you plan to bring members together.</p>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="city">City <span class="req">*</span></label>
-                        <div class="select-wrap">
-                            <select id="city" class="form-input">
-                                <option value="">-- Select Your City --</option>
-                                <option>Agra</option><option>Ahmedabad</option><option>Amritsar</option>
-                                <option>Aurangabad</option><option>Bengaluru</option><option>Bhopal</option>
-                                <option>Bhubaneswar</option><option>Chandigarh</option><option>Chennai</option>
-                                <option>Coimbatore</option><option>Delhi</option><option>Faridabad</option>
-                                <option>Gurugram</option><option>Guwahati</option><option>Hyderabad</option>
-                                <option>Indore</option><option>Jaipur</option><option>Jodhpur</option>
-                                <option>Kochi</option><option>Kolkata</option><option>Lucknow</option>
-                                <option>Ludhiana</option><option>Mangalore</option><option>Meerut</option>
-                                <option>Mumbai</option><option>Mysuru</option><option>Nagpur</option>
-                                <option>Nashik</option><option>Navi Mumbai</option><option>Noida</option>
-                                <option>Patna</option><option>Pune</option><option>Raipur</option>
-                                <option>Rajkot</option><option>Surat</option><option>Thane</option>
-                                <option>Thiruvananthapuram</option><option>Vadodara</option><option>Varanasi</option>
-                                <option>Vijayawada</option><option>Visakhapatnam</option>
-                            </select>
-                        </div>
-                        <span class="err-msg" id="cityErr"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="area">Area / Locality <span class="req">*</span></label>
-                        <input type="text" id="area" class="form-input" placeholder="Andheri West, Koramangala">
-                        <span class="err-msg" id="areaErr"></span>
-                    </div>
-                    <div class="form-group full">
-                        <label for="address">Full Address <span class="req">*</span></label>
-                        <textarea id="address" class="form-input form-textarea" rows="2" placeholder="e.g. Flat 12, Seawoods Grand Central, Sector 40, Kharghar"></textarea>
-                        <p class="form-hint">This is used to pin your Circle accurately on the map for members to find you.</p>
-                        <span class="err-msg" id="addressErr"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="pincode">PIN Code <span class="req">*</span></label>
-                        <input type="text" id="pincode" class="form-input" placeholder="6-digit PIN code" maxlength="6">
-                        <span class="err-msg" id="pincodeErr"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="venueType">Venue Type <span class="req">*</span></label>
-                        <div class="select-wrap">
-                            <select id="venueType" class="form-input">
-                                <option value="">-- Select Venue Type --</option>
-                                <option value="Own Office">Own Office</option>
-                                <option value="Co-working Space">Co-working Space</option>
-                                <option value="AMC Office">AMC Office</option>
-                                <option value="Society Clubhouse">Society Clubhouse</option>
-                            </select>
-                        </div>
-                        <span class="err-msg" id="venueTypeErr"></span>
-                    </div>
-                    <div class="form-group full">
-                        <label for="capacity">Approximate Hosting Capacity <span class="req">*</span></label>
-                        <div class="select-wrap">
-                            <select id="capacity" class="form-input">
-                                <option value="">-- Select Capacity --</option>
-                                <option value="Up to 6 People">Up to 6 People</option>
-                                <option value="6-10 People">6-10 People</option>
-                                <option value="10-20 People">10-20 People</option>
-                                <option value="More than 20 People">More than 20 People</option>
-                            </select>
-                        </div>
-                        <span class="err-msg" id="capacityErr"></span>
-                    </div>
-                    <div class="form-group full">
-                        <label>Hosted an NFP Event Before?</label>
-                        <div class="radio-group">
-                            <label class="radio-label">
-                                <input type="radio" name="hostedBefore" value="Yes" id="hostedYes">
-                                <span class="radio-custom"></span>Yes
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="hostedBefore" value="No" id="hostedNo" checked>
-                                <span class="radio-custom"></span>No
-                            </label>
-                        </div>
-                    </div>
-                    <div class="form-group full">
-                        <label>How many times are you willing to host an NFP Circle? <span class="req">*</span></label>
-                        <p class="form-hint">Let us know your availability for hosting future NFP Circle sessions.</p>
-                        <div class="radio-group">
-                            <label class="radio-label">
-                                <input type="radio" name="hostingFrequency" value="Only host on 29 July" id="freqOnce" checked>
-                                <span class="radio-custom"></span>Only host on 29 July
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="hostingFrequency" value="Multiple Times" id="freqMultiple">
-                                <span class="radio-custom"></span>Multiple Times
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="hostingFrequency" value="Open to Either" id="freqEither">
-                                <span class="radio-custom"></span>Open to Either
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-outline" onclick="goToStep(1)">&larr; Previous Step</button>
-                    <button class="btn-primary" onclick="validateStep2()">Submit Application &rarr;</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ══════════════════ SUCCESS ══════════════════ -->
-<section id="success" class="page">
-    <div class="success-wrapper">
-        <div class="success-card">
-            <div class="success-icon-wrap">
-                <div class="success-check">&#10003;</div>
-            </div>
-            <h2>Application Submitted!</h2>
-            <p class="success-tagline">Thank you for stepping up for the community. Your application is now under review by the NetworkFP team — we'll be in touch within 2-3 business days.</p>
-            <div class="success-details" id="successDetails"></div>
-            <div class="success-actions">
-                <button class="btn-primary" onclick="showSection('landing')">Back to Home</button>
-                <button class="btn-outline" onclick="resetAndRegister()">Submit Another</button>
-            </div>
-        </div>
-    </div>
-</section>
-
 <!-- ══════════════════ PARTICIPANT REGISTRATION ══════════════════ -->
 <section id="participantReg" class="page">
     <div class="page-topbar">
         <button class="btn-back" onclick="showSection('landing')">&larr; Back to Home</button>
-        <span class="mode-chip participant-chip">&#128100; Participant Registration</span>
+        <span class="mode-chip participant-chip">&#128100; Find a Circle</span>
     </div>
 
     <div class="ppage-header">
@@ -1255,6 +737,11 @@
                     <span class="hsb-icon">&#128269;</span>
                     <input type="text" id="hubCitySearch" class="hsb-input" placeholder="Search by city or area..." oninput="filterHubs()">
                 </div>
+                <div class="hsb-input-wrap hsb-pin-wrap">
+                    <span class="hsb-icon">&#128205;</span>
+                    <input type="text" id="hubPincodeSearch" class="hsb-input" placeholder="Enter 6-digit PIN code..." maxlength="6" inputmode="numeric">
+                </div>
+                <button class="btn-nearme btn-pin-search" onclick="searchByPincode()">Search</button>
                 <button class="btn-nearme" onclick="findNearMe()">&#128205; Near Me</button>
                 <button class="btn-outline btn-sm" onclick="resetMapView()">&#128506; All Circles</button>
             </div>
@@ -1280,6 +767,7 @@
                         <option value="city">Sort: City</option>
                         <option value="name">Sort: Name</option>
                         <option value="capacity">Sort: Capacity</option>
+                        <option value="distance">Sort: Nearest to my PIN</option>
                     </select>
                 </div>
                 <div class="hub-cards-list" id="hubCardsList">
@@ -1355,266 +843,8 @@
     </div>
 </section>
 
-<!-- ══════════════════ ADMIN LOGIN ══════════════════ -->
-<section id="adminLogin" class="page">
-    <div class="admin-login-wrapper">
-        <div class="login-card">
-            <div class="login-logo">
-                <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-login">
-            </div>
-            <h2>Admin Portal</h2>
-            <p class="login-sub">Sign in to manage Circle Host applications</p>
-            <div class="form-group">
-                <label for="adminEmail">Email Address</label>
-                <input type="email" id="adminEmail" class="form-input" placeholder="admin@networkfp.com" value="admin@networkfp.com">
-                <span class="err-msg" id="adminEmailErr"></span>
-            </div>
-            <div class="form-group">
-                <label for="adminPassword">Password</label>
-                <div class="pw-wrap">
-                    <input type="password" id="adminPassword" class="form-input" placeholder="Enter password" value="admin123">
-                    <button type="button" class="pw-toggle" onclick="togglePassword()" title="Toggle visibility">&#128065;</button>
-                </div>
-                <span class="err-msg" id="adminPasswordErr"></span>
-            </div>
-            <button class="btn-primary full-w" onclick="adminLogin()">Sign In to Admin Portal</button>
-            <div class="login-hint"><span>Demo credentials: admin@networkfp.com / admin123</span></div>
-            <button class="btn-back-link" onclick="showSection('landing')">&larr; Back to Website</button>
-        </div>
-    </div>
-</section>
-
-<!-- ══════════════════ ADMIN DASHBOARD ══════════════════ -->
-<section id="adminDashboard" class="page">
-    <div class="admin-layout">
-        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-        <aside class="sidebar" id="sidebar">
-            <div class="sb-logo">
-                <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-sidebar">
-                <span class="sb-tag">Admin</span>
-            </div>
-            <nav class="sb-nav">
-                <div class="sb-section-label">Circle Hosts</div>
-                <a class="sb-link active" id="navApplications" onclick="showAdminTab('applications', this)">
-                    <span>Applications</span>
-                </a>
-                <a class="sb-link" id="navAnalytics" onclick="showAdminTab('analytics', this)">
-                    <span>Analytics</span>
-                </a>
-                <a class="sb-link" onclick="exportCSV()">
-                    <span>Export CSV</span>
-                </a>
-                <div class="sb-section-label" style="margin-top:12px">Participants</div>
-                <a class="sb-link" id="navParticipants" onclick="showAdminTab('participants', this)">
-                    <span class="sb-icon">&#128100;</span><span>Registrations</span>
-                </a>
-                <a class="sb-link" onclick="exportParticipantsCSV()">
-                    <span>Export CSV</span>
-                </a>
-            </nav>
-            <div class="reg-mode-block">
-                <div class="rmb-label">Registration Mode</div>
-                <div class="rmb-desc" id="rmbDesc">Circle Hosts can register</div>
-                <div class="rmb-toggle-wrap">
-                    <div class="rmb-toggle" id="rmbToggle">
-                        <div class="rmb-pill" id="rmbPill">
-                            <button class="rmb-opt rmb-opt-left active" id="rmb-leader" onclick="setRegistrationMode('hub-leader')">
-                                &#127963; Circle Hosts
-                            </button>
-                            <button class="rmb-opt rmb-opt-right" id="rmb-participant" onclick="setRegistrationMode('participant')">
-                                &#128100; Participants
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="rmb-status">
-                    <span class="rmb-status-dot" id="rmbStatusDot"></span>
-                    <span id="rmbStatusText">Circle Host mode active</span>
-                </div>
-            </div>
-            <div class="sb-footer">
-                <div class="sb-user">
-                    <div class="sb-avatar">A</div>
-                    <div class="sb-user-info">
-                        <strong>Admin</strong>
-                        <small>admin@networkfp.com</small>
-                    </div>
-                </div>
-                <button class="btn-logout" onclick="adminLogout()">&#128682; Sign Out</button>
-            </div>
-        </aside>
-
-        <main class="admin-main" id="adminMain">
-            <div class="admin-topbar">
-                <button class="sb-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">&#9776;</button>
-                <h1 class="admin-page-title" id="adminPageTitle">Applications</h1>
-                <div class="topbar-right">
-                    <button class="btn-export" onclick="exportCSV()">&#128229; Export CSV</button>
-                    <div class="admin-profile">A</div>
-                </div>
-            </div>
-
-            <!-- Applications Tab -->
-            <div id="tabApplications" class="admin-tab">
-                <div class="stats-grid">
-                    <div class="stat-card sc-total">
-                        <div class="sc-body"><span class="sc-val" id="statTotal">0</span><span class="sc-lbl">Total Applications</span></div>
-                        <div class="sc-trend">All Time</div>
-                    </div>
-                    <div class="stat-card sc-pending">
-                        <div class="sc-body"><span class="sc-val" id="statPending">0</span><span class="sc-lbl">Pending Approvals</span></div>
-                        <div class="sc-trend">Awaiting Review</div>
-                    </div>
-                    <div class="stat-card sc-approved">
-                        <div class="sc-body"><span class="sc-val" id="statApproved">0</span><span class="sc-lbl">Approved Hosts</span></div>
-                        <div class="sc-trend">Active Circles</div>
-                    </div>
-                    <div class="stat-card sc-rejected">
-                        <div class="sc-body"><span class="sc-val" id="statRejected">0</span><span class="sc-lbl">Rejected</span></div>
-                        <div class="sc-trend">Not Approved</div>
-                    </div>
-                </div>
-                <div class="filter-bar">
-                    <div class="search-box">
-                        <span class="search-icon">&#128269;</span>
-                        <input type="text" id="searchInput" class="search-input" placeholder="Search by name, email, or city..." oninput="applyFilters()">
-                        <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear">&#10005;</button>
-                    </div>
-                    <div class="filter-chips">
-                        <button class="chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
-                        <button class="chip" data-filter="Pending" onclick="setFilter('Pending', this)">Pending</button>
-                        <button class="chip" data-filter="Approved" onclick="setFilter('Approved', this)">Approved</button>
-                        <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
-                    </div>
-                </div>
-                <div class="table-wrap-outer" id="hubTableOuter">
-                <div class="table-wrap" id="hubTableWrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Reg. ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
-                                <th>Membership</th><th>City</th><th>Area</th><th>Address</th>
-                                <th>Venue</th><th>Capacity</th><th>Hosted Before</th>
-                                <th>Hosting Frequency</th><th>Date</th><th>Status</th><th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody"></tbody>
-                    </table>
-                    <div class="table-empty" id="tableEmpty">
-                        <h3>No applications found</h3>
-                        <p>No records match your current search or filter criteria.</p>
-                    </div>
-                </div>
-                </div>
-            </div>
-
-            <!-- Analytics Tab -->
-            <div id="tabAnalytics" class="admin-tab hidden">
-                <div class="analytics-grid">
-                    <div class="analytics-card">
-                        <h3>Application Status Overview</h3>
-                        <div class="donut-chart-wrap" id="donutChart"></div>
-                        <div class="chart-legend" id="chartLegend"></div>
-                    </div>
-                    <div class="analytics-card">
-                        <h3>Top Cities</h3>
-                        <div class="city-bars" id="cityBars"></div>
-                    </div>
-                    <div class="analytics-card">
-                        <h3>Membership Distribution</h3>
-                        <div class="member-bars" id="memberBars"></div>
-                    </div>
-                    <div class="analytics-card">
-                        <h3>Venue Type Breakdown</h3>
-                        <div class="venue-bars" id="venueBars"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Participants Tab -->
-            <div id="tabParticipants" class="admin-tab hidden">
-                <div class="stats-grid">
-                    <div class="stat-card sc-total">
-                        <div class="sc-body"><span class="sc-val" id="pStatTotal">0</span><span class="sc-lbl">Total Participants</span></div>
-                        <div class="sc-trend">All Registrations</div>
-                    </div>
-                    <div class="stat-card sc-approved">
-                        <div class="sc-body"><span class="sc-val" id="pStatConfirmed">0</span><span class="sc-lbl">Confirmed</span></div>
-                        <div class="sc-trend">Active Participants</div>
-                    </div>
-                    <div class="stat-card sc-rejected">
-                        <div class="sc-body"><span class="sc-val" id="pStatCancelled">0</span><span class="sc-lbl">Cancelled</span></div>
-                        <div class="sc-trend">Withdrawn</div>
-                    </div>
-                    <div class="stat-card sc-pending">
-                        <div class="sc-body"><span class="sc-val" id="pStatHubs">0</span><span class="sc-lbl">Circles with Participants</span></div>
-                        <div class="sc-trend">Active Circles</div>
-                    </div>
-                </div>
-                <div class="filter-bar">
-                    <div class="search-box">
-                        <span class="search-icon">&#128269;</span>
-                        <input type="text" id="pSearchInput" class="search-input" placeholder="Search by name, email, or hub city..." oninput="applyParticipantFilters()">
-                        <button class="search-clear" id="pSearchClear" onclick="clearParticipantSearch()" title="Clear">&#10005;</button>
-                    </div>
-                    <div class="filter-chips">
-                        <button class="chip active" data-pfilter="all" onclick="setPFilter('all', this)">All</button>
-                        <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
-                        <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
-                    </div>
-                    <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
-                </div>
-                <div class="table-wrap-outer" id="partTableOuter">
-                <div class="table-wrap" id="partTableWrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Participant ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
-                                <th>Membership</th><th>Circle Host</th><th>Circle City</th><th>Circle Area</th>
-                                <th>Note</th><th>Registered On</th><th>Status</th><th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pTableBody"></tbody>
-                    </table>
-                    <div class="table-empty" id="pTableEmpty">
-                        <div class="te-icon">&#128100;</div>
-                        <h3>No participant registrations yet</h3>
-                        <p>Once participants register through the public portal, they will appear here.</p>
-                    </div>
-                </div>
-                </div>
-            </div>
-        </main>
-    </div>
-</section>
-
 <!-- ══════════════════ TOAST ══════════════════ -->
 <div class="toast-container" id="toastContainer"></div>
-
-<!-- ══════════════════ CONFIRM MODAL ══════════════════ -->
-<div class="modal-overlay" id="confirmOverlay">
-    <div class="modal">
-        <div class="modal-emoji" id="modalEmoji">!</div>
-        <h3 id="modalTitle">Confirm Action</h3>
-        <p id="modalMessage">Are you sure you want to proceed?</p>
-        <div class="modal-btns">
-            <button class="btn-outline" onclick="closeConfirmModal()">Cancel</button>
-            <button class="btn-primary" id="modalConfirmBtn" onclick="executeModalAction()">Confirm</button>
-        </div>
-    </div>
-</div>
-
-<!-- ══════════════════ DETAILS MODAL ══════════════════ -->
-<div class="modal-overlay" id="detailsOverlay">
-    <div class="modal modal-lg">
-        <button class="modal-x" onclick="closeDetailsModal()">&#10005;</button>
-        <h3>Application Details</h3>
-        <div id="detailsContent" class="details-content"></div>
-        <div class="modal-btns">
-            <button class="btn-primary" onclick="closeDetailsModal()">Close</button>
-        </div>
-    </div>
-</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="script.js"></script>

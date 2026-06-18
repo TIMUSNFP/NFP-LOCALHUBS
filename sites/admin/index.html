@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>NFP Circles | Admin Portal</title>
+    <link rel="icon" type="image/png" href="Images/NetworkFP Logo.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ══════════════════ NAVBAR (minimal, internal tool) ══════════════════ -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <div class="nav-logo">
+            <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-nav">
+        </div>
+    </div>
+</nav>
+
+<!-- ══════════════════ ADMIN LOGIN ══════════════════ -->
+<section id="adminLogin" class="page active">
+    <div class="admin-login-wrapper">
+        <div class="login-card">
+            <div class="login-logo">
+                <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-login">
+            </div>
+            <h2>Admin Portal</h2>
+            <p class="login-sub">Sign in to manage Circle Host applications</p>
+            <div class="form-group">
+                <label for="adminEmail">Email Address</label>
+                <input type="email" id="adminEmail" class="form-input" placeholder="admin@networkfp.com" value="admin@networkfp.com">
+                <span class="err-msg" id="adminEmailErr"></span>
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">Password</label>
+                <div class="pw-wrap">
+                    <input type="password" id="adminPassword" class="form-input" placeholder="Enter password" value="admin123">
+                    <button type="button" class="pw-toggle" onclick="togglePassword()" title="Toggle visibility">&#128065;</button>
+                </div>
+                <span class="err-msg" id="adminPasswordErr"></span>
+            </div>
+            <button class="btn-primary full-w" onclick="adminLogin()">Sign In to Admin Portal</button>
+            <div class="login-hint"><span>Demo credentials: admin@networkfp.com / admin123</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════ ADMIN DASHBOARD ══════════════════ -->
+<section id="adminDashboard" class="page">
+    <div class="admin-layout">
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        <aside class="sidebar" id="sidebar">
+            <div class="sb-logo">
+                <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-sidebar">
+                <span class="sb-tag">Admin</span>
+            </div>
+            <nav class="sb-nav">
+                <div class="sb-section-label">Circle Hosts</div>
+                <a class="sb-link active" id="navApplications" onclick="showAdminTab('applications', this)">
+                    <span>Applications</span>
+                </a>
+                <a class="sb-link" id="navAnalytics" onclick="showAdminTab('analytics', this)">
+                    <span>Analytics</span>
+                </a>
+                <a class="sb-link" onclick="exportCSV()">
+                    <span>Export CSV</span>
+                </a>
+                <div class="sb-section-label" style="margin-top:12px">Participants</div>
+                <a class="sb-link" id="navParticipants" onclick="showAdminTab('participants', this)">
+                    <span class="sb-icon">&#128100;</span><span>Registrations</span>
+                </a>
+                <a class="sb-link" onclick="exportParticipantsCSV()">
+                    <span>Export CSV</span>
+                </a>
+            </nav>
+            <div class="sb-footer">
+                <div class="sb-user">
+                    <div class="sb-avatar">A</div>
+                    <div class="sb-user-info">
+                        <strong>Admin</strong>
+                        <small>admin@networkfp.com</small>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="adminLogout()">&#128682; Sign Out</button>
+            </div>
+        </aside>
+
+        <main class="admin-main" id="adminMain">
+            <div class="admin-topbar">
+                <button class="sb-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">&#9776;</button>
+                <h1 class="admin-page-title" id="adminPageTitle">Applications</h1>
+                <div class="topbar-right">
+                    <button class="btn-export" onclick="exportCSV()">&#128229; Export CSV</button>
+                    <div class="admin-profile">A</div>
+                </div>
+            </div>
+
+            <!-- Applications Tab -->
+            <div id="tabApplications" class="admin-tab">
+                <div class="stats-grid">
+                    <div class="stat-card sc-total">
+                        <div class="sc-body"><span class="sc-val" id="statTotal">0</span><span class="sc-lbl">Total Applications</span></div>
+                        <div class="sc-trend">All Time</div>
+                    </div>
+                    <div class="stat-card sc-pending">
+                        <div class="sc-body"><span class="sc-val" id="statPending">0</span><span class="sc-lbl">Pending Approvals</span></div>
+                        <div class="sc-trend">Awaiting Review</div>
+                    </div>
+                    <div class="stat-card sc-approved">
+                        <div class="sc-body"><span class="sc-val" id="statApproved">0</span><span class="sc-lbl">Approved Hosts</span></div>
+                        <div class="sc-trend">Active Circles</div>
+                    </div>
+                    <div class="stat-card sc-rejected">
+                        <div class="sc-body"><span class="sc-val" id="statRejected">0</span><span class="sc-lbl">Rejected</span></div>
+                        <div class="sc-trend">Not Approved</div>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <span class="search-icon">&#128269;</span>
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search by name, email, or city..." oninput="applyFilters()">
+                        <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear">&#10005;</button>
+                    </div>
+                    <div class="filter-chips">
+                        <button class="chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
+                        <button class="chip" data-filter="Pending" onclick="setFilter('Pending', this)">Pending</button>
+                        <button class="chip" data-filter="Approved" onclick="setFilter('Approved', this)">Approved</button>
+                        <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
+                    </div>
+                </div>
+                <div class="table-wrap-outer" id="hubTableOuter">
+                <div class="table-wrap" id="hubTableWrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Reg. ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
+                                <th>Membership</th><th>City</th><th>Area</th><th>Address</th>
+                                <th>Venue</th><th>Capacity</th><th>Hosted Before</th>
+                                <th>Hosting Frequency</th><th>Date</th><th>Status</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                    <div class="table-empty" id="tableEmpty">
+                        <h3>No applications found</h3>
+                        <p>No records match your current search or filter criteria.</p>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="tabAnalytics" class="admin-tab hidden">
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Application Status Overview</h3>
+                        <div class="donut-chart-wrap" id="donutChart"></div>
+                        <div class="chart-legend" id="chartLegend"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Top Cities</h3>
+                        <div class="city-bars" id="cityBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Membership Distribution</h3>
+                        <div class="member-bars" id="memberBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Venue Type Breakdown</h3>
+                        <div class="venue-bars" id="venueBars"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Participants Tab -->
+            <div id="tabParticipants" class="admin-tab hidden">
+                <div class="stats-grid">
+                    <div class="stat-card sc-total">
+                        <div class="sc-body"><span class="sc-val" id="pStatTotal">0</span><span class="sc-lbl">Total Participants</span></div>
+                        <div class="sc-trend">All Registrations</div>
+                    </div>
+                    <div class="stat-card sc-approved">
+                        <div class="sc-body"><span class="sc-val" id="pStatConfirmed">0</span><span class="sc-lbl">Confirmed</span></div>
+                        <div class="sc-trend">Active Participants</div>
+                    </div>
+                    <div class="stat-card sc-rejected">
+                        <div class="sc-body"><span class="sc-val" id="pStatCancelled">0</span><span class="sc-lbl">Cancelled</span></div>
+                        <div class="sc-trend">Withdrawn</div>
+                    </div>
+                    <div class="stat-card sc-pending">
+                        <div class="sc-body"><span class="sc-val" id="pStatHubs">0</span><span class="sc-lbl">Circles with Participants</span></div>
+                        <div class="sc-trend">Active Circles</div>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <span class="search-icon">&#128269;</span>
+                        <input type="text" id="pSearchInput" class="search-input" placeholder="Search by name, email, or hub city..." oninput="applyParticipantFilters()">
+                        <button class="search-clear" id="pSearchClear" onclick="clearParticipantSearch()" title="Clear">&#10005;</button>
+                    </div>
+                    <div class="filter-chips">
+                        <button class="chip active" data-pfilter="all" onclick="setPFilter('all', this)">All</button>
+                        <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
+                        <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
+                    </div>
+                    <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
+                </div>
+                <div class="table-wrap-outer" id="partTableOuter">
+                <div class="table-wrap" id="partTableWrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Participant ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
+                                <th>Membership</th><th>Circle Host</th><th>Circle City</th><th>Circle Area</th>
+                                <th>Note</th><th>Registered On</th><th>Status</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pTableBody"></tbody>
+                    </table>
+                    <div class="table-empty" id="pTableEmpty">
+                        <div class="te-icon">&#128100;</div>
+                        <h3>No participant registrations yet</h3>
+                        <p>Once participants register through the public portal, they will appear here.</p>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</section>
+
+<!-- ══════════════════ TOAST ══════════════════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ══════════════════ CONFIRM MODAL ══════════════════ -->
+<div class="modal-overlay" id="confirmOverlay">
+    <div class="modal">
+        <div class="modal-emoji" id="modalEmoji">!</div>
+        <h3 id="modalTitle">Confirm Action</h3>
+        <p id="modalMessage">Are you sure you want to proceed?</p>
+        <div class="modal-btns">
+            <button class="btn-outline" onclick="closeConfirmModal()">Cancel</button>
+            <button class="btn-primary" id="modalConfirmBtn" onclick="executeModalAction()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════ DETAILS MODAL ══════════════════ -->
+<div class="modal-overlay" id="detailsOverlay">
+    <div class="modal modal-lg">
+        <button class="modal-x" onclick="closeDetailsModal()">&#10005;</button>
+        <h3>Application Details</h3>
+        <div id="detailsContent" class="details-content"></div>
+        <div class="modal-btns">
+            <button class="btn-primary" onclick="closeDetailsModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

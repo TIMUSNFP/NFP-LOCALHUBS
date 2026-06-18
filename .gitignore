@@ -1,3 +1,9 @@
 .claude/
 
 .vercel
+.mcp.json
+.jetro/
+.cursor/
+.agents/
+backend/.env
+backend/node_modules/

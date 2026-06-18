@@ -52,77 +52,6 @@ function renderHeroMapPins() {
     }).join('');
 }
 
-// ═══════════════════ LEAFLET MAP ═══════════════════
-function initLeafletMap() {
-    if (typeof L === 'undefined') { renderHeroMapPins(); return; }
-    const mapEl = document.getElementById('indiaLeafletMap');
-    if (!mapEl) return;
-
-    const map = L.map('indiaLeafletMap', {
-        zoomControl: false,
-        attributionControl: false,
-        scrollWheelZoom: false,
-        dragging: false,
-        touchZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false,
-        fadeAnimation: false,
-        zoomAnimation: false
-    });
-
-    // fitBounds twice: once now, once after layout settles (aspect-ratio CSS needs a frame to apply)
-    const INDIA_BOUNDS = [[6.5, 67.0], [37.5, 97.5]];
-    map.fitBounds(INDIA_BOUNDS, { animate: false, padding: [8, 8] });
-    requestAnimationFrame(() => {
-        map.invalidateSize();
-        map.fitBounds(INDIA_BOUNDS, { animate: false, padding: [8, 8] });
-    });
-
-    // No tile layer — ocean is transparent (hero gradient shows through).
-    // GeoJSON draws India states in white, exactly like MapChart_Map.png.
-    const GEO_URLS = [
-        'https://cdn.jsdelivr.net/gh/geohacker/india@master/state/india_state.geojson',
-        'https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson'
-    ];
-    (async () => {
-        for (const url of GEO_URLS) {
-            try {
-                const r = await fetch(url, { cache: 'force-cache' });
-                if (!r.ok) continue;
-                const geo = await r.json();
-                L.geoJSON(geo, {
-                    style: {
-                        fillColor:   '#1e1b2e',
-                        fillOpacity: 0.94,
-                        color:       'rgba(255,255,255,0.38)',
-                        weight:      0.85,
-                        opacity:     1
-                    }
-                }).addTo(map);
-                break;
-            } catch (_) { /* try next url */ }
-        }
-    })();
-
-    _addLeafletPins(map);
-}
-
-function _addLeafletPins(map) {
-    HUB_CITIES.forEach(c => {
-        const dotSize = c.lg ? 9 : 7;
-        const icon = L.divIcon({
-            html: `<div class="map-pin-pulse" style="animation-delay:${c.delay}s"></div>` +
-                  `<div class="${c.lg ? 'map-pin-dot map-pin-dot--lg' : 'map-pin-dot'}"></div>` +
-                  `<span class="map-pin-label lbl-${c.lbl}">${c.name}</span>`,
-            className: 'lf-pin-wrapper',
-            iconSize:   [dotSize, dotSize],
-            iconAnchor: [dotSize / 2, dotSize / 2]
-        });
-        L.marker([c.lat, c.lng], { icon, interactive: false }).addTo(map);
-    });
-}
-
 
 // ═══════════════════ CONSTANTS ═══════════════════
 const ADMIN_EMAIL       = 'admin@networkfp.com';
@@ -199,22 +128,6 @@ function showSection(id) {
     if (id === 'adminDashboard') {
         updateDashboard();
     }
-}
-
-function scrollToFeatures() {
-    showSection('landing');
-    setTimeout(() => {
-        const el = document.getElementById('whatAreHubs');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-}
-
-function scrollToParticipantFeatures() {
-    showSection('landing');
-    setTimeout(() => {
-        const el = document.getElementById('joinAHub');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
 }
 
 function scrollToSection(sectionId) {
@@ -658,6 +571,10 @@ function updateDashboard() {
     if (document.getElementById('tabAnalytics') && !document.getElementById('tabAnalytics').classList.contains('hidden')) {
         renderAnalytics();
     }
+    if (document.getElementById('tabParticipants') && !document.getElementById('tabParticipants').classList.contains('hidden')) {
+        updateParticipantStats();
+        applyParticipantFilters();
+    }
 }
 
 function updateStats() {
@@ -697,8 +614,10 @@ function showAdminTab(tab, linkEl) {
     if (targetTab) targetTab.classList.remove('hidden');
     if (linkEl) linkEl.classList.add('active');
     const title = document.getElementById('adminPageTitle');
-    if (title) title.textContent = tab === 'applications' ? 'Applications' : 'Analytics';
-    if (tab === 'analytics') renderAnalytics();
+    const titleMap = { applications: 'Applications', analytics: 'Analytics', participants: 'Participant Registrations' };
+    if (title) title.textContent = titleMap[tab] || (tab.charAt(0).toUpperCase() + tab.slice(1));
+    if (tab === 'analytics')    renderAnalytics();
+    if (tab === 'participants') { updateParticipantStats(); applyParticipantFilters(); }
     // Close sidebar on mobile
     closeSidebar();
 }
@@ -757,7 +676,7 @@ function renderTable(regs) {
             <td>${escHtml(r.membership)}</td>
             <td>${escHtml(r.city)}</td>
             <td>${escHtml(r.area)}</td>
-            <td style="max-width:180px;white-space:normal;font-size:12px">${escHtml(r.address || '—')}</td>
+            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:12px" title="${escHtml(r.address || '')}">${escHtml(r.address || '—')}</td>
             <td>${escHtml(r.venueType)}</td>
             <td>${escHtml(r.capacity)}</td>
             <td>${r.hostedBefore === 'Yes' ? '✅ Yes' : '❌ No'}</td>
@@ -1265,8 +1184,10 @@ function applyModeToBanner(mode) {
             <button onclick="showSection('participantReg')">View Circle Finder</button>
         `;
         banner.classList.add('visible');
+        document.body.classList.add('banner-active');
     } else {
         banner.classList.remove('visible');
+        document.body.classList.remove('banner-active');
     }
 }
 
@@ -1885,7 +1806,7 @@ function renderParticipantTable(parts) {
             <td class="td-name">${escHtml(p.hubLeader)}'s Circle</td>
             <td>${escHtml(p.hubCity)}</td>
             <td>${escHtml(p.hubArea)}</td>
-            <td style="max-width:160px;white-space:normal;font-size:12px;color:var(--muted)">${escHtml(p.note || '—')}</td>
+            <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--muted)" title="${escHtml(p.note || '')}">${escHtml(p.note || '—')}</td>
             <td>${formatDate(p.registeredAt)}</td>
             <td>${participantStatusBadge(p.status)}</td>
             <td>
