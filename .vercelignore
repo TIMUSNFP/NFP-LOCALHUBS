@@ -1,42 +1,41 @@
-# Files NOT to deploy to Vercel. The live app only needs:
-#   participant/  circle-leaders/  admin/   (the 3 static sites)
-#   api/  backend/                          (the serverless API + its source)
-#   package.json  vercel.json
-# Everything below is local tooling, old files, or assets the sites don't use.
+# Files NOT to deploy to Vercel.
+# IMPORTANT: a leading slash anchors a pattern to the repo ROOT only. Without it,
+# a bare name like "index.html" would also match participant/index.html and strip
+# the real site pages — which is exactly the bug this file previously had.
 
 # Dependencies (Vercel installs these fresh from package.json)
 node_modules
 
-# Secrets — never upload (also git-ignored, this is belt-and-suspenders)
-backend/.env
-.env
+# Secrets — never upload (also git-ignored)
+/.env
+/backend/.env
 
-# Old single-page monolith (superseded by the 3 site folders)
-index.html
-script.js
-styles.css
-pin-editor.html
-pin-editor-server.js
-serve-static.js
+# Old single-page monolith at the repo ROOT (the per-site copies are kept)
+/index.html
+/script.js
+/styles.css
+/pin-editor.html
+/pin-editor-server.js
+/serve-static.js
 
-# Old SQLite data + scratch folders
-backend/data
-data
-projects
-sites
+# Old SQLite data + scratch (root-level)
+/backend/data
+/data
+/projects
+/sites
 
-# Shared root assets — each site folder has its own copy, so these are unused
-Images
-Fonts-20260608T063024Z-3-001
+# Shared ROOT assets — each site folder has its own copy, so the root ones are unused
+/Images
+/Fonts-20260608T063024Z-3-001
 
-# Local tooling / editor / agent config
-.jetro
-.claude
-.cursor
-.agents
-.github
-.windsurfrules
-.mcp.json
+# Local tooling / editor / agent config (root-level)
+/.jetro
+/.claude
+/.cursor
+/.agents
+/.github
+/.windsurfrules
+/.mcp.json
 
 # Docs
 *.md

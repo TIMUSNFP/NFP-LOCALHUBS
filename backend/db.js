@@ -22,6 +22,15 @@ const pool = new Pool({
   // Keep the pool tiny: serverless functions each open their own pool, and the
   // Supabase pooler caps total connections. A small max avoids exhausting it.
   max: 3,
+  // Fail fast instead of hanging forever if the DB can't be reached (e.g. a
+  // missing/wrong DATABASE_URL). Without this, a bad connection makes the whole
+  // serverless function time out silently.
+  connectionTimeoutMillis: 8000,
+});
+
+// Surface idle-client errors instead of crashing the function process.
+pool.on('error', (err) => {
+  console.error('[db] idle pool client error:', err.message);
 });
 
 // Run a raw query. Returns the full pg result ({ rows, rowCount, ... }).
