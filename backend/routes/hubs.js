@@ -18,7 +18,7 @@ const REQUIRED_FIELDS = [
 ];
 
 // POST /api/hubs — submit a new hub registration.
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const body = req.body || {};
 
   for (const field of REQUIRED_FIELDS) {
@@ -30,6 +30,22 @@ router.post('/', (req, res) => {
   const id = generateHubId();
   const submittedAt = new Date().toISOString();
   const status = 'Pending';
+
+  // Geocode BEFORE responding. On serverless the function freezes the instant it
+  // responds, so the old fire-and-forget UPDATE would never run. We resolve coords
+  // up front (best-effort — null on failure) and insert them with the row.
+  let lat = null;
+  let lng = null;
+  try {
+    const coords = await geocodeHub({
+      address: body.address ? String(body.address).trim() : null,
+      area: String(body.area).trim(),
+      city: String(body.city).trim(),
+    });
+    if (coords) [lat, lng] = coords;
+  } catch (e) {
+    // Geocoding is best-effort; ignore failures and store null coords.
+  }
 
   const hub = {
     id,
@@ -48,37 +64,30 @@ router.post('/', (req, res) => {
     capacity: body.capacity,
     hosted_before: body.hostedBefore || 'No',
     hosting_frequency: body.hostingFrequency || 'One Time Only',
-    lat: null,
-    lng: null,
+    lat,
+    lng,
   };
 
-  db.prepare(
+  await db.run(
     `INSERT INTO hubs (
       id, submitted_at, last_updated, status, full_name, email, mobile, membership,
       city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, lat, lng
     ) VALUES (
-      @id, @submitted_at, @last_updated, @status, @full_name, @email, @mobile, @membership,
-      @city, @area, @address, @pincode, @venue_type, @capacity, @hosted_before, @hosting_frequency, @lat, @lng
-    )`
-  ).run(hub);
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+    )`,
+    [
+      hub.id, hub.submitted_at, hub.last_updated, hub.status, hub.full_name, hub.email,
+      hub.mobile, hub.membership, hub.city, hub.area, hub.address, hub.pincode,
+      hub.venue_type, hub.capacity, hub.hosted_before, hub.hosting_frequency, hub.lat, hub.lng,
+    ]
+  );
 
-  const created = db.prepare('SELECT * FROM hubs WHERE id = ?').get(id);
+  const created = await db.get('SELECT * FROM hubs WHERE id = $1', [id]);
   res.status(201).json(hubRowToJson(created));
-
-  // Fire-and-forget geocoding — does not block the response.
-  geocodeHub({ address: hub.address, area: hub.area, city: hub.city })
-    .then((coords) => {
-      if (!coords) return;
-      const [lat, lng] = coords;
-      db.prepare('UPDATE hubs SET lat = ?, lng = ? WHERE id = ?').run(lat, lng, id);
-    })
-    .catch(() => {
-      // Geocoding is best-effort; ignore failures.
-    });
 });
 
 // GET /api/hubs?status=Approved,Pending — list hubs, optionally filtered by status.
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { status } = req.query;
   let rows;
 
@@ -88,23 +97,24 @@ router.get('/', (req, res) => {
       .map((s) => s.trim())
       .filter(Boolean);
     if (statuses.length === 0) {
-      rows = db.prepare('SELECT * FROM hubs ORDER BY submitted_at DESC').all();
+      rows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
     } else {
-      const placeholders = statuses.map(() => '?').join(',');
-      rows = db
-        .prepare(`SELECT * FROM hubs WHERE status IN (${placeholders}) ORDER BY submitted_at DESC`)
-        .all(...statuses);
+      const placeholders = statuses.map((_, i) => `$${i + 1}`).join(',');
+      rows = await db.all(
+        `SELECT * FROM hubs WHERE status IN (${placeholders}) ORDER BY submitted_at DESC`,
+        statuses
+      );
     }
   } else {
-    rows = db.prepare('SELECT * FROM hubs ORDER BY submitted_at DESC').all();
+    rows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
   }
 
   res.json(rows.map(hubRowToJson));
 });
 
 // GET /api/hubs/:id — single hub.
-router.get('/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM hubs WHERE id = ?').get(req.params.id);
+router.get('/:id', async (req, res) => {
+  const row = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'Hub not found' });
   res.json(hubRowToJson(row));
 });

@@ -13,7 +13,7 @@ router.get('/nearby-hubs', async (req, res) => {
     return res.status(400).json({ error: 'A valid 6-digit pincode is required.' });
   }
 
-  const cached = db.prepare('SELECT * FROM pincode_cache WHERE pincode = ?').get(pincode);
+  const cached = await db.get('SELECT * FROM pincode_cache WHERE pincode = $1', [pincode]);
   let lat, lng;
 
   if (cached) {
@@ -25,14 +25,18 @@ router.get('/nearby-hubs', async (req, res) => {
       return res.status(404).json({ error: 'Could not locate that PIN code.' });
     }
     [lat, lng] = coords;
-    db.prepare(
-      'INSERT INTO pincode_cache (pincode, lat, lng, cached_at) VALUES (?, ?, ?, ?)'
-    ).run(pincode, lat, lng, new Date().toISOString());
+    // ON CONFLICT guards against two simultaneous requests caching the same pincode.
+    await db.run(
+      `INSERT INTO pincode_cache (pincode, lat, lng, cached_at) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (pincode) DO NOTHING`,
+      [pincode, lat, lng, new Date().toISOString()]
+    );
   }
 
-  const approvedHubs = db
-    .prepare('SELECT * FROM hubs WHERE status = ? AND lat IS NOT NULL AND lng IS NOT NULL')
-    .all('Approved');
+  const approvedHubs = await db.all(
+    'SELECT * FROM hubs WHERE status = $1 AND lat IS NOT NULL AND lng IS NOT NULL',
+    ['Approved']
+  );
 
   const results = approvedHubs
     .map((row) => {

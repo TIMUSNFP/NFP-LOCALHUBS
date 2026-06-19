@@ -1,9 +1,14 @@
-// seed.js — inserts the same 12 demo hubs that seedDemoData() in script.js used to
-// create in localStorage, so the participant/admin sites have real data immediately.
+// seed.js — inserts demo hubs so the participant/admin sites have data to show.
+//
+// Run MANUALLY (it does NOT auto-run on server boot anymore):
+//   npm run seed
+// It is idempotent: if the hubs table already has rows, it does nothing.
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const db = require('./db');
 
-function seed() {
-  const { count } = db.prepare('SELECT COUNT(*) AS count FROM hubs').get();
+async function seed() {
+  const { count } = await db.get('SELECT COUNT(*)::int AS count FROM hubs');
   if (count > 0) {
     console.log(`Skipping seed — hubs table already has ${count} row(s).`);
     return;
@@ -40,20 +45,6 @@ function seed() {
   const statuses = ['Pending', 'Approved', 'Rejected', 'Pending', 'Approved', 'Approved'];
   const frequencies = ['One Time Only', 'Multiple Times', 'Open to Either'];
 
-  const insert = db.prepare(`
-    INSERT INTO hubs (
-      id, submitted_at, last_updated, status, full_name, email, mobile, membership,
-      city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, lat, lng
-    ) VALUES (
-      @id, @submitted_at, @last_updated, @status, @full_name, @email, @mobile, @membership,
-      @city, @area, @address, @pincode, @venue_type, @capacity, @hosted_before, @hosting_frequency, @lat, @lng
-    )
-  `);
-
-  const insertMany = db.transaction((hubs) => {
-    for (const hub of hubs) insert.run(hub);
-  });
-
   const demo = names.map((name, i) => {
     const id = `NFP-HUB-2024${String(11 - i).padStart(2, '0')}15-${1000 + i * 73}`;
     const submittedAt = new Date(Date.now() - i * 24 * 60 * 60 * 1000 * 2).toISOString();
@@ -79,11 +70,34 @@ function seed() {
     };
   });
 
-  insertMany(demo);
+  for (const hub of demo) {
+    await db.run(
+      `INSERT INTO hubs (
+        id, submitted_at, last_updated, status, full_name, email, mobile, membership,
+        city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, lat, lng
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+      )`,
+      [
+        hub.id, hub.submitted_at, hub.last_updated, hub.status, hub.full_name, hub.email,
+        hub.mobile, hub.membership, hub.city, hub.area, hub.address, hub.pincode,
+        hub.venue_type, hub.capacity, hub.hosted_before, hub.hosting_frequency, hub.lat, hub.lng,
+      ]
+    );
+  }
+
   const approvedCount = demo.filter((h) => h.status === 'Approved').length;
   console.log(`Seeded ${demo.length} demo hubs (${approvedCount} Approved).`);
 }
 
-seed();
+// Run when invoked directly (`node seed.js` / `npm run seed`).
+if (require.main === module) {
+  seed()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('Seed failed:', err);
+      process.exit(1);
+    });
+}
 
 module.exports = seed;

@@ -8,7 +8,9 @@
 'use strict';
 
 // ═══════════════════ API CONFIG ═══════════════════
-const API_BASE  = 'http://192.168.29.34:4000';
+// Empty string = same origin (pages + API share one domain on Vercel; no CORS).
+// For local testing against the backend, set this to e.g. 'http://localhost:4000'.
+const API_BASE  = '';
 const TOKEN_KEY = 'nfp_admin_token';
 
 // ═══════════════════ STATE ═══════════════════

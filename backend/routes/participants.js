@@ -1,14 +1,14 @@
 // routes/participants.js — public participant registration.
 const express = require('express');
 const db = require('../db');
-const { generateParticipantId, hubRowToJson } = require('../utils');
+const { generateParticipantId } = require('../utils');
 
 const router = express.Router();
 
 const REQUIRED_FIELDS = ['fullName', 'email', 'mobile', 'membership', 'hubId'];
 
 // POST /api/participants — register a participant against an Approved hub.
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const body = req.body || {};
 
   for (const field of REQUIRED_FIELDS) {
@@ -17,7 +17,7 @@ router.post('/', (req, res) => {
     }
   }
 
-  const hub = db.prepare('SELECT * FROM hubs WHERE id = ?').get(body.hubId);
+  const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [body.hubId]);
   if (!hub) {
     return res.status(404).json({ error: 'Hub not found' });
   }
@@ -41,10 +41,14 @@ router.post('/', (req, res) => {
     hub_id: hub.id,
   };
 
-  db.prepare(
+  await db.run(
     `INSERT INTO participants (id, registered_at, status, full_name, email, mobile, membership, note, hub_id)
-     VALUES (@id, @registered_at, @status, @full_name, @email, @mobile, @membership, @note, @hub_id)`
-  ).run(participant);
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      participant.id, participant.registered_at, participant.status, participant.full_name,
+      participant.email, participant.mobile, participant.membership, participant.note, participant.hub_id,
+    ]
+  );
 
   res.status(201).json({
     id,

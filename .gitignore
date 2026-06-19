@@ -7,3 +7,6 @@
 .agents/
 backend/.env
 backend/node_modules/
+
+# Node dependencies (Vercel installs these from package.json — never commit)
+node_modules/

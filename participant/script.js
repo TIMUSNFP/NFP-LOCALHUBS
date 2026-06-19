@@ -7,7 +7,10 @@
 'use strict';
 
 // ═══════════════════ API CONFIG ═══════════════════
-const API_BASE = 'http://192.168.29.34:4000';
+// Empty string = same origin. On Vercel the pages and the API share one domain,
+// so requests go to /api/... directly (no CORS). For local testing against the
+// backend on another port, set this to e.g. 'http://localhost:4000'.
+const API_BASE = '';
 
 // ═══════════════════ HERO MAP — CITY DATA & PROJECTION ═══════════════════
 // MapChart_Map.png calibration anchored on the Kolkata star marker (88.36°E → x≈68.8%)
