@@ -324,7 +324,21 @@ function formatDate(date) {
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// Guard against double submission: once a submit is in flight, ignore further
+// clicks until it finishes. This is what prevents the same hub registering twice.
+let hubSubmitting = false;
+
 async function submitRegistration() {
+    if (hubSubmitting) return;
+    hubSubmitting = true;
+
+    const submitBtn = document.getElementById('hubSubmitBtn');
+    const originalLabel = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Submitting…';
+    }
+
     const hostedEl = document.querySelector('input[name="hostedBefore"]:checked');
     const freqEl   = document.querySelector('input[name="hostingFrequency"]:checked');
     const payload = {
@@ -357,6 +371,13 @@ async function submitRegistration() {
         resetForm();
     } catch (err) {
         showToast('Could not submit your application — please try again.', 'error');
+    } finally {
+        // Always restore the button and release the guard, so a genuine retry works.
+        hubSubmitting = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalLabel;
+        }
     }
 }
 

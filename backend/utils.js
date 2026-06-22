@@ -88,7 +88,10 @@ function sleep(ms) {
 }
 
 // Geocodes a single free-text query against Nominatim. Returns [lat, lng] or null.
+// Uses a hard timeout so a slow geocoder can never hang the request indefinitely.
 async function geocodeQuery(query) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
   try {
     const url = `${NOMINATIM_URL}?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=in`;
     const res = await fetch(url, {
@@ -96,6 +99,7 @@ async function geocodeQuery(query) {
         Accept: 'application/json',
         'User-Agent': NOMINATIM_USER_AGENT,
       },
+      signal: controller.signal,
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -105,7 +109,9 @@ async function geocodeQuery(query) {
       if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
     }
   } catch (e) {
-    // try next query
+    // try next query (includes abort/timeout)
+  } finally {
+    clearTimeout(timer);
   }
   return null;
 }

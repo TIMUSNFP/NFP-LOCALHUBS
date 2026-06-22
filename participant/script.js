@@ -730,11 +730,23 @@ function validateParticipantForm() {
     return valid;
 }
 
+// Guard against double submission: ignore extra clicks while a request is in flight.
+let participantSubmitting = false;
+
 async function submitParticipant() {
+    if (participantSubmitting) return;
     if (!validateParticipantForm()) return;
 
     const hub = allApprovedHubs.find(h => h.id === selectedHubId);
     if (!hub) { showToast('Selected Circle not found. Please choose again.', 'error'); return; }
+
+    participantSubmitting = true;
+    const submitBtn = document.getElementById('participantSubmitBtn');
+    const originalLabel = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Registering…';
+    }
 
     const note = document.getElementById('pNote')?.value.trim() || '';
     const payload = {
@@ -763,6 +775,12 @@ async function submitParticipant() {
         console.warn('Participant registration failed:', err);
         showToast('Could not reach the server. Please check your connection and try again.', 'error');
         return;
+    } finally {
+        participantSubmitting = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalLabel;
+        }
     }
 
     showParticipantSuccess(participant);

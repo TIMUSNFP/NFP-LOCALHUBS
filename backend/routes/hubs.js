@@ -1,7 +1,7 @@
 // routes/hubs.js — public hub registration + listing endpoints.
 const express = require('express');
 const db = require('../db');
-const { generateHubId, hubRowToJson, geocodeHub } = require('../utils');
+const { generateHubId, hubRowToJson } = require('../utils');
 
 const router = express.Router();
 
@@ -31,22 +31,11 @@ router.post('/', async (req, res) => {
   const submittedAt = new Date().toISOString();
   const status = 'Pending';
 
-  // Geocode BEFORE responding. On serverless the function freezes the instant it
-  // responds, so the old fire-and-forget UPDATE would never run. We resolve coords
-  // up front (best-effort — null on failure) and insert them with the row.
-  let lat = null;
-  let lng = null;
-  try {
-    const coords = await geocodeHub({
-      address: body.address ? String(body.address).trim() : null,
-      area: String(body.area).trim(),
-      city: String(body.city).trim(),
-    });
-    if (coords) [lat, lng] = coords;
-  } catch (e) {
-    // Geocoding is best-effort; ignore failures and store null coords.
-  }
-
+  // NOTE: we deliberately do NOT geocode here. Geocoding made hub submission slow
+  // (multiple network lookups before responding), which caused a laggy submit and
+  // accidental double-submissions. Coordinates are filled in later when an admin
+  // approves the hub (see routes/admin.js) — which is the only time the map needs
+  // a precise pin. Pending hubs fall back to city-centre coords on the frontend.
   const hub = {
     id,
     submitted_at: submittedAt,
@@ -64,8 +53,8 @@ router.post('/', async (req, res) => {
     capacity: body.capacity,
     hosted_before: body.hostedBefore || 'No',
     hosting_frequency: body.hostingFrequency || 'One Time Only',
-    lat,
-    lng,
+    lat: null,
+    lng: null,
   };
 
   await db.run(

@@ -3,7 +3,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-const { hubRowToJson, participantRowToJson } = require('../utils');
+const { hubRowToJson, participantRowToJson, geocodeHub } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -57,6 +57,21 @@ router.patch('/hubs/:id/status', async (req, res) => {
     lastUpdated,
     req.params.id,
   ]);
+
+  // Geocode on approval (only if coords are missing). This is the moment the hub
+  // becomes visible on the map and in the PIN-code nearby search, so it's the right
+  // time to resolve a precise pin — and it keeps public submission fast.
+  if (status === 'Approved' && (hub.lat == null || hub.lng == null)) {
+    try {
+      const coords = await geocodeHub({ address: hub.address, area: hub.area, city: hub.city });
+      if (coords) {
+        const [lat, lng] = coords;
+        await db.run('UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3', [lat, lng, req.params.id]);
+      }
+    } catch (e) {
+      // Best-effort; frontend falls back to city-centre coords if this stays null.
+    }
+  }
 
   const updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
   res.json(hubRowToJson(updated));
