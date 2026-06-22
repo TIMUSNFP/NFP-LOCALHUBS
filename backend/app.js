@@ -40,6 +40,38 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// TEMPORARY diagnostic endpoint — reports DB connectivity without leaking secrets.
+// Remove this route once the deployment is confirmed working.
+app.get('/api/debug/db', async (req, res) => {
+  const info = {};
+  const url = process.env.DATABASE_URL;
+  info.hasDatabaseUrl = !!url;
+  if (url) {
+    info.rawHasPercent40 = url.includes('%40'); // true = @ correctly encoded
+    try {
+      const u = new URL(url);
+      info.host = u.hostname;
+      info.port = u.port;
+      info.user = u.username;
+    } catch (e) {
+      info.urlParseError = e.message;
+    }
+  }
+  info.otherEnv = {
+    JWT_SECRET: !!process.env.JWT_SECRET,
+    ADMIN_EMAIL: !!process.env.ADMIN_EMAIL,
+    ADMIN_PASSWORD_HASH: !!process.env.ADMIN_PASSWORD_HASH,
+  };
+  try {
+    const db = require('./db');
+    const r = await db.get('SELECT 1 AS ok');
+    info.dbQuery = 'OK ' + JSON.stringify(r);
+  } catch (e) {
+    info.dbQuery = 'ERROR: ' + e.message;
+  }
+  res.json(info);
+});
+
 app.use('/api/hubs', hubsRouter);
 app.use('/api/participants', participantsRouter);
 app.use('/api/geo', geoRouter);
