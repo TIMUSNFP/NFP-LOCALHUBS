@@ -514,9 +514,18 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     border-radius: 100px;
     flex-shrink: 0;
 }
+/* Form open/close toggle sits to the right as a clear status control. */
+.filter-bar .form-toggle {
+    margin-left: auto;
+    font-weight: 700;
+    min-width: 232px;
+    justify-content: center;
+    text-align: center;
+}
 .search-box {
-    flex: 1;
-    min-width: 280px;
+    flex: 1 1 320px;
+    max-width: 460px;
+    min-width: 260px;
     display: flex;
     align-items: center;
     gap: 10px;

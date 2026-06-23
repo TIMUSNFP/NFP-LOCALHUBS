@@ -30,19 +30,18 @@
             <p class="login-sub">Sign in to manage Circle Host applications</p>
             <div class="form-group">
                 <label for="adminEmail">Email Address</label>
-                <input type="email" id="adminEmail" class="form-input" placeholder="admin@networkfp.com" value="admin@networkfp.com">
+                <input type="email" id="adminEmail" class="form-input" placeholder="admin@networkfp.com" autocomplete="username">
                 <span class="err-msg" id="adminEmailErr"></span>
             </div>
             <div class="form-group">
                 <label for="adminPassword">Password</label>
                 <div class="pw-wrap">
-                    <input type="password" id="adminPassword" class="form-input" placeholder="Enter password" value="admin123">
+                    <input type="password" id="adminPassword" class="form-input" placeholder="Enter password" autocomplete="current-password">
                     <button type="button" class="pw-toggle" onclick="togglePassword()" title="Toggle visibility">&#128065;</button>
                 </div>
                 <span class="err-msg" id="adminPasswordErr"></span>
             </div>
             <button class="btn-primary full-w" onclick="adminLogin()">Sign In to Admin Portal</button>
-            <div class="login-hint"><span>Demo credentials: admin@networkfp.com / admin123</span></div>
         </div>
     </div>
 </section>
@@ -129,7 +128,7 @@
                         <button class="chip" data-filter="Approved" onclick="setFilter('Approved', this)">Approved</button>
                         <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
                     </div>
-                    <button class="btn-export" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:auto;">Applications</button>
+                    <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()">Applications</button>
                 </div>
                 <div class="table-wrap-outer" id="hubTableOuter">
                 <div class="table-wrap" id="hubTableWrap">
@@ -206,7 +205,7 @@
                         <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
                         <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
                     </div>
-                    <button class="btn-export" id="participantFormToggle" onclick="toggleParticipantForm()" style="margin-left:auto;">Registrations</button>
+                    <button class="btn-export form-toggle" id="participantFormToggle" onclick="toggleParticipantForm()">Registrations</button>
                     <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
                 </div>
                 <div class="table-wrap-outer" id="partTableOuter">
