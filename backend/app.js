@@ -41,6 +41,29 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// TEMPORARY diagnostic — checks the admin hash without leaking it. Remove after use.
+app.get('/api/debug/auth', (req, res) => {
+  const bcrypt = require('bcryptjs');
+  const hash = process.env.ADMIN_PASSWORD_HASH || '';
+  let compareNew = null;
+  let compareErr = null;
+  try {
+    compareNew = bcrypt.compareSync('NfpCircles@2026#Admin', hash.trim());
+  } catch (e) {
+    compareErr = e.message;
+  }
+  res.json({
+    emailEnv: process.env.ADMIN_EMAIL,
+    hashLen: hash.length,
+    hashPrefix: hash.slice(0, 7),
+    hashSuffix: hash.slice(-4),
+    hasWhitespace: /\s/.test(hash),
+    looksLikeBcrypt: /^\$2[aby]\$\d\d\$/.test(hash.trim()),
+    compareNewWithTrim: compareNew,
+    compareErr,
+  });
+});
+
 app.use('/api/hubs', hubsRouter);
 app.use('/api/participants', participantsRouter);
 app.use('/api/geo', geoRouter);
