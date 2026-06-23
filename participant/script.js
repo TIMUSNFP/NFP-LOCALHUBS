@@ -827,8 +827,12 @@ function showParticipantSuccess(p) {
             <div class="sd-row"><span class="sd-label">Status</span><span class="sd-value"><span class="badge badge-approved">Confirmed</span></span></div>
         `;
     }
-    showSection('participantSuccess');
+    document.getElementById('participantSuccessOverlay').classList.add('visible');
     showToast('You are successfully registered at this Circle!', 'success');
+}
+
+function closeParticipantSuccessModal() {
+    document.getElementById('participantSuccessOverlay').classList.remove('visible');
 }
 
 function resetParticipantForm() {

@@ -70,7 +70,8 @@
     --radius-md:     12px;
     --radius-lg:     20px;
     --radius-xl:     28px;
-    --nav-height:    90px;
+    --nav-height:    70px;
+    --search-h:      82px;   /* height of the sticky location search bar */
     --sidebar-w:     260px;
     --transition:    0.25s ease;
 }
@@ -530,7 +531,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 @media (max-width: 768px) {
 
     /* ── Root ── */
-    :root { --nav-height: 64px; }
+    :root { --nav-height: 64px; --search-h: 0px; }
+
+    /* On small screens the search bar stacks tall, so don't pin it. */
+    .hub-search-sticky { position: static; box-shadow: none; }
 
     /* ── Navbar ── */
     .hamburger { display: flex; }
@@ -809,8 +813,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .pb-map-col {
     position: sticky;
-    top: var(--nav-height);
-    height: calc(100vh - var(--nav-height));
+    top: calc(var(--nav-height) + var(--search-h));
+    height: calc(100vh - var(--nav-height) - var(--search-h));
     overflow: hidden;
     border-right: 1px solid var(--border);
 }
@@ -1070,9 +1074,9 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     border-radius: var(--radius-xl);
     overflow: hidden;
     position: sticky;
-    top: calc(var(--nav-height) + 20px);
+    top: calc(var(--nav-height) + var(--search-h) + 20px);
     align-self: flex-start;
-    max-height: calc(100vh - var(--nav-height) - 40px);
+    max-height: calc(100vh - var(--nav-height) - var(--search-h) - 40px);
     overflow-y: auto;
 }
 .rfp-placeholder {
@@ -2043,3 +2047,41 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* Disabled primary button (declaration not yet accepted) */
 .btn-primary:disabled,
 .btn-primary[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none;filter:grayscale(15%);}
+
+/* Sticky location search bar — stays pinned below the navbar while browsing Circles */
+.hub-search-sticky {
+    position: sticky;
+    top: var(--nav-height);
+    z-index: 1001;
+    background: var(--bg);
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 6px 14px -8px rgba(0,0,0,0.18);
+}
+
+/* Submit-success popup modal (shown in-page instead of navigating away) */
+.success-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease;
+}
+.success-overlay.visible { opacity: 1; visibility: visible; }
+.success-modal {
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: successModalPop 0.3s ease;
+}
+@keyframes successModalPop {
+    from { transform: scale(0.94); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}

@@ -452,6 +452,11 @@
                     <p class="ppage-sub">Connect with QPFP&reg;-certified and ProMember Personal Finance Professionals who have opened their doors for you. Find a Circle in your city, join the conversation, and never practice in isolation again.</p>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="hub-search-sticky">
+        <div class="container">
             <div class="hub-search-bar">
                 <div class="hsb-input-wrap">
                     <span class="hsb-icon">&#128269;</span>
@@ -525,10 +530,8 @@
                                 <select id="pMembership" class="form-input">
                                     <option value="">-- Select your membership --</option>
                                     <option value="QPFP Certificant">QPFP Certificant</option>
-                                    <option value="CFP Professional">CFP Professional</option>
-                                    <option value="ProMember">ProMember</option>
-                                    <option value="Both CFP &amp; QPFP">Both CFP &amp; QPFP</option>
-                                    <option value="Aspiring MFD">Aspiring MFD</option>
+                                    <option value="NFP Member">NFP Member</option>
+                                    <option value="Both NFP ProMember &amp; QPFP Certificant">Both NFP ProMember &amp; QPFP Certificant</option>
                                 </select>
                             </div>
                             <span class="err-msg" id="pMembershipErr"></span>
@@ -556,22 +559,20 @@
 </section>
 
 <!-- ══════════════════ PARTICIPANT SUCCESS ══════════════════ -->
-<section id="participantSuccess" class="page">
-    <div class="success-wrapper">
-        <div class="success-card">
-            <div class="success-icon-wrap">
-                <div class="success-check">&#10003;</div>
-            </div>
-            <h2>You're Registered!</h2>
-            <p class="success-tagline">Your spot at the Circle is confirmed. The Circle Host has been notified and will reach out before the next session.</p>
-            <div class="success-details" id="pSuccessDetails"></div>
-            <div class="success-actions">
-                <button class="btn-primary" onclick="showSection('landing')">Back to Home</button>
-                <button class="btn-outline" onclick="resetParticipantForm(); showSection('participantReg')">Join Another Circle</button>
-            </div>
+<div class="success-overlay" id="participantSuccessOverlay">
+    <div class="success-card success-modal">
+        <div class="success-icon-wrap">
+            <div class="success-check">&#10003;</div>
+        </div>
+        <h2>You're Registered!</h2>
+        <p class="success-tagline">Your spot at the Circle is confirmed. The Circle Host has been notified and will reach out before the next session.</p>
+        <div class="success-details" id="pSuccessDetails"></div>
+        <div class="success-actions">
+            <button class="btn-primary" onclick="closeParticipantSuccessModal()">Done</button>
+            <button class="btn-outline" onclick="closeParticipantSuccessModal(); showSection('landing')">Back to Home</button>
         </div>
     </div>
-</section>
+</div>
 
 <!-- ══════════════════ TOAST ══════════════════ -->
 <div class="toast-container" id="toastContainer"></div>

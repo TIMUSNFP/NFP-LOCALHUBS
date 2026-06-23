@@ -450,9 +450,13 @@ function showSuccessScreen(reg) {
             <span class="sd-value"><span class="badge badge-pending">Pending Approval</span></span>
         </div>
     `;
-    showSection('success');
+    document.getElementById('successOverlay').classList.add('visible');
     goToStep(1);
     showToast('Application submitted successfully!', 'success');
+}
+
+function closeSuccessModal() {
+    document.getElementById('successOverlay').classList.remove('visible');
 }
 
 function resetForm() {

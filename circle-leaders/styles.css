@@ -70,7 +70,7 @@
     --radius-md:     12px;
     --radius-lg:     20px;
     --radius-xl:     28px;
-    --nav-height:    90px;
+    --nav-height:    70px;
     --sidebar-w:     260px;
     --transition:    0.25s ease;
 }
@@ -2292,3 +2292,30 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* Disabled primary button (declaration not yet accepted) */
 .btn-primary:disabled,
 .btn-primary[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none;filter:grayscale(15%);}
+
+/* Submit-success popup modal (shown in-page instead of navigating away) */
+.success-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease;
+}
+.success-overlay.visible { opacity: 1; visibility: visible; }
+.success-modal {
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: successModalPop 0.3s ease;
+}
+@keyframes successModalPop {
+    from { transform: scale(0.94); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
