@@ -467,8 +467,12 @@ function sortAndRenderHubs() {
 }
 
 function capacityOrder(cap) {
-    const m = { 'Up to 6 People': 1, '6-10 People': 2, '10-20 People': 3, 'More than 20 People': 4 };
-    return m[cap] || 99;
+    // New capacities are definitive numbers like "5 People" .. "15 People",
+    // so sort by the leading integer. Falls back for any legacy range labels.
+    const n = parseInt(cap, 10);
+    if (Number.isFinite(n)) return n;
+    const legacy = { 'Up to 6 People': 6, '6-10 People': 10, '10-20 People': 20, 'More than 20 People': 21 };
+    return legacy[cap] || 99;
 }
 
 // renderHubCards optionally shows a distance badge per hub when hub.distanceKm is present.
