@@ -17,6 +17,7 @@ const hubsRouter = require('./routes/hubs');
 const participantsRouter = require('./routes/participants');
 const geoRouter = require('./routes/geo');
 const adminRouter = require('./routes/admin');
+const settingsRouter = require('./routes/settings');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/hubs', hubsRouter);
 app.use('/api/participants', participantsRouter);
 app.use('/api/geo', geoRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/settings', settingsRouter);
 
 // 404 fallback for unknown API routes.
 app.use('/api', (req, res) => {

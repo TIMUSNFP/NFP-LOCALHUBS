@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { hubRowToJson, participantRowToJson, geocodeHub } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
+const { readFormSettings } = require('./settings');
 
 const router = express.Router();
 
@@ -34,6 +35,29 @@ router.post('/login', async (req, res) => {
 
 // Everything below requires a valid admin JWT.
 router.use(requireAdmin);
+
+// GET /api/admin/settings — current open/closed state of the public forms.
+router.get('/settings', async (req, res) => {
+  res.json(await readFormSettings());
+});
+
+// PATCH /api/admin/settings — open or close the public forms.
+// Body: { hubFormOpen?: boolean, participantFormOpen?: boolean }
+router.patch('/settings', async (req, res) => {
+  const { hubFormOpen, participantFormOpen } = req.body || {};
+
+  const upsert = (key, val) =>
+    db.run(
+      `INSERT INTO settings (key, value) VALUES ($1, $2)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [key, val ? 'true' : 'false']
+    );
+
+  if (typeof hubFormOpen === 'boolean') await upsert('hub_form_open', hubFormOpen);
+  if (typeof participantFormOpen === 'boolean') await upsert('participant_form_open', participantFormOpen);
+
+  res.json(await readFormSettings());
+});
 
 // GET /api/admin/hubs — all hubs regardless of status.
 router.get('/hubs', async (req, res) => {

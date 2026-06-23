@@ -168,6 +168,88 @@ function togglePassword() {
     passEl.type = passEl.type === 'password' ? 'text' : 'password';
 }
 
+// ═══════════════════ FORM OPEN/CLOSE SETTINGS ═══════════════════
+let formSettings = { hubFormOpen: true, participantFormOpen: true };
+
+async function loadSettings() {
+    try {
+        const res = await fetch(`${API_BASE}/api/settings`);
+        if (res.ok) { formSettings = await res.json(); renderFormToggles(); }
+    } catch (e) { /* leave defaults */ }
+}
+
+function renderFormToggles() {
+    const hb = document.getElementById('hubFormToggle');
+    if (hb) {
+        hb.innerHTML = formSettings.hubFormOpen
+            ? '🟢 Applications Open — Close Form'
+            : '🔴 Applications Closed — Open Form';
+        hb.style.background = formSettings.hubFormOpen ? '' : '#DC2626';
+        hb.style.color = formSettings.hubFormOpen ? '' : '#fff';
+    }
+    const pb = document.getElementById('participantFormToggle');
+    if (pb) {
+        pb.innerHTML = formSettings.participantFormOpen
+            ? '🟢 Registrations Open — Close Form'
+            : '🔴 Registrations Closed — Open Form';
+        pb.style.background = formSettings.participantFormOpen ? '' : '#DC2626';
+        pb.style.color = formSettings.participantFormOpen ? '' : '#fff';
+    }
+}
+
+async function patchSettings(payload) {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/settings`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) { showToast('Could not update form status.', 'error'); return false; }
+        formSettings = await res.json();
+        renderFormToggles();
+        return true;
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+        return false;
+    }
+}
+
+function toggleHubForm() {
+    const next = !formSettings.hubFormOpen;
+    openConfirmModal(
+        next ? 'Open Applications' : 'Close Applications',
+        next
+            ? 'Re-open the Hub Leader application form so people can apply again?'
+            : 'Close the Hub Leader application form? New applications will be blocked until you re-open it.',
+        next ? '🟢' : '🔴',
+        async () => {
+            closeConfirmModal();
+            const ok = await patchSettings({ hubFormOpen: next });
+            if (ok) showToast(next ? 'Hub Leader applications are now OPEN.' : 'Hub Leader applications are now CLOSED.', next ? 'success' : 'warning');
+        },
+        next ? 'Open Form' : 'Close Form',
+        !next
+    );
+}
+
+function toggleParticipantForm() {
+    const next = !formSettings.participantFormOpen;
+    openConfirmModal(
+        next ? 'Open Registrations' : 'Close Registrations',
+        next
+            ? 'Re-open Circle registrations so members can join again?'
+            : 'Close Circle registrations? Members will be able to browse Circles but not join until you re-open it.',
+        next ? '🟢' : '🔴',
+        async () => {
+            closeConfirmModal();
+            const ok = await patchSettings({ participantFormOpen: next });
+            if (ok) showToast(next ? 'Circle registrations are now OPEN.' : 'Circle registrations are now CLOSED.', next ? 'success' : 'warning');
+        },
+        next ? 'Open Form' : 'Close Form',
+        !next
+    );
+}
+
 // ═══════════════════ DATA LOADING ═══════════════════
 async function loadHubs() {
     try {
@@ -191,6 +273,7 @@ async function loadParticipants() {
 
 // ═══════════════════ ADMIN DASHBOARD ═══════════════════
 async function updateDashboard() {
+    loadSettings();
     await loadHubs();
     updateStats();
     applyFilters();

@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindMobileInputs();
     initGallery();
     renderHeroMapPins();
+    loadParticipantFormState();
 });
 
 function handleNavbarScroll() {
@@ -786,11 +787,26 @@ async function submitParticipant() {
     resetParticipantForm();
 }
 
-// Enable the Confirm button only when BOTH declaration checkboxes are ticked.
+// Whether the admin currently has Circle registrations open.
+let participantFormOpen = true;
+
+async function loadParticipantFormState() {
+    try {
+        const res = await fetch(`${API_BASE}/api/settings`);
+        if (res.ok) { const s = await res.json(); participantFormOpen = s.participantFormOpen !== false; }
+    } catch (e) { /* assume open if settings can't be read */ }
+    const banner = document.getElementById('participantClosedBanner');
+    if (banner) banner.style.display = participantFormOpen ? 'none' : 'block';
+    updateParticipantSubmitGate();
+}
+
+// Enable Confirm only when registrations are open AND both declaration checkboxes are ticked.
 function updateParticipantSubmitGate() {
     const btn = document.getElementById('participantSubmitBtn');
     if (!btn) return;
-    const ok = document.getElementById('pDecl1')?.checked && document.getElementById('pDecl2')?.checked;
+    const ok = participantFormOpen
+        && document.getElementById('pDecl1')?.checked
+        && document.getElementById('pDecl2')?.checked;
     btn.disabled = !ok;
 }
 

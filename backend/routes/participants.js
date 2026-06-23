@@ -11,6 +11,12 @@ const REQUIRED_FIELDS = ['fullName', 'email', 'mobile', 'membership', 'hubId'];
 router.post('/', async (req, res) => {
   const body = req.body || {};
 
+  // Reject if admin has closed participant registrations.
+  const setting = await db.get("SELECT value FROM settings WHERE key = 'participant_form_open'");
+  if (setting && setting.value === 'false') {
+    return res.status(403).json({ error: 'Circle registrations are currently closed.' });
+  }
+
   for (const field of REQUIRED_FIELDS) {
     if (!body[field] || !String(body[field]).trim()) {
       return res.status(400).json({ error: `${field} is required.` });

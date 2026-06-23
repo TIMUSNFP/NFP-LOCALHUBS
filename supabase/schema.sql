@@ -47,3 +47,14 @@ create table if not exists pincode_cache (
   lng double precision not null,
   cached_at text not null
 );
+
+-- Key/value platform settings. Used to open/close the public forms from admin.
+-- Keys: 'hub_form_open', 'participant_form_open'  (value: 'true' | 'false')
+create table if not exists settings (
+  key text primary key,
+  value text not null
+);
+insert into settings (key, value) values
+  ('hub_form_open', 'true'),
+  ('participant_form_open', 'true')
+on conflict (key) do nothing;

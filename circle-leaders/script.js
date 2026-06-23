@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initGallery();
     initGrowthBar();
     renderHeroMapPins();
+    loadHubFormState();
 });
 
 function initGrowthBar() {
@@ -281,11 +282,26 @@ function toggleVenueOther() {
     if (!show) { other.value = ''; clearErr('venueOtherErr'); }
 }
 
-// Enable the Submit button only when BOTH declaration checkboxes are ticked.
+// Whether the admin currently has the Hub Leader application form open.
+let hubFormOpen = true;
+
+async function loadHubFormState() {
+    try {
+        const res = await fetch(`${API_BASE}/api/settings`);
+        if (res.ok) { const s = await res.json(); hubFormOpen = s.hubFormOpen !== false; }
+    } catch (e) { /* assume open if settings can't be read */ }
+    const banner = document.getElementById('hubClosedBanner');
+    if (banner) banner.style.display = hubFormOpen ? 'none' : 'block';
+    updateHubSubmitGate();
+}
+
+// Enable Submit only when the form is open AND both declaration checkboxes are ticked.
 function updateHubSubmitGate() {
     const btn = document.getElementById('hubSubmitBtn');
     if (!btn) return;
-    const ok = document.getElementById('hubDecl1')?.checked && document.getElementById('hubDecl2')?.checked;
+    const ok = hubFormOpen
+        && document.getElementById('hubDecl1')?.checked
+        && document.getElementById('hubDecl2')?.checked;
     btn.disabled = !ok;
 }
 

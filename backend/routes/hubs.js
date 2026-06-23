@@ -21,6 +21,12 @@ const REQUIRED_FIELDS = [
 router.post('/', async (req, res) => {
   const body = req.body || {};
 
+  // Reject if admin has closed Hub Leader applications.
+  const setting = await db.get("SELECT value FROM settings WHERE key = 'hub_form_open'");
+  if (setting && setting.value === 'false') {
+    return res.status(403).json({ error: 'Hub Leader applications are currently closed.' });
+  }
+
   for (const field of REQUIRED_FIELDS) {
     if (!body[field] || !String(body[field]).trim()) {
       return res.status(400).json({ error: `${field} is required.` });

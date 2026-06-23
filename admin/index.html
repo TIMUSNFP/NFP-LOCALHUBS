@@ -129,6 +129,7 @@
                         <button class="chip" data-filter="Approved" onclick="setFilter('Approved', this)">Approved</button>
                         <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
                     </div>
+                    <button class="btn-export" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:auto;">Applications</button>
                 </div>
                 <div class="table-wrap-outer" id="hubTableOuter">
                 <div class="table-wrap" id="hubTableWrap">
@@ -205,6 +206,7 @@
                         <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
                         <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
                     </div>
+                    <button class="btn-export" id="participantFormToggle" onclick="toggleParticipantForm()" style="margin-left:auto;">Registrations</button>
                     <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
                 </div>
                 <div class="table-wrap-outer" id="partTableOuter">
