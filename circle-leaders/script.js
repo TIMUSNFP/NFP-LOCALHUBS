@@ -271,6 +271,24 @@ function validateStep1() {
     return valid;
 }
 
+// Show/hide the "specify your venue" text field when "Other" is chosen.
+function toggleVenueOther() {
+    const sel   = document.getElementById('venueType');
+    const other = document.getElementById('venueOther');
+    if (!sel || !other) return;
+    const show = sel.value === 'Other';
+    other.style.display = show ? 'block' : 'none';
+    if (!show) { other.value = ''; clearErr('venueOtherErr'); }
+}
+
+// Enable the Submit button only when BOTH declaration checkboxes are ticked.
+function updateHubSubmitGate() {
+    const btn = document.getElementById('hubSubmitBtn');
+    if (!btn) return;
+    const ok = document.getElementById('hubDecl1')?.checked && document.getElementById('hubDecl2')?.checked;
+    btn.disabled = !ok;
+}
+
 function validateStep2() {
     let valid = true;
     const city      = document.getElementById('city').value.trim();
@@ -278,14 +296,16 @@ function validateStep2() {
     const address   = document.getElementById('address').value.trim();
     const pincode   = document.getElementById('pincode').value.trim();
     const venueType = document.getElementById('venueType').value;
+    const venueOther = document.getElementById('venueOther').value.trim();
     const capacity  = document.getElementById('capacity').value;
-    ['cityErr','areaErr','addressErr','pincodeErr','venueTypeErr','capacityErr'].forEach(clearErr);
+    ['cityErr','areaErr','addressErr','pincodeErr','venueTypeErr','venueOtherErr','capacityErr'].forEach(clearErr);
     if (!city) { setErr('cityErr', 'City is required.'); valid = false; }
     if (!area) { setErr('areaErr', 'Area / Locality is required.'); valid = false; }
     if (!address) { setErr('addressErr', 'Full address is required so participants can find you.'); valid = false; }
     if (!pincode) { setErr('pincodeErr', 'PIN Code is required.'); valid = false; }
     else if (!/^\d{6}$/.test(pincode)) { setErr('pincodeErr', 'PIN Code must be exactly 6 digits.'); valid = false; }
     if (!venueType) { setErr('venueTypeErr', 'Please select a venue type.'); valid = false; }
+    else if (venueType === 'Other' && !venueOther) { setErr('venueOtherErr', 'Please specify your venue.'); valid = false; }
     if (!capacity) { setErr('capacityErr', 'Please select hosting capacity.'); valid = false; }
     if (valid) submitRegistration();
     else shakeFirstError();
@@ -350,7 +370,9 @@ async function submitRegistration() {
         area:             document.getElementById('area').value.trim(),
         address:          document.getElementById('address').value.trim(),
         pincode:          document.getElementById('pincode').value.trim(),
-        venueType:        document.getElementById('venueType').value,
+        venueType:        (document.getElementById('venueType').value === 'Other'
+                            ? (document.getElementById('venueOther').value.trim() || 'Other')
+                            : document.getElementById('venueType').value),
         capacity:         document.getElementById('capacity').value,
         hostedBefore:     hostedEl ? hostedEl.value : 'No',
         hostingFrequency: freqEl   ? freqEl.value   : 'One Time Only',
@@ -372,12 +394,11 @@ async function submitRegistration() {
     } catch (err) {
         showToast('Could not submit your application — please try again.', 'error');
     } finally {
-        // Always restore the button and release the guard, so a genuine retry works.
+        // Always restore the button label and release the guard, so a genuine retry works.
+        // Re-apply the declaration gate rather than blindly enabling.
         hubSubmitting = false;
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalLabel;
-        }
+        if (submitBtn) submitBtn.innerHTML = originalLabel;
+        updateHubSubmitGate();
     }
 }
 
@@ -429,7 +450,12 @@ function resetForm() {
     });
     const hostedNo = document.getElementById('hostedNo');
     if (hostedNo) hostedNo.checked = true;
-    ['fullNameErr','emailErr','mobileErr','membershipErr','cityErr','areaErr','pincodeErr','venueTypeErr','capacityErr'].forEach(clearErr);
+    // Reset venue "Other" field and the declaration checkboxes, then re-lock submit.
+    const venueOther = document.getElementById('venueOther');
+    if (venueOther) { venueOther.value = ''; venueOther.style.display = 'none'; }
+    ['hubDecl1','hubDecl2'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+    ['fullNameErr','emailErr','mobileErr','membershipErr','cityErr','areaErr','pincodeErr','venueTypeErr','venueOtherErr','capacityErr'].forEach(clearErr);
+    updateHubSubmitGate();
     goToStep(1);
 }
 

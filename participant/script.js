@@ -776,15 +776,22 @@ async function submitParticipant() {
         showToast('Could not reach the server. Please check your connection and try again.', 'error');
         return;
     } finally {
+        // Restore the label and re-apply the declaration gate (don't blindly enable).
         participantSubmitting = false;
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalLabel;
-        }
+        if (submitBtn) submitBtn.innerHTML = originalLabel;
+        updateParticipantSubmitGate();
     }
 
     showParticipantSuccess(participant);
     resetParticipantForm();
+}
+
+// Enable the Confirm button only when BOTH declaration checkboxes are ticked.
+function updateParticipantSubmitGate() {
+    const btn = document.getElementById('participantSubmitBtn');
+    if (!btn) return;
+    const ok = document.getElementById('pDecl1')?.checked && document.getElementById('pDecl2')?.checked;
+    btn.disabled = !ok;
 }
 
 function showParticipantSuccess(p) {
@@ -811,6 +818,9 @@ function resetParticipantForm() {
     });
     const pm = document.getElementById('pMembership');
     if (pm) pm.value = '';
+    // Reset declaration checkboxes and re-lock the submit button.
+    ['pDecl1','pDecl2'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+    updateParticipantSubmitGate();
     selectedHubId = null;
     document.getElementById('regFormPanel')?.classList.add('hidden');
     if (leafletMap) {
