@@ -20,9 +20,11 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const validEmail = email === process.env.ADMIN_EMAIL;
+  // Trim the env values — Vercel/.env values often pick up a trailing newline,
+  // which would otherwise make a perfectly correct bcrypt hash fail to match.
+  const validEmail = email === (process.env.ADMIN_EMAIL || '').trim();
   const validPassword = validEmail
-    ? await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH)
+    ? await bcrypt.compare(password, (process.env.ADMIN_PASSWORD_HASH || '').trim())
     : false;
 
   if (!validEmail || !validPassword) {
