@@ -659,6 +659,16 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .act-delete { background: #fff; border-color: var(--danger); color: var(--danger); }
 .act-delete:hover { background: var(--danger); color: white; }
 
+/* Clickable name links inside table cells */
+.name-link {
+    background: none; border: none; padding: 0; margin: 0;
+    font: inherit; font-weight: 600; color: var(--primary);
+    cursor: pointer; text-align: left;
+    text-decoration: underline; text-decoration-color: transparent;
+    transition: text-decoration-color .15s, color .15s;
+}
+.name-link:hover { color: var(--primary-dark); text-decoration-color: var(--primary-dark); }
+
 /* Table scrollbar */
 .table-wrap::-webkit-scrollbar          { height: 5px; }
 .table-wrap::-webkit-scrollbar-track    { background: var(--bg); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }

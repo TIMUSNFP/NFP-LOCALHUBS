@@ -388,7 +388,7 @@ function renderTable(regs) {
     tbody.innerHTML = regs.map(r => `
         <tr data-id="${escHtml(r.id)}">
             <td class="td-id" style="min-width:180px">${escHtml(r.id)}</td>
-            <td class="td-name" style="min-width:140px">${escHtml(r.fullName)}</td>
+            <td class="td-name" style="min-width:140px"><button class="name-link" onclick="viewHubParticipants('${escHtml(r.id)}')">${escHtml(r.fullName)}</button></td>
             <td class="td-email" style="min-width:180px">${escHtml(r.email)}</td>
             <td>${escHtml(r.mobile)}</td>
             <td>${escHtml(r.membership)}</td>
@@ -497,6 +497,8 @@ async function executeReject() {
 function viewDetails(id) {
     const reg = allHubs.find(r => String(r.id) === String(id));
     if (!reg) return;
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = 'Application Details';
     const content = document.getElementById('detailsContent');
     content.innerHTML = `
         <div class="detail-section">
@@ -844,7 +846,7 @@ function renderParticipantTable(parts) {
     tbody.innerHTML = parts.map(p => `
         <tr>
             <td class="td-id" style="min-width:200px">${escHtml(p.id)}</td>
-            <td class="td-name">${escHtml(p.fullName)}</td>
+            <td class="td-name"><button class="name-link" onclick="viewParticipantDetails('${escHtml(p.id)}')">${escHtml(p.fullName)}</button></td>
             <td class="td-email">${escHtml(p.email)}</td>
             <td>${escHtml(p.mobile)}</td>
             <td>${escHtml(p.membership)}</td>
@@ -950,9 +952,60 @@ function deleteParticipant(id) {
     );
 }
 
+function viewHubParticipants(hubId) {
+    const hub = allHubs.find(h => String(h.id) === String(hubId));
+    if (!hub) return;
+    const hubParticipants = allParticipants.filter(p => String(p.hubId) === String(hubId));
+
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = `${hub.fullName}'s Circle — Participants`;
+
+    const content = document.getElementById('detailsContent');
+    const participantRows = hubParticipants.length === 0
+        ? `<div style="text-align:center;padding:24px 0;color:var(--muted);font-size:14px">No participants registered for this circle yet.</div>`
+        : hubParticipants.map(p => `
+            <div onclick="viewParticipantFromHub('${escHtml(p.id)}')" style="cursor:pointer;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:14px;transition:background .15s" onmouseover="this.style.background='var(--light)'" onmouseout="this.style.background=''">
+                <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0">${escHtml(p.fullName.charAt(0).toUpperCase())}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;color:var(--dark);margin-bottom:2px">${escHtml(p.fullName)}</div>
+                    <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.email)} &middot; ${escHtml(p.mobile)}</div>
+                    <div style="font-size:12px;color:var(--muted);margin-top:1px">${escHtml(p.membership)}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+                    ${participantStatusBadge(p.status)}
+                    <span style="font-size:11px;color:var(--muted)">${formatDate(p.registeredAt)}</span>
+                </div>
+            </div>
+        `).join('');
+
+    content.innerHTML = `
+        <div class="detail-section">
+            <h4>Circle Info</h4>
+            <div class="detail-grid">
+                <div class="detail-item"><label>Circle Host</label><span>${escHtml(hub.fullName)}</span></div>
+                <div class="detail-item"><label>City</label><span>${escHtml(hub.city)}</span></div>
+                <div class="detail-item"><label>Area</label><span>${escHtml(hub.area)}</span></div>
+                <div class="detail-item"><label>Status</label><span>${statusBadge(hub.status)}</span></div>
+            </div>
+        </div>
+        <div class="detail-section">
+            <h4>Participants <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 10px;font-size:13px;font-weight:600;margin-left:6px;vertical-align:middle">${hubParticipants.length}</span></h4>
+            ${participantRows}
+        </div>
+    `;
+    document.getElementById('detailsOverlay').classList.add('visible');
+}
+
+function viewParticipantFromHub(id) {
+    closeDetailsModal();
+    setTimeout(() => viewParticipantDetails(id), 120);
+}
+
 function viewParticipantDetails(id) {
     const p = allParticipants.find(p => String(p.id) === String(id));
     if (!p) return;
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = 'Participant Details';
     const content = document.getElementById('detailsContent');
     content.innerHTML = `
         <div class="detail-section">
