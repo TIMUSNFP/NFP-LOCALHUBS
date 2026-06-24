@@ -58,3 +58,15 @@ insert into settings (key, value) values
   ('hub_form_open', 'true'),
   ('participant_form_open', 'true')
 on conflict (key) do nothing;
+
+-- ── Row Level Security ────────────────────────────────────────────────────────
+-- All tables must have RLS enabled because Supabase exposes the public schema
+-- via PostgREST. With RLS on and no policies defined, PostgREST's anon/
+-- authenticated roles are denied all access by default.
+--
+-- Our backend connects as the postgres superuser (Transaction Pooler URL),
+-- which bypasses RLS — so the API is completely unaffected.
+alter table public.hubs            enable row level security;
+alter table public.participants     enable row level security;
+alter table public.pincode_cache    enable row level security;
+alter table public.settings         enable row level security;
