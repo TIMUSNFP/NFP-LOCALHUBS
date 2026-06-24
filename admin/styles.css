@@ -656,6 +656,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .act-reject:hover { background: var(--danger); color: white; }
 .act-view { background: var(--info-bg); border-color: var(--info); color: var(--info); }
 .act-view:hover { background: var(--info); color: white; }
+.act-delete { background: #fff; border-color: var(--danger); color: var(--danger); }
+.act-delete:hover { background: var(--danger); color: white; }
 
 /* Table scrollbar */
 .table-wrap::-webkit-scrollbar          { height: 5px; }

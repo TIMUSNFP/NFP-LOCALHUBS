@@ -861,6 +861,7 @@ function renderParticipantTable(parts) {
                         : `<button class="act-btn act-approve" onclick="reinstateParticipant('${escHtml(p.id)}')">Reinstate</button>`
                     }
                     <button class="act-btn act-view" onclick="viewParticipantDetails('${escHtml(p.id)}')">View</button>
+                    <button class="act-btn act-delete" onclick="deleteParticipant('${escHtml(p.id)}')">Delete</button>
                 </div>
             </td>
         </tr>
@@ -919,6 +920,34 @@ async function reinstateParticipant(id) {
     } else {
         showToast('Failed to reinstate participant.', 'error');
     }
+}
+
+// Permanently delete a participant — frees up their email/mobile so they can
+// register again (e.g. for a different Circle).
+function deleteParticipant(id) {
+    openConfirmModal(
+        'Delete Participant',
+        'Permanently delete this registration? This frees up their email and mobile so they can register again (e.g. for a different Circle). This cannot be undone.',
+        '🗑️',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Participant deleted.', 'success');
+                    await loadParticipants();
+                    updateParticipantStats();
+                    applyParticipantFilters();
+                } else {
+                    showToast('Failed to delete participant.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Delete',
+        true
+    );
 }
 
 function viewParticipantDetails(id) {

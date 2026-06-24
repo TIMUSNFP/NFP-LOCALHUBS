@@ -141,4 +141,13 @@ router.patch('/participants/:id/status', async (req, res) => {
   res.json(participantRowToJson(updated));
 });
 
+// DELETE /api/admin/participants/:id — permanently remove a participant. This is
+// how an admin frees up an email/mobile so the person can register again.
+router.delete('/participants/:id', async (req, res) => {
+  const existing = await db.get('SELECT id FROM participants WHERE id = $1', [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Participant not found' });
+  await db.run('DELETE FROM participants WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 module.exports = router;
