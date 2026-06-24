@@ -7,6 +7,23 @@ const router = express.Router();
 
 const REQUIRED_FIELDS = ['fullName', 'email', 'mobile', 'membership', 'hubId'];
 
+// GET /api/participants/check — real-time duplicate check before submit (called on field blur).
+router.get('/check', async (req, res) => {
+  const { email, mobile } = req.query;
+  const result = { emailExists: false, mobileExists: false };
+  try {
+    if (email && String(email).trim()) {
+      const row = await db.get('SELECT id FROM participants WHERE lower(email) = lower($1)', [String(email).trim()]);
+      result.emailExists = !!row;
+    }
+    if (mobile && String(mobile).trim()) {
+      const row = await db.get('SELECT id FROM participants WHERE mobile = $1', [String(mobile).trim()]);
+      result.mobileExists = !!row;
+    }
+  } catch (e) { /* DB error — return false so we never block a legitimate new user */ }
+  res.json(result);
+});
+
 // POST /api/participants — register a participant against an Approved hub.
 router.post('/', async (req, res) => {
   const body = req.body || {};

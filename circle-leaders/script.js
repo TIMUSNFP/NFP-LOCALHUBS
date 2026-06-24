@@ -88,23 +88,47 @@ function bindMobileInputs() {
     // Only allow digits in mobile & pincode fields
     const mobileEl  = document.getElementById('mobile');
     const pincodeEl = document.getElementById('pincode');
-    if (mobileEl) mobileEl.addEventListener('input', e => {
-        e.target.value = e.target.value.replace(/\D/g, '');
-        clearErr('mobileErr');
-    });
+    if (mobileEl) {
+        mobileEl.addEventListener('input', e => {
+            e.target.value = e.target.value.replace(/\D/g, '');
+            clearErr('mobileErr');
+        });
+        mobileEl.addEventListener('blur', () => checkHubDuplicate('mobile'));
+    }
     if (pincodeEl) pincodeEl.addEventListener('input', e => {
         e.target.value = e.target.value.replace(/\D/g, '');
         clearErr('pincodeErr');
     });
-    // Live clear on valid inputs
+    // Live clear on valid inputs + blur duplicate check on email
     ['fullName','email','area'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => clearErr(id + 'Err'));
     });
+    const emailEl = document.getElementById('email');
+    if (emailEl) emailEl.addEventListener('blur', () => checkHubDuplicate('email'));
     ['city','membership','venueType','capacity'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', () => clearErr(id + 'Err'));
     });
+}
+
+// Check a single field for duplicate registrations. Called on blur so the user
+// sees "Email ID already registered!" immediately below the field — no toast popup.
+async function checkHubDuplicate(field) {
+    const email  = document.getElementById('email')?.value.trim() || '';
+    const mobile = document.getElementById('mobile')?.value.trim() || '';
+    if (field === 'email'  && (!email  || !isValidEmail(email)))   return;
+    if (field === 'mobile' && !/^\d{10}$/.test(mobile))            return;
+    try {
+        const params = new URLSearchParams();
+        if (field === 'email')  params.set('email',  email);
+        if (field === 'mobile') params.set('mobile', mobile);
+        const res = await fetch(`${API_BASE}/api/hubs/check?${params}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (field === 'email'  && data.emailExists)  setErr('emailErr',  'Email ID already registered!');
+        if (field === 'mobile' && data.mobileExists) setErr('mobileErr', 'Mobile number already registered!');
+    } catch (e) { /* network error — silently ignore, server will catch on submit */ }
 }
 
 // ═══════════════════ PAGE NAVIGATION ═══════════════════
@@ -401,8 +425,27 @@ async function submitRegistration() {
             body: JSON.stringify(payload),
         });
         const body = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+            // Duplicate email/mobile — show inline below the relevant field(s) on step 1.
+            try {
+                const email  = document.getElementById('email').value.trim();
+                const mobile = document.getElementById('mobile').value.trim();
+                const ck = await fetch(`${API_BASE}/api/hubs/check?email=${encodeURIComponent(email)}&mobile=${encodeURIComponent(mobile)}`);
+                if (ck.ok) {
+                    const d = await ck.json();
+                    if (d.emailExists)  setErr('emailErr',  'Email ID already registered!');
+                    if (d.mobileExists) setErr('mobileErr', 'Mobile number already registered!');
+                } else {
+                    setErr('emailErr', 'Email or mobile already registered!');
+                }
+            } catch (e) {
+                setErr('emailErr', 'Email or mobile already registered!');
+            }
+            goToStep(1);
+            shakeFirstError();
+            return;
+        }
         if (res.status !== 201) {
-            // Surface the server's message (e.g. "already registered"), not a generic one.
             showToast(body.error || 'Could not submit your application — please try again.', 'error');
             return;
         }

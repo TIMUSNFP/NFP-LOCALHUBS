@@ -97,7 +97,18 @@ function showSection(id) {
             const mobileInput = document.getElementById('pMobile');
             if (mobileInput && !mobileInput._boundDigit) {
                 mobileInput.addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g,''); });
+                mobileInput.addEventListener('blur', () => checkParticipantDuplicate('mobile'));
                 mobileInput._boundDigit = true;
+            }
+            const emailInput = document.getElementById('pEmail');
+            if (emailInput && !emailInput._boundBlur) {
+                emailInput.addEventListener('blur', () => checkParticipantDuplicate('email'));
+                emailInput.addEventListener('input', () => {
+                    const el = document.getElementById('pEmailErr');
+                    if (el) el.textContent = '';
+                    emailInput.classList.remove('error');
+                });
+                emailInput._boundBlur = true;
             }
         }, 100);
     }
@@ -694,6 +705,32 @@ async function searchByPincode() {
 //  PARTICIPANT REGISTRATION
 // ═══════════════════════════════════════════════════════════════
 
+function setPartErr(fieldId, msg) {
+    const errEl   = document.getElementById(fieldId + 'Err');
+    const inputEl = document.getElementById(fieldId);
+    if (errEl)   errEl.textContent = msg;
+    if (inputEl) inputEl.classList.toggle('error', !!msg);
+}
+
+// Check a single field for duplicate registrations. Called on blur so the user
+// sees "Email ID already registered!" immediately below the field — no toast popup.
+async function checkParticipantDuplicate(field) {
+    const email  = document.getElementById('pEmail')?.value.trim()  || '';
+    const mobile = document.getElementById('pMobile')?.value.trim() || '';
+    if (field === 'email'  && (!email  || !isValidEmail(email)))  return;
+    if (field === 'mobile' && !/^\d{10}$/.test(mobile))           return;
+    try {
+        const params = new URLSearchParams();
+        if (field === 'email')  params.set('email',  email);
+        if (field === 'mobile') params.set('mobile', mobile);
+        const res = await fetch(`${API_BASE}/api/participants/check?${params}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (field === 'email'  && data.emailExists)  setPartErr('pEmail',  'Email ID already registered!');
+        if (field === 'mobile' && data.mobileExists) setPartErr('pMobile', 'Mobile number already registered!');
+    } catch (e) { /* network error — silently ignore, server will catch on submit */ }
+}
+
 function validateParticipantForm() {
     let valid = true;
     const name       = document.getElementById('pName')?.value.trim() || '';
@@ -771,6 +808,24 @@ async function submitParticipant() {
             body: JSON.stringify(payload),
         });
         const body = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+            // Duplicate email/mobile — show inline below the relevant field(s).
+            try {
+                const email  = document.getElementById('pEmail').value.trim();
+                const mobile = document.getElementById('pMobile').value.trim();
+                const ck = await fetch(`${API_BASE}/api/participants/check?email=${encodeURIComponent(email)}&mobile=${encodeURIComponent(mobile)}`);
+                if (ck.ok) {
+                    const d = await ck.json();
+                    if (d.emailExists)  setPartErr('pEmail',  'Email ID already registered!');
+                    if (d.mobileExists) setPartErr('pMobile', 'Mobile number already registered!');
+                } else {
+                    setPartErr('pEmail', 'Email or mobile already registered!');
+                }
+            } catch (e) {
+                setPartErr('pEmail', 'Email or mobile already registered!');
+            }
+            return;
+        }
         if (!res.ok) {
             showToast(body.error || 'Could not complete your registration. Please try again.', 'error');
             return;
