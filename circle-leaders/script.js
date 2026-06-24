@@ -400,12 +400,13 @@ async function submitRegistration() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
+        const body = await res.json().catch(() => ({}));
         if (res.status !== 201) {
-            showToast('Could not submit your application — please try again.', 'error');
+            // Surface the server's message (e.g. "already registered"), not a generic one.
+            showToast(body.error || 'Could not submit your application — please try again.', 'error');
             return;
         }
-        const hub = await res.json();
-        showSuccessScreen(hub);
+        showSuccessScreen(body);
         resetForm();
     } catch (err) {
         showToast('Could not submit your application — please try again.', 'error');

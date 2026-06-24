@@ -31,6 +31,19 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'This hub is not open for registration yet.' });
   }
 
+  // Block duplicate registrations: one participant registration per email/mobile.
+  const emailIn = String(body.email).trim();
+  const mobileIn = String(body.mobile).trim();
+  const dupe = await db.get(
+    'SELECT id FROM participants WHERE lower(email) = lower($1) OR mobile = $2',
+    [emailIn, mobileIn]
+  );
+  if (dupe) {
+    return res.status(409).json({
+      error: 'You have already registered with this email or mobile number.',
+    });
+  }
+
   const id = generateParticipantId();
   const registeredAt = new Date().toISOString();
   const status = 'Confirmed';

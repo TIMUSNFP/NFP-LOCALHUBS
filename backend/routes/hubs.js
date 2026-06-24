@@ -33,6 +33,19 @@ router.post('/', async (req, res) => {
     }
   }
 
+  // Block duplicate applications: one Circle Host registration per email/mobile.
+  const emailIn = String(body.email).trim();
+  const mobileIn = String(body.mobile).trim();
+  const dupe = await db.get(
+    'SELECT id FROM hubs WHERE lower(email) = lower($1) OR mobile = $2',
+    [emailIn, mobileIn]
+  );
+  if (dupe) {
+    return res.status(409).json({
+      error: 'You have already registered as a Circle Host with this email or mobile number.',
+    });
+  }
+
   const id = generateHubId();
   const submittedAt = new Date().toISOString();
   const status = 'Pending';
