@@ -60,6 +60,8 @@ function renderHeroMapPins() {
 
 // ═══════════════════ STATE ═══════════════════
 let currentStep = 1;
+let hubEmailDuplicate  = false;
+let hubMobileDuplicate = false;
 
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -91,6 +93,7 @@ function bindMobileInputs() {
     if (mobileEl) {
         mobileEl.addEventListener('input', e => {
             e.target.value = e.target.value.replace(/\D/g, '');
+            hubMobileDuplicate = false;
             clearErr('mobileErr');
         });
         mobileEl.addEventListener('blur', () => checkHubDuplicate('mobile'));
@@ -100,12 +103,15 @@ function bindMobileInputs() {
         clearErr('pincodeErr');
     });
     // Live clear on valid inputs + blur duplicate check on email
-    ['fullName','email','area'].forEach(id => {
+    ['fullName','area'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => clearErr(id + 'Err'));
     });
     const emailEl = document.getElementById('email');
-    if (emailEl) emailEl.addEventListener('blur', () => checkHubDuplicate('email'));
+    if (emailEl) {
+        emailEl.addEventListener('input', () => { hubEmailDuplicate = false; clearErr('emailErr'); });
+        emailEl.addEventListener('blur', () => checkHubDuplicate('email'));
+    }
     ['city','membership','venueType','capacity'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', () => clearErr(id + 'Err'));
@@ -126,8 +132,8 @@ async function checkHubDuplicate(field) {
         const res = await fetch(`${API_BASE}/api/hubs/check?${params}`);
         if (!res.ok) return;
         const data = await res.json();
-        if (field === 'email'  && data.emailExists)  setErr('emailErr',  'Email ID already registered!');
-        if (field === 'mobile' && data.mobileExists) setErr('mobileErr', 'Mobile number already registered!');
+        if (field === 'email'  && data.emailExists)  { hubEmailDuplicate  = true; setErr('emailErr',  'Email ID already registered!'); }
+        if (field === 'mobile' && data.mobileExists) { hubMobileDuplicate = true; setErr('mobileErr', 'Mobile number already registered!'); }
     } catch (e) { /* network error — silently ignore, server will catch on submit */ }
 }
 
@@ -291,6 +297,9 @@ function validateStep1() {
     if (!mobile) { setErr('mobileErr', 'Mobile number is required.'); valid = false; }
     else if (!/^\d{10}$/.test(mobile)) { setErr('mobileErr', 'Mobile number must be exactly 10 digits.'); valid = false; }
     if (!membership) { setErr('membershipErr', 'Please select your membership type.'); valid = false; }
+    // Block step 2 if a duplicate was detected on blur (flags survive the clearErr loop above).
+    if (hubEmailDuplicate)  { setErr('emailErr',  'Email ID already registered!');        valid = false; }
+    if (hubMobileDuplicate) { setErr('mobileErr', 'Mobile number already registered!'); valid = false; }
     if (valid) goToStep(2);
     else shakeFirstError();
     return valid;
@@ -519,6 +528,8 @@ function resetForm() {
     if (venueOther) { venueOther.value = ''; venueOther.style.display = 'none'; }
     ['hubDecl1','hubDecl2'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
     ['fullNameErr','emailErr','mobileErr','membershipErr','cityErr','areaErr','pincodeErr','venueTypeErr','venueOtherErr','capacityErr'].forEach(clearErr);
+    hubEmailDuplicate  = false;
+    hubMobileDuplicate = false;
     updateHubSubmitGate();
     goToStep(1);
 }
