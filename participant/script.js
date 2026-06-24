@@ -406,14 +406,14 @@ function buildHubPopupHTML(hub) {
     const isPending = hub.status === 'Pending';
     return `
         <div class="hub-popup">
-            <div class="hp-header">&#127968; ${escHtml(hub.fullName)}'s Circle
+            <div class="hp-header">${escHtml(hub.fullName)}'s Circle
                 ${isPending ? '<span class="hp-pending-badge">Opening Soon</span>' : ''}
             </div>
             <div class="hp-body">
-                <div class="hp-row"><span class="hp-icon">📍</span><span>${escHtml(hub.address || hub.area)}, ${escHtml(hub.city)}</span></div>
-                <div class="hp-row"><span class="hp-icon">🏠</span><span>${escHtml(hub.venueType)}</span></div>
-                <div class="hp-row"><span class="hp-icon">👥</span><span>${escHtml(hub.capacity)}</span></div>
-                <div class="hp-row"><span class="hp-icon">🎓</span><span>${escHtml(hub.membership)}</span></div>
+                <div class="hp-row"><span>${escHtml(hub.address || hub.area)}, ${escHtml(hub.city)}</span></div>
+                <div class="hp-row"><span>${escHtml(hub.venueType)}</span></div>
+                <div class="hp-row"><span>${escHtml(hub.capacity)}</span></div>
+                <div class="hp-row"><span>${escHtml(hub.membership)}</span></div>
             </div>
             ${isPending
                 ? '<div class="hp-pending-note">This Circle is awaiting NFP approval. Registration will open shortly.</div>'
@@ -493,7 +493,7 @@ function renderHubCards(hubs) {
     if (!el) return;
     if (countPill) countPill.textContent = hubs.length;
     if (!hubs.length) {
-        el.innerHTML = `<div class="no-hubs-msg"><div style="font-size:36px">🗺️</div><p>No approved Circles found${document.getElementById('hubCitySearch')?.value ? ' for this search' : ' yet'}. Check back soon!</p></div>`;
+        el.innerHTML = `<div class="no-hubs-msg"><p>No approved Circles found${document.getElementById('hubCitySearch')?.value ? ' for this search' : ' yet'}. Check back soon!</p></div>`;
         return;
     }
     el.innerHTML = hubs.map(hub => {
@@ -506,19 +506,18 @@ function renderHubCards(hubs) {
              onclick="${isPending ? '' : `highlightHubOnMap('${escHtml(hub.id)}')`}">
             <div class="hci-top">
                 <div>
-                    <div class="hci-name">&#127968; ${escHtml(hub.fullName)}'s Circle</div>
-                    <div class="hci-city">📍 ${escHtml(hub.address ? hub.address + ', ' + hub.city : hub.area + ', ' + hub.city)}</div>
+                    <div class="hci-name">${escHtml(hub.fullName)}'s Circle</div>
+                    <div class="hci-city">${escHtml(hub.address ? hub.address + ', ' + hub.city : hub.area + ', ' + hub.city)}</div>
                 </div>
                 <span class="hci-badge${isPending ? ' hci-badge-pending' : ''}">
                     ${isPending ? 'Opening Soon' : 'Open'}
                 </span>
             </div>
             <div class="hci-details">
-                <span class="hci-tag">🏠 ${escHtml(hub.venueType)}</span>
-                <span class="hci-tag">👥 ${escHtml(hub.capacity)}</span>
-                <span class="hci-tag">🎓 ${escHtml(hub.membership)}</span>
-                ${hub.hostingFrequency ? `<span class="hci-tag">🗓 ${escHtml(hub.hostingFrequency)}</span>` : ''}
-                ${hasDistance ? `<span class="hci-tag hci-distance-tag">📏 ${hub.distanceKm.toFixed(1)} km away</span>` : ''}
+                <span class="hci-tag">${escHtml(hub.venueType)}</span>
+                <span class="hci-tag">${escHtml(hub.capacity)}</span>
+                <span class="hci-tag">${escHtml(hub.membership)}</span>
+                ${hasDistance ? `<span class="hci-tag hci-distance-tag">${hub.distanceKm.toFixed(1)} km away</span>` : ''}
             </div>
             ${isPending
                 ? '<div class="hci-pending-note">Awaiting NFP approval — check back soon</div>'
@@ -564,12 +563,12 @@ function selectHubById(hubId) {
     if (hubCard) {
         hubCard.innerHTML = `
             <div class="shc-label">You're registering at</div>
-            <div class="shc-name">&#127968; ${escHtml(hub.fullName)}'s Circle</div>
-            <div class="shc-detail">📍 ${escHtml(hub.area)}, ${escHtml(hub.city)} &mdash; ${escHtml(hub.venueType)}</div>
+            <div class="shc-name">${escHtml(hub.fullName)}'s Circle</div>
+            <div class="shc-detail">${escHtml(hub.area)}, ${escHtml(hub.city)} &mdash; ${escHtml(hub.venueType)}</div>
             <div class="shc-tags">
-                <span class="shc-tag">👥 ${escHtml(hub.capacity)}</span>
-                <span class="shc-tag">🎓 ${escHtml(hub.membership)}</span>
-                ${hub.hostedBefore === 'Yes' ? '<span class="shc-tag">✅ Experienced Host</span>' : ''}
+                <span class="shc-tag">${escHtml(hub.capacity)}</span>
+                <span class="shc-tag">${escHtml(hub.membership)}</span>
+                ${hub.hostedBefore === 'Yes' ? '<span class="shc-tag">Experienced Host</span>' : ''}
             </div>
             <button class="shc-change" onclick="deselectHub()">↩ Change Circle</button>
         `;

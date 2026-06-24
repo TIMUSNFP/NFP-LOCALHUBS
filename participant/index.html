@@ -437,10 +437,10 @@
 <section id="participantReg" class="page">
     <div class="page-topbar">
         <button class="btn-back" onclick="showSection('landing')">&larr; Back to Home</button>
-        <span class="mode-chip participant-chip">&#128100; Find a Circle</span>
+        <span class="mode-chip participant-chip">Find a Circle</span>
     </div>
     <div id="participantClosedBanner" style="display:none;max-width:760px;margin:16px auto 0;padding:14px 18px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:10px;text-align:center;font-weight:600;line-height:1.5;">
-        🚫 Circle registrations are currently closed. You can still browse Circles, but joining is temporarily disabled.
+        Circle registrations are currently closed. You can still browse Circles, but joining is temporarily disabled.
     </div>
 
     <div class="ppage-header">
@@ -459,16 +459,14 @@
         <div class="container">
             <div class="hub-search-bar">
                 <div class="hsb-input-wrap">
-                    <span class="hsb-icon">&#128269;</span>
                     <input type="text" id="hubCitySearch" class="hsb-input" placeholder="Search by city or area..." oninput="filterHubs()">
                 </div>
                 <div class="hsb-input-wrap hsb-pin-wrap">
-                    <span class="hsb-icon">&#128205;</span>
                     <input type="text" id="hubPincodeSearch" class="hsb-input" placeholder="Enter 6-digit PIN code..." maxlength="6" inputmode="numeric">
                 </div>
                 <button class="btn-nearme btn-pin-search" onclick="searchByPincode()">Search</button>
-                <button class="btn-nearme" onclick="findNearMe()">&#128205; Near Me</button>
-                <button class="btn-outline btn-sm" onclick="resetMapView()">&#128506; All Circles</button>
+                <button class="btn-nearme" onclick="findNearMe()">Near Me</button>
+                <button class="btn-outline btn-sm" onclick="resetMapView()">All Circles</button>
             </div>
         </div>
     </div>
