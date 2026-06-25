@@ -575,6 +575,10 @@ function viewDetails(id) {
                     <label>Willing to Host NFP Circle</label>
                     <span>${escHtml(reg.hostingFrequency || '—')}</span>
                 </div>
+                <div class="detail-item">
+                    <label>Circle POC</label>
+                    <span>${reg.pocRole === 'assign' ? 'Will assign someone else' : 'Self'}</span>
+                </div>
             </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">

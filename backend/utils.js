@@ -46,6 +46,7 @@ function hubRowToJson(row) {
     capacity: row.capacity,
     hostedBefore: row.hosted_before,
     hostingFrequency: row.hosting_frequency,
+    pocRole: row.poc_role,
     lat: row.lat,
     lng: row.lng,
   };

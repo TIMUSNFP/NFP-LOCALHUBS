@@ -72,6 +72,7 @@ router.post('/', async (req, res) => {
     capacity: body.capacity,
     hosted_before: body.hostedBefore || 'No',
     hosting_frequency: body.hostingFrequency || 'One Time Only',
+    poc_role: body.pocRole || 'self',
     lat: null,
     lng: null,
   };
@@ -79,14 +80,14 @@ router.post('/', async (req, res) => {
   await db.run(
     `INSERT INTO hubs (
       id, submitted_at, last_updated, status, full_name, email, mobile, membership,
-      city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, lat, lng
+      city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, poc_role, lat, lng
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
     )`,
     [
       hub.id, hub.submitted_at, hub.last_updated, hub.status, hub.full_name, hub.email,
       hub.mobile, hub.membership, hub.city, hub.area, hub.address, hub.pincode,
-      hub.venue_type, hub.capacity, hub.hosted_before, hub.hosting_frequency, hub.lat, hub.lng,
+      hub.venue_type, hub.capacity, hub.hosted_before, hub.hosting_frequency, hub.poc_role, hub.lat, hub.lng,
     ]
   );
 
