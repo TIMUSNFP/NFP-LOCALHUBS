@@ -408,8 +408,9 @@ async function submitRegistration() {
         submitBtn.innerHTML = 'Submitting…';
     }
 
-    const hostedEl = document.querySelector('input[name="hostedBefore"]:checked');
-    const freqEl   = document.querySelector('input[name="hostingFrequency"]:checked');
+    const hostedEl  = document.querySelector('input[name="hostedBefore"]:checked');
+    const freqEl    = document.querySelector('input[name="hostingFrequency"]:checked');
+    const pocAssign = document.getElementById('pocAssign').checked;
     const payload = {
         fullName:         document.getElementById('fullName').value.trim(),
         email:            document.getElementById('email').value.trim(),
@@ -425,6 +426,7 @@ async function submitRegistration() {
         capacity:         document.getElementById('capacity').value,
         hostedBefore:     hostedEl ? hostedEl.value : 'No',
         hostingFrequency: freqEl   ? freqEl.value   : 'One Time Only',
+        pocRole:          pocAssign ? 'assign' : 'self',
     };
 
     try {

@@ -348,6 +348,7 @@ function formatDate(date) {
 function submitRegistration() {
     const hostedEl    = document.querySelector('input[name="hostedBefore"]:checked');
     const freqEl      = document.querySelector('input[name="hostingFrequency"]:checked');
+    const pocAssign   = document.getElementById('pocAssign').checked;
     const reg = {
         id:               generateRegId(),
         submittedAt:      new Date().toISOString(),
@@ -364,6 +365,7 @@ function submitRegistration() {
         capacity:         document.getElementById('capacity').value,
         hostedBefore:     hostedEl ? hostedEl.value : 'No',
         hostingFrequency: freqEl   ? freqEl.value   : 'One Time Only',
+        pocRole:          pocAssign ? 'assign' : 'self',
     };
     // Save to localStorage
     const registrations = getRegistrations();
@@ -414,6 +416,10 @@ function showSuccessScreen(reg) {
             <span class="sd-value">${formatDate(reg.submittedAt)}</span>
         </div>
         <div class="sd-row">
+            <span class="sd-label">Circle POC</span>
+            <span class="sd-value">${reg.pocRole === 'assign' ? escHtml(reg.pocName) + ' (Assigned)' : escHtml(reg.fullName) + ' (Self)'}</span>
+        </div>
+        <div class="sd-row">
             <span class="sd-label">Status</span>
             <span class="sd-value"><span class="badge badge-pending">Pending Approval</span></span>
         </div>
@@ -434,6 +440,8 @@ function resetForm() {
     });
     const hostedNo = document.getElementById('hostedNo');
     if (hostedNo) hostedNo.checked = true;
+    const pocSelf = document.getElementById('pocSelf');
+    if (pocSelf) pocSelf.checked = true;
     ['fullNameErr','emailErr','mobileErr','membershipErr','cityErr','areaErr','pincodeErr','venueTypeErr','capacityErr'].forEach(clearErr);
     goToStep(1);
 }
