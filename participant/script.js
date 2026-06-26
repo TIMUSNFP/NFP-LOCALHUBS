@@ -402,22 +402,35 @@ async function refreshMapMarkers() {
     renderHubCards(filteredHubs);
 }
 
+function getHubSpotsInfo(hub) {
+    const limit = parseInt(hub.capacity, 10);
+    if (isNaN(limit) || limit <= 0) return { isFull: false, spotsLabel: hub.capacity };
+    const taken = hub.participantCount || 0;
+    const left = limit - taken;
+    if (left <= 0) return { isFull: true, spotsLabel: 'Full' };
+    return { isFull: false, spotsLabel: `${left} spot${left === 1 ? '' : 's'} left` };
+}
+
 function buildHubPopupHTML(hub) {
     const isPending = hub.status === 'Pending';
+    const { isFull, spotsLabel } = getHubSpotsInfo(hub);
     return `
         <div class="hub-popup">
             <div class="hp-header">${escHtml(hub.fullName)}'s Circle
                 ${isPending ? '<span class="hp-pending-badge">Opening Soon</span>' : ''}
+                ${!isPending && isFull ? '<span class="hp-pending-badge" style="background:#ef4444">Full</span>' : ''}
             </div>
             <div class="hp-body">
                 <div class="hp-row"><span>${escHtml(hub.address || hub.area)}, ${escHtml(hub.city)}</span></div>
                 <div class="hp-row"><span>${escHtml(hub.venueType)}</span></div>
-                <div class="hp-row"><span>${escHtml(hub.capacity)}</span></div>
+                <div class="hp-row"><span>${escHtml(spotsLabel)}</span></div>
                 <div class="hp-row"><span>${escHtml(hub.membership)}</span></div>
             </div>
             ${isPending
                 ? '<div class="hp-pending-note">This Circle is awaiting NFP approval. Registration will open shortly.</div>'
-                : `<button class="hp-btn" onclick="selectHubById('${escHtml(hub.id)}')">Join This Circle &rarr;</button>`
+                : isFull
+                    ? '<div class="hp-pending-note" style="color:#ef4444">This Circle is fully booked.</div>'
+                    : `<button class="hp-btn" onclick="selectHubById('${escHtml(hub.id)}')">Join This Circle &rarr;</button>`
             }
         </div>
     `;
@@ -500,30 +513,35 @@ function renderHubCards(hubs) {
         const isPending  = hub.status === 'Pending';
         const isSelected = hub.id === selectedHubId;
         const hasDistance = typeof hub.distanceKm === 'number';
+        const { isFull, spotsLabel } = getHubSpotsInfo(hub);
+        const badgeText = isPending ? 'Opening Soon' : isFull ? 'Full' : 'Open';
+        const badgeStyle = isFull && !isPending ? ' style="background:#ef4444;color:#fff"' : '';
         return `
         <div class="hub-card-item${isSelected ? ' selected' : ''}${isPending ? ' pending-hub' : ''}"
              id="hubcard-${escHtml(hub.id)}"
-             onclick="${isPending ? '' : `highlightHubOnMap('${escHtml(hub.id)}')`}">
+             onclick="${isPending || isFull ? '' : `highlightHubOnMap('${escHtml(hub.id)}')`}">
             <div class="hci-top">
                 <div>
                     <div class="hci-name">${escHtml(hub.fullName)}'s Circle</div>
                     <div class="hci-city">${escHtml(hub.address ? hub.address + ', ' + hub.city : hub.area + ', ' + hub.city)}</div>
                 </div>
-                <span class="hci-badge${isPending ? ' hci-badge-pending' : ''}">
-                    ${isPending ? 'Opening Soon' : 'Open'}
+                <span class="hci-badge${isPending ? ' hci-badge-pending' : ''}"${badgeStyle}>
+                    ${escHtml(badgeText)}
                 </span>
             </div>
             <div class="hci-details">
                 <span class="hci-tag">${escHtml(hub.venueType)}</span>
-                <span class="hci-tag">${escHtml(hub.capacity)}</span>
+                <span class="hci-tag">${escHtml(spotsLabel)}</span>
                 <span class="hci-tag">${escHtml(hub.membership)}</span>
                 ${hasDistance ? `<span class="hci-tag hci-distance-tag">${hub.distanceKm.toFixed(1)} km away</span>` : ''}
             </div>
             ${isPending
                 ? '<div class="hci-pending-note">Awaiting NFP approval — check back soon</div>'
-                : `<button class="hci-btn" onclick="event.stopPropagation(); selectHubById('${escHtml(hub.id)}')">
-                    Join This Circle &rarr;
-                   </button>`
+                : isFull
+                    ? '<div class="hci-pending-note" style="color:#ef4444">This Circle is fully booked.</div>'
+                    : `<button class="hci-btn" onclick="event.stopPropagation(); selectHubById('${escHtml(hub.id)}')">
+                        Join This Circle &rarr;
+                       </button>`
             }
         </div>`;
     }).join('');

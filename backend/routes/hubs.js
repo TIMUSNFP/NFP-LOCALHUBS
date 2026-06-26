@@ -136,14 +136,18 @@ router.get('/', async (req, res) => {
     rows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
   }
 
-  res.json(rows.map(hubRowToJson));
+  const counts = await db.all('SELECT hub_id, COUNT(*) as cnt FROM participants GROUP BY hub_id');
+  const countMap = {};
+  counts.forEach(r => { countMap[r.hub_id] = Number(r.cnt); });
+  res.json(rows.map(row => ({ ...hubRowToJson(row), participantCount: countMap[row.id] || 0 })));
 });
 
 // GET /api/hubs/:id — single hub.
 router.get('/:id', async (req, res) => {
   const row = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'Hub not found' });
-  res.json(hubRowToJson(row));
+  const countRow = await db.get('SELECT COUNT(*) as cnt FROM participants WHERE hub_id = $1', [row.id]);
+  res.json({ ...hubRowToJson(row), participantCount: countRow ? Number(countRow.cnt) : 0 });
 });
 
 module.exports = router;

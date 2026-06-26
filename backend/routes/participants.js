@@ -61,6 +61,17 @@ router.post('/', async (req, res) => {
     });
   }
 
+  // Capacity check — parse the numeric limit from strings like "10 People".
+  // If parsing fails for any reason, skip the check so no valid registration is blocked.
+  const capacityLimit = parseInt(hub.capacity, 10);
+  if (!isNaN(capacityLimit) && capacityLimit > 0) {
+    const countRow = await db.get('SELECT COUNT(*) as cnt FROM participants WHERE hub_id = $1', [hub.id]);
+    const currentCount = countRow ? Number(countRow.cnt) : 0;
+    if (currentCount >= capacityLimit) {
+      return res.status(409).json({ error: 'This Circle is fully booked. No spots remaining.' });
+    }
+  }
+
   const id = generateParticipantId();
   const registeredAt = new Date().toISOString();
   const status = 'Confirmed';
