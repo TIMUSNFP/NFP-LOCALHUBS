@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIRE Calculator | NFP Circles</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="navbar scrolled" id="navbar">
+    <div class="nav-container">
+        <div class="nav-logo" onclick="window.location='../'" style="cursor:pointer">
+            <img src="../Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-nav">
+        </div>
+        <div class="nav-menu">
+            <a class="nav-link" href="../">Home</a>
+            <a class="nav-link active-link">FIRE Calculator</a>
+        </div>
+    </div>
+</nav>
+
+<div class="fire-page">
+
+    <!-- PAGE HEADER -->
+    <div class="fire-hero">
+        <div class="fire-hero-inner">
+            <div class="fire-hero-label">NFP Circles · Tools</div>
+            <h1 class="fire-hero-title">FIRE Calculator</h1>
+            <p class="fire-hero-sub">Financial Independence, Retire Early — Find your exact number with life expectancy-adjusted sustainability</p>
+        </div>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div class="fire-layout">
+
+        <!-- LEFT: INPUTS -->
+        <aside class="fire-inputs">
+
+            <!-- PROFILE -->
+            <div class="fi-card">
+                <div class="fi-card-title">Your Profile</div>
+
+                <div class="fi-slider-row">
+                    <div class="fi-row-top">
+                        <span class="fi-row-label">Current Age</span>
+                        <span class="fi-row-val" id="val-currentAge">30 yrs</span>
+                    </div>
+                    <input type="range" class="fi-slider" id="currentAge" min="20" max="55" value="30" step="1">
+                    <div class="fi-range-ends"><span>20</span><span>55</span></div>
+                </div>
+
+                <div class="fi-slider-row">
+                    <div class="fi-row-top">
+                        <span class="fi-row-label">Life Expectancy</span>
+                        <span class="fi-row-val" id="val-lifeExpectancy">85 yrs</span>
+                    </div>
+                    <input type="range" class="fi-slider" id="lifeExpectancy" min="70" max="100" value="85" step="1">
+                    <div class="fi-range-ends"><span>70</span><span>100</span></div>
+                </div>
+            </div>
+
+            <!-- FINANCES -->
+            <div class="fi-card">
+                <div class="fi-card-title">Your Finances</div>
+
+                <div class="fi-money-row">
+                    <label class="fi-money-label">Annual Expenses (today)</label>
+                    <div class="fi-money-field">
+                        <span class="fi-rupee">₹</span>
+                        <input type="number" class="fi-money-input" id="annualExpenses" value="600000" min="0" step="10000">
+                        <span class="fi-money-unit" id="unit-expenses">6.0 L / yr</span>
+                    </div>
+                </div>
+
+                <div class="fi-money-row">
+                    <label class="fi-money-label">Current Corpus / Savings</label>
+                    <div class="fi-money-field">
+                        <span class="fi-rupee">₹</span>
+                        <input type="number" class="fi-money-input" id="currentCorpus" value="2000000" min="0" step="50000">
+                        <span class="fi-money-unit" id="unit-corpus">20.0 L</span>
+                    </div>
+                </div>
+
+                <div class="fi-money-row">
+                    <label class="fi-money-label">Monthly Investment / SIP</label>
+                    <div class="fi-money-field">
+                        <span class="fi-rupee">₹</span>
+                        <input type="number" class="fi-money-input" id="monthlyInvestment" value="50000" min="0" step="5000">
+                        <span class="fi-money-unit" id="unit-sip">50 K / mo</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RETURNS -->
+            <div class="fi-card">
+                <div class="fi-card-title">Returns &amp; Inflation</div>
+
+                <div class="fi-slider-row">
+                    <div class="fi-row-top">
+                        <span class="fi-row-label">Pre-retirement Return</span>
+                        <span class="fi-row-val" id="val-preReturn">10.0%</span>
+                    </div>
+                    <input type="range" class="fi-slider" id="preReturn" min="6" max="18" value="10" step="0.5">
+                    <div class="fi-range-ends"><span>6%</span><span>18%</span></div>
+                </div>
+
+                <div class="fi-slider-row">
+                    <div class="fi-row-top">
+                        <span class="fi-row-label">Post-retirement Return</span>
+                        <span class="fi-row-val" id="val-postReturn">7.0%</span>
+                    </div>
+                    <input type="range" class="fi-slider" id="postReturn" min="4" max="12" value="7" step="0.5">
+                    <div class="fi-range-ends"><span>4%</span><span>12%</span></div>
+                </div>
+
+                <div class="fi-slider-row">
+                    <div class="fi-row-top">
+                        <span class="fi-row-label">Inflation Rate</span>
+                        <span class="fi-row-val" id="val-inflation">6.0%</span>
+                    </div>
+                    <input type="range" class="fi-slider" id="inflation" min="3" max="10" value="6" step="0.5">
+                    <div class="fi-range-ends"><span>3%</span><span>10%</span></div>
+                </div>
+            </div>
+
+            <!-- WITHDRAWAL -->
+            <div class="fi-card fi-card-withdrawal">
+                <div class="fi-card-title">Withdrawal Strategy</div>
+
+                <div class="fi-slider-row">
+                    <div class="fi-row-top">
+                        <span class="fi-row-label">Initial Withdrawal Rate</span>
+                        <span class="fi-row-val fi-val-orange" id="val-withdrawal">4.0%</span>
+                    </div>
+                    <input type="range" class="fi-slider" id="withdrawal" min="2" max="8" value="4" step="0.1">
+                    <div class="fi-range-ends"><span>2% (Very Safe)</span><span>8% (Aggressive)</span></div>
+                </div>
+
+                <div class="fi-w-note" id="withdrawal-note">
+                    At 4% — you need <strong>25×</strong> your annual retirement expenses. Classic safe withdrawal rate.
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- RIGHT: RESULTS -->
+        <main class="fire-results">
+
+            <!-- METRIC CARDS -->
+            <div class="fi-metrics">
+                <div class="fi-metric fi-metric-primary">
+                    <div class="fi-metric-label">FIRE Age</div>
+                    <div class="fi-metric-big" id="res-fireAge">—</div>
+                    <div class="fi-metric-sub" id="res-yearsToFire">calculating…</div>
+                </div>
+                <div class="fi-metric">
+                    <div class="fi-metric-label">Required Corpus</div>
+                    <div class="fi-metric-big" id="res-requiredCorpus">—</div>
+                    <div class="fi-metric-sub">at time of retirement</div>
+                </div>
+                <div class="fi-metric">
+                    <div class="fi-metric-label">Years in Retirement</div>
+                    <div class="fi-metric-big" id="res-yearsRetirement">—</div>
+                    <div class="fi-metric-sub" id="res-lifeNote">up to age 85</div>
+                </div>
+                <div class="fi-metric" id="sustainCard">
+                    <div class="fi-metric-label">Sustainability</div>
+                    <div class="fi-metric-big" id="res-sustainability">—</div>
+                    <div class="fi-metric-sub" id="res-finalCorpus">—</div>
+                </div>
+            </div>
+
+            <!-- CHART -->
+            <div class="fi-chart-card">
+                <div class="fi-chart-header">
+                    <div class="fi-chart-title">Corpus Trajectory</div>
+                    <div class="fi-chart-legend">
+                        <span class="fi-legend-dot" style="background:#2563EB"></span> Accumulation
+                        <span class="fi-legend-dot" style="background:#16A34A;margin-left:12px"></span> Retirement (Safe)
+                        <span class="fi-legend-dot" style="background:#D97706;margin-left:12px"></span> Retirement (Depleting)
+                    </div>
+                </div>
+                <div class="fi-chart-wrap">
+                    <canvas id="fireChart"></canvas>
+                </div>
+            </div>
+
+            <!-- INSIGHT -->
+            <div class="fi-insight" id="fi-insight">
+                <div class="fi-insight-icon" id="insight-icon">&#9432;</div>
+                <div class="fi-insight-text" id="insight-text">Adjust the inputs to see your FIRE projection.</div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
