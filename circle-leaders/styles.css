@@ -904,7 +904,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--brand);
 }
 .lh-hero-mission {
-    font-family: 'The Youngest Script', cursive;
+    font-family: 'The Youngest Serif', Georgia, serif;
+    font-style: italic;
     font-size: clamp(26px, 3.2vw, 38px);
     font-weight: 400;
     color: rgba(255,255,255,0.92);
@@ -1318,9 +1319,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-gallery-img {
     position: absolute;
     inset: 0;
-    background-size: cover;
+    background-size: contain;
+    background-repeat: no-repeat;
     background-position: center;
-    background-color: #e8e4e0;
+    background-color: #f5f4f0;
 }
 .lh-gallery-img::before {
     content: '';
@@ -1984,9 +1986,9 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     .container { padding: 0 16px; }
 }
 
-/* Gallery image neutral fallback (no dark background) */
+/* Gallery image neutral fallback */
 .lh-gallery-img {
-    background-color: #e8e4e0;
+    background-color: #f5f4f0;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2270,7 +2272,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-edition-grid img {
     width: 100%;
     height: 260px;
-    object-fit: cover;
+    object-fit: contain;
+    background-color: #f5f4f0;
     border-radius: 12px;
     display: block;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
