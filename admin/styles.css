@@ -432,6 +432,9 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     gap: 6px;
 }
 .btn-export:hover { border-color: var(--primary); color: var(--primary); background: var(--secondary); }
+.btn-sheets { background: #f0faf4; border-color: #16A34A; color: #16A34A; }
+.btn-sheets:hover { background: #16A34A; color: #fff; border-color: #16A34A; }
+.btn-sheets:disabled { opacity: .6; cursor: not-allowed; }
 .admin-profile {
     width: 36px;
     height: 36px;

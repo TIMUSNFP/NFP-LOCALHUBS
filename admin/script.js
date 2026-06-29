@@ -1064,6 +1064,37 @@ function exportParticipantsCSV() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  GOOGLE SHEETS SYNC
+// ═══════════════════════════════════════════════════════════════
+
+async function syncToSheets(type) {
+    const btnId = type === 'hubs' ? 'syncHubsBtn' : 'syncParticipantsBtn';
+    const btn = document.getElementById(btnId);
+    const label = type === 'hubs' ? 'Hub Leaders' : 'Participants';
+    const original = btn ? btn.innerHTML : '';
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Syncing...'; }
+
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/sync-sheets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+            showToast(`${label} synced — ${data.count} rows sent to Google Sheets.`, 'success');
+        } else {
+            showToast(data.error || `Failed to sync ${label}.`, 'error');
+        }
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  TABLE HORIZONTAL SCROLL — FADE HINT
 // ═══════════════════════════════════════════════════════════════
 function initTableScrollFade() {

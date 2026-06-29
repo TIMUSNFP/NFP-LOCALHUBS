@@ -150,4 +150,64 @@ router.delete('/participants/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/admin/sync-sheets — push hub leaders or participants to Google Sheets
+// via a Google Apps Script webhook. Set SHEETS_WEBHOOK_URL in your environment.
+// Body: { type: 'hubs' | 'participants' }
+router.post('/sync-sheets', async (req, res) => {
+  const webhookUrl = (process.env.SHEETS_WEBHOOK_URL || '').trim();
+  if (!webhookUrl) {
+    return res.status(503).json({ error: 'SHEETS_WEBHOOK_URL is not configured in environment variables.' });
+  }
+
+  const { type } = req.body || {};
+  if (!['hubs', 'participants'].includes(type)) {
+    return res.status(400).json({ error: 'type must be "hubs" or "participants"' });
+  }
+
+  const fmt = (iso) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  let rows;
+  if (type === 'hubs') {
+    const dbRows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
+    rows = dbRows.map(hubRowToJson).map(r => [
+      r.id, r.fullName, r.email, r.mobile, r.membership,
+      r.city, r.area, r.address || '', r.pincode || '',
+      r.venueType, r.capacity, r.hostedBefore, r.hostingFrequency || '',
+      r.pocRole === 'assign' ? 'Will assign someone else' : 'Self',
+      fmt(r.submittedAt), r.status,
+    ]);
+  } else {
+    const dbRows = await db.all(
+      `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
+       FROM participants p JOIN hubs h ON h.id = p.hub_id ORDER BY p.registered_at DESC`
+    );
+    rows = dbRows.map(row => {
+      const p = { ...participantRowToJson(row), hubLeader: row.hub_leader, hubCity: row.hub_city, hubArea: row.hub_area };
+      return [
+        p.id, p.fullName, p.email, p.mobile, p.membership,
+        p.hubLeader, p.hubCity, p.hubArea, p.note || '',
+        fmt(p.registeredAt), p.status,
+      ];
+    });
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, rows }),
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      return res.status(502).json({ error: `Sheets webhook returned ${response.status}: ${text}` });
+    }
+    res.json({ ok: true, count: rows.length });
+  } catch (e) {
+    res.status(502).json({ error: `Could not reach Sheets webhook: ${e.message}` });
+  }
+});
+
 module.exports = router;

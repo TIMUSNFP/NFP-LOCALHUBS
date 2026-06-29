@@ -66,12 +66,18 @@
                 <a class="sb-link" onclick="exportCSV()">
                     <span>Export CSV</span>
                 </a>
+                <a class="sb-link" onclick="syncToSheets('hubs')">
+                    <span>&#128196; Sync to Google Sheets</span>
+                </a>
                 <div class="sb-section-label" style="margin-top:12px">Participants</div>
                 <a class="sb-link" id="navParticipants" onclick="showAdminTab('participants', this)">
                     <span class="sb-icon">&#128100;</span><span>Registrations</span>
                 </a>
                 <a class="sb-link" onclick="exportParticipantsCSV()">
                     <span>Export CSV</span>
+                </a>
+                <a class="sb-link" onclick="syncToSheets('participants')">
+                    <span>&#128196; Sync to Google Sheets</span>
                 </a>
             </nav>
             <div class="sb-footer">
@@ -128,7 +134,10 @@
                         <button class="chip" data-filter="Approved" onclick="setFilter('Approved', this)">Approved</button>
                         <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
                     </div>
-                    <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()">Applications</button>
+                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                        <button class="btn-export btn-sheets" id="syncHubsBtn" onclick="syncToSheets('hubs')">&#128196; Sync to Sheets</button>
+                        <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:0;min-width:auto">Applications</button>
+                    </div>
                 </div>
                 <div class="table-wrap-outer" id="hubTableOuter">
                 <div class="table-wrap" id="hubTableWrap">
@@ -205,8 +214,11 @@
                         <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
                         <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
                     </div>
-                    <button class="btn-export form-toggle" id="participantFormToggle" onclick="toggleParticipantForm()">Registrations</button>
-                    <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
+                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                        <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
+                        <button class="btn-export btn-sheets" id="syncParticipantsBtn" onclick="syncToSheets('participants')">&#128196; Sync to Sheets</button>
+                        <button class="btn-export form-toggle" id="participantFormToggle" onclick="toggleParticipantForm()" style="margin-left:0;min-width:auto">Registrations</button>
+                    </div>
                 </div>
                 <div class="table-wrap-outer" id="partTableOuter">
                 <div class="table-wrap" id="partTableWrap">
