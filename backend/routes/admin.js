@@ -171,7 +171,7 @@ router.post('/sync-sheets', async (req, res) => {
 
   let rows;
   if (type === 'hubs') {
-    const dbRows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
+    const dbRows = await db.all('SELECT * FROM hubs ORDER BY submitted_at ASC');
     rows = dbRows.map(hubRowToJson).map(r => [
       r.id, r.fullName, r.email, r.mobile, r.membership,
       r.city, r.area, r.address || '', r.pincode || '',
@@ -182,7 +182,7 @@ router.post('/sync-sheets', async (req, res) => {
   } else {
     const dbRows = await db.all(
       `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
-       FROM participants p JOIN hubs h ON h.id = p.hub_id ORDER BY p.registered_at DESC`
+       FROM participants p JOIN hubs h ON h.id = p.hub_id ORDER BY p.registered_at ASC`
     );
     rows = dbRows.map(row => {
       const p = { ...participantRowToJson(row), hubLeader: row.hub_leader, hubCity: row.hub_city, hubArea: row.hub_area };
