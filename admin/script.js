@@ -19,6 +19,7 @@ let currentPFilter   = 'all';
 let pendingRegId     = null;
 let allHubs          = [];
 let allParticipants  = [];
+let trendMode        = 'day';
 
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -780,6 +781,25 @@ function groupByMonth(items, dateField) {
     return Object.entries(map).sort((a,b) => a[0].localeCompare(b[0])).slice(-12).map(([,v]) => v);
 }
 
+function groupByDay(items, dateField) {
+    const map = {};
+    items.forEach(r => {
+        const d = new Date(r[dateField]);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        if (!map[key]) map[key] = { label, count: 0 };
+        map[key].count++;
+    });
+    return Object.entries(map).sort((a,b) => a[0].localeCompare(b[0])).slice(-30).map(([,v]) => v);
+}
+
+function setTrendMode(mode) {
+    trendMode = mode;
+    document.getElementById('trendDayBtn')?.classList.toggle('active', mode === 'day');
+    document.getElementById('trendMonthBtn')?.classList.toggle('active', mode === 'month');
+    renderApplicationTrend(allHubs);
+}
+
 // ══ HUB LEADER CHARTS ══
 
 function renderDonut(regs) {
@@ -798,7 +818,10 @@ function renderDonut(regs) {
 }
 
 function renderApplicationTrend(regs) {
-    renderTrendChart('trendBars', groupByMonth(regs, 'submittedAt'), 'var(--primary)');
+    const data = trendMode === 'day'
+        ? groupByDay(regs, 'submittedAt')
+        : groupByMonth(regs, 'submittedAt');
+    renderTrendChart('trendBars', data, 'var(--primary)');
 }
 
 function renderStatusFunnel(regs, parts) {

@@ -171,7 +171,13 @@
                         <div class="chart-legend" id="chartLegend"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Applications Over Time</h3>
+                        <div class="chart-header">
+                            <h3>Applications Over Time</h3>
+                            <div class="trend-toggle">
+                                <button class="tt-btn active" id="trendDayBtn" onclick="setTrendMode('day')">Days</button>
+                                <button class="tt-btn" id="trendMonthBtn" onclick="setTrendMode('month')">Months</button>
+                            </div>
+                        </div>
                         <div class="trend-chart" id="trendBars"></div>
                     </div>
                     <div class="analytics-card">
