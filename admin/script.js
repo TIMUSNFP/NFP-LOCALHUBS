@@ -703,7 +703,7 @@ function renderBarSet(containerId, counts, color) {
     color = color || 'var(--primary)';
     const el = document.getElementById(containerId);
     if (!el) return;
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const max = sorted[0]?.[1] || 1;
     if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
     el.innerHTML = sorted.map(([label, val]) => `
@@ -868,7 +868,7 @@ function renderApprovalByCity(regs) {
     });
     const sorted = Object.entries(cityMap)
         .map(([city, d]) => ({ city, ...d, rate: Math.round(d.approved/d.total*100) }))
-        .sort((a,b) => b.rate - a.rate).slice(0, 8);
+        .sort((a,b) => b.rate - a.rate);
     if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
     el.innerHTML = sorted.map(c => `
         <div class="bar-row">
@@ -964,7 +964,7 @@ function renderCircleFillRate(hubs, parts) {
         const reg = parts.filter(p => String(p.hubId) === String(h.id) && p.status === 'Confirmed').length;
         const pct = cap > 0 ? Math.min(100, Math.round(reg/cap*100)) : 0;
         return { name: h.fullName, cap, reg, pct };
-    }).sort((a,b) => b.pct - a.pct).slice(0, 8);
+    }).sort((a,b) => b.pct - a.pct);
     el.innerHTML = data.map(d => {
         const col = d.pct >= 90 ? '#DC2626' : d.pct >= 60 ? '#F59E0B' : '#16A34A';
         return `<div class="bar-row">
@@ -1006,7 +1006,7 @@ function renderCirclesWithNoParticipants(hubs, parts) {
     el.innerHTML = `
         <div class="empty-circle-count">${empty.length} circle${empty.length > 1 ? 's' : ''} still need${empty.length === 1 ? 's' : ''} participants</div>
         <div class="empty-circles-grid">${
-            empty.slice(0,9).map(h => `
+            empty.map(h => `
                 <div class="empty-circle-row">
                     <span class="ec-dot"></span>
                     <div>
@@ -1014,7 +1014,7 @@ function renderCirclesWithNoParticipants(hubs, parts) {
                         <div class="ec-loc">${escHtml(h.city)}${h.area ? ' · '+escHtml(h.area) : ''}</div>
                     </div>
                 </div>`).join('')
-        }${empty.length > 9 ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">+${empty.length-9} more</div>` : ''}</div>`;
+        }</div>`;
 }
 
 // ══ COMBINED CHARTS ══
@@ -1032,7 +1032,7 @@ function renderSupplyVsDemand(hubs, parts) {
         cityMap[c] = cityMap[c] || { circles: 0, participants: 0 };
         cityMap[c].participants++;
     });
-    const sorted = Object.entries(cityMap).sort((a,b) => b[1].participants - a[1].participants).slice(0, 8);
+    const sorted = Object.entries(cityMap).sort((a,b) => b[1].participants - a[1].participants);
     if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
     const maxC = Math.max(...sorted.map(([,d]) => d.circles));
     const maxP = Math.max(...sorted.map(([,d]) => d.participants), 1);
