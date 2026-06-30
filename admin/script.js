@@ -706,6 +706,7 @@ function renderBarSet(containerId, counts, color) {
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const max = sorted[0]?.[1] || 1;
     if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
+    el.classList.add('chart-scroll');
     el.innerHTML = sorted.map(([label, val]) => `
         <div class="bar-row">
             <div class="bar-label-row">
@@ -870,6 +871,7 @@ function renderApprovalByCity(regs) {
         .map(([city, d]) => ({ city, ...d, rate: Math.round(d.approved/d.total*100) }))
         .sort((a,b) => b.rate - a.rate);
     if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
+    el.classList.add('chart-scroll');
     el.innerHTML = sorted.map(c => `
         <div class="bar-row">
             <div class="bar-label-row">
@@ -959,6 +961,7 @@ function renderCircleFillRate(hubs, parts) {
     if (!el) return;
     const approved = hubs.filter(h => h.status === 'Approved');
     if (!approved.length) { el.innerHTML = '<div class="a-no-data">No approved circles yet</div>'; return; }
+    el.classList.add('chart-scroll');
     const data = approved.map(h => {
         const cap = parseInt(h.capacity) || 0;
         const reg = parts.filter(p => String(p.hubId) === String(h.id) && p.status === 'Confirmed').length;
@@ -1003,6 +1006,7 @@ function renderCirclesWithNoParticipants(hubs, parts) {
         el.innerHTML = '<div class="a-no-data" style="color:#16A34A">All approved circles have at least one participant!</div>';
         return;
     }
+    el.classList.add('chart-scroll');
     el.innerHTML = `
         <div class="empty-circle-count">${empty.length} circle${empty.length > 1 ? 's' : ''} still need${empty.length === 1 ? 's' : ''} participants</div>
         <div class="empty-circles-grid">${
@@ -1034,6 +1038,7 @@ function renderSupplyVsDemand(hubs, parts) {
     });
     const sorted = Object.entries(cityMap).sort((a,b) => b[1].participants - a[1].participants);
     if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
+    el.classList.add('chart-scroll');
     const maxC = Math.max(...sorted.map(([,d]) => d.circles));
     const maxP = Math.max(...sorted.map(([,d]) => d.participants), 1);
     el.innerHTML = sorted.map(([city, d]) => `
