@@ -274,15 +274,14 @@ async function loadParticipants() {
 // ═══════════════════ ADMIN DASHBOARD ═══════════════════
 async function updateDashboard() {
     loadSettings();
-    await loadHubs();
+    await Promise.all([loadHubs(), loadParticipants()]);
     updateStats();
     applyFilters();
+    updateParticipantStats();
+    applyParticipantFilters();
     if (document.getElementById('tabAnalytics') && !document.getElementById('tabAnalytics').classList.contains('hidden')) {
         renderAnalytics();
     }
-    await loadParticipants();
-    updateParticipantStats();
-    applyParticipantFilters();
 }
 
 function updateStats() {
@@ -331,7 +330,7 @@ async function showAdminTab(tab, linkEl) {
         applyFilters();
     }
     if (tab === 'analytics') {
-        await loadHubs();
+        await Promise.all([loadHubs(), loadParticipants()]);
         renderAnalytics();
     }
     if (tab === 'participants') {
@@ -661,72 +660,51 @@ function exportCSV() {
     showToast(`Exported ${regs.length} records to CSV.`, 'success');
 }
 
-// ═══════════════════ ANALYTICS ═══════════════════
+// ═══════════════════════════════════════════════════════════════
+//  ANALYTICS — FULL SUITE
+// ═══════════════════════════════════════════════════════════════
+
 function renderAnalytics() {
-    const regs = allHubs;
-    if (!regs.length) return;
-    renderDonut(regs);
-    renderCityBars(regs);
-    renderMemberBars(regs);
-    renderVenueBars(regs);
+    const hubs  = allHubs;
+    const parts = allParticipants;
+    if (!hubs.length) return;
+
+    // Hub Leader Insights
+    renderDonut(hubs);
+    renderApplicationTrend(hubs);
+    renderStatusFunnel(hubs, parts);
+    renderCityBars(hubs);
+    renderAreaBars(hubs);
+    renderApprovalByCity(hubs);
+    renderMemberBars(hubs);
+    renderVenueBars(hubs);
+    renderCapacityDistribution(hubs);
+    renderHostingExperience(hubs);
+    renderHostingFrequency(hubs);
+    renderPocRole(hubs);
+
+    // Participant Insights
+    renderRegistrationTrend(parts);
+    renderParticipantsByCity(parts);
+    renderTopCirclesByParticipants(parts);
+    renderParticipantMembership(parts);
+    renderCircleFillRate(hubs, parts);
+    renderCancellationKpi(parts);
+    renderCirclesWithNoParticipants(hubs, parts);
+
+    // Combined
+    renderSupplyVsDemand(hubs, parts);
+    renderCapacityVsRegistered(hubs, parts);
 }
 
-function renderDonut(regs) {
-    const pending  = regs.filter(r => r.status === 'Pending').length;
-    const approved = regs.filter(r => r.status === 'Approved').length;
-    const rejected = regs.filter(r => r.status === 'Rejected').length;
-    const total    = regs.length;
-    const colors   = { Pending: '#D97706', Approved: '#16A34A', Rejected: '#DC2626' };
-    const data     = [
-        { label: 'Pending',  val: pending,  pct: total ? Math.round(pending/total*100)  : 0 },
-        { label: 'Approved', val: approved, pct: total ? Math.round(approved/total*100) : 0 },
-        { label: 'Rejected', val: rejected, pct: total ? Math.round(rejected/total*100) : 0 },
-    ];
-    let conicParts = [];
-    let acc = 0;
-    data.forEach(d => {
-        if (d.val > 0) {
-            const deg = (d.val / total) * 360;
-            conicParts.push(`${colors[d.label]} ${acc}deg ${acc + deg}deg`);
-            acc += deg;
-        }
-    });
-    const donutEl = document.getElementById('donutChart');
-    if (donutEl) {
-        donutEl.innerHTML = `
-            <div style="
-                width:160px;height:160px;border-radius:50%;
-                background:conic-gradient(${conicParts.join(',')});
-                position:relative;
-            ">
-                <div style="
-                    position:absolute;inset:30px;border-radius:50%;
-                    background:var(--white);display:flex;flex-direction:column;
-                    align-items:center;justify-content:center;
-                ">
-                    <strong style="font-size:24px;color:var(--dark)">${total}</strong>
-                    <span style="font-size:11px;color:var(--muted)">Total</span>
-                </div>
-            </div>
-        `;
-    }
-    const legendEl = document.getElementById('chartLegend');
-    if (legendEl) {
-        legendEl.innerHTML = data.map(d => `
-            <div class="legend-item">
-                <span class="legend-dot" style="background:${colors[d.label]}"></span>
-                <span class="legend-label">${d.label}</span>
-                <span class="legend-val">${d.val} (${d.pct}%)</span>
-            </div>
-        `).join('');
-    }
-}
-
-function renderBarSet(containerId, counts, color = 'var(--primary)') {
+// ── Shared: horizontal bar set ──
+function renderBarSet(containerId, counts, color) {
+    color = color || 'var(--primary)';
     const el = document.getElementById(containerId);
     if (!el) return;
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-    const max    = sorted[0]?.[1] || 1;
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const max = sorted[0]?.[1] || 1;
+    if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
     el.innerHTML = sorted.map(([label, val]) => `
         <div class="bar-row">
             <div class="bar-label-row">
@@ -740,10 +718,145 @@ function renderBarSet(containerId, counts, color = 'var(--primary)') {
     `).join('');
 }
 
+// ── Shared: small donut ──
+function renderSmallDonut(chartId, legendId, data) {
+    const total = data.reduce((s, d) => s + d.val, 0);
+    if (!total) return;
+    const conicParts = [];
+    let acc = 0;
+    data.forEach(d => {
+        if (d.val > 0) {
+            const deg = (d.val / total) * 360;
+            conicParts.push(`${d.color} ${acc}deg ${acc + deg}deg`);
+            acc += deg;
+        }
+    });
+    const donutEl = document.getElementById(chartId);
+    if (donutEl) {
+        donutEl.innerHTML = `
+            <div style="width:140px;height:140px;border-radius:50%;background:conic-gradient(${conicParts.join(',')});position:relative;margin:0 auto">
+                <div style="position:absolute;inset:28px;border-radius:50%;background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center">
+                    <strong style="font-size:20px;color:var(--dark)">${total}</strong>
+                    <span style="font-size:10px;color:var(--muted)">Total</span>
+                </div>
+            </div>`;
+    }
+    const legendEl = document.getElementById(legendId);
+    if (legendEl) {
+        legendEl.innerHTML = data.map(d => `
+            <div class="legend-item">
+                <span class="legend-dot" style="background:${d.color}"></span>
+                <span class="legend-label">${escHtml(d.label)}</span>
+                <span class="legend-val">${d.val} (${total ? Math.round(d.val/total*100) : 0}%)</span>
+            </div>`).join('');
+    }
+}
+
+// ── Shared: trend bar chart (vertical) ──
+function renderTrendChart(elId, data, color) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (!data.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
+    const max = Math.max(...data.map(d => d.count));
+    el.innerHTML = `<div class="trend-chart-inner">${
+        data.map(d => `
+            <div class="trend-col">
+                <div class="trend-val">${d.count}</div>
+                <div class="trend-bar" style="height:${Math.max(6, Math.round(d.count/max*100))}%;background:${color}"></div>
+                <div class="trend-label">${escHtml(d.label)}</div>
+            </div>`).join('')
+    }</div>`;
+}
+
+function groupByMonth(items, dateField) {
+    const map = {};
+    items.forEach(r => {
+        const d = new Date(r[dateField]);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const label = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+        if (!map[key]) map[key] = { label, count: 0 };
+        map[key].count++;
+    });
+    return Object.entries(map).sort((a,b) => a[0].localeCompare(b[0])).slice(-12).map(([,v]) => v);
+}
+
+// ══ HUB LEADER CHARTS ══
+
+function renderDonut(regs) {
+    const colors = { Pending: '#D97706', Approved: '#16A34A', Rejected: '#DC2626' };
+    const total  = regs.length;
+    const data   = ['Pending','Approved','Rejected'].map(s => ({
+        label: s, val: regs.filter(r => r.status === s).length, color: colors[s],
+    }));
+    renderSmallDonut('donutChart', 'chartLegend', data);
+    // override center with larger number for the main donut
+    const donutEl = document.getElementById('donutChart');
+    if (donutEl) {
+        const inner = donutEl.querySelector('div > div');
+        if (inner) inner.querySelector('strong').style.fontSize = '24px';
+    }
+}
+
+function renderApplicationTrend(regs) {
+    renderTrendChart('trendBars', groupByMonth(regs, 'submittedAt'), 'var(--primary)');
+}
+
+function renderStatusFunnel(regs, parts) {
+    const el = document.getElementById('funnelChart');
+    if (!el) return;
+    const total     = regs.length;
+    const approved  = regs.filter(r => r.status === 'Approved').length;
+    const withParts = new Set(parts.filter(p => p.status === 'Confirmed').map(p => p.hubId)).size;
+    const steps = [
+        { label: 'Total Applied',    val: total,     color: '#3B82F6', pct: 100 },
+        { label: 'Approved',         val: approved,  color: '#16A34A', pct: total ? Math.round(approved/total*100)  : 0 },
+        { label: 'Has Participants', val: withParts, color: '#7C3AED', pct: total ? Math.round(withParts/total*100) : 0 },
+    ];
+    el.innerHTML = steps.map(s => `
+        <div class="funnel-step">
+            <div class="funnel-label">${s.label}</div>
+            <div class="funnel-bar-wrap">
+                <div class="funnel-bar" style="width:${Math.max(s.pct,8)}%;background:${s.color}"><span>${s.val}</span></div>
+                <span class="funnel-pct">${s.pct}%</span>
+            </div>
+        </div>`).join('');
+}
+
 function renderCityBars(regs) {
     const counts = {};
     regs.forEach(r => { counts[r.city] = (counts[r.city] || 0) + 1; });
-    renderBarSet('cityBars', counts);
+    renderBarSet('cityBars', counts, 'var(--primary)');
+}
+
+function renderAreaBars(regs) {
+    const counts = {};
+    regs.forEach(r => { if (r.area) counts[r.area] = (counts[r.area] || 0) + 1; });
+    renderBarSet('areaBars', counts, '#0EA5E9');
+}
+
+function renderApprovalByCity(regs) {
+    const el = document.getElementById('approvalCityBars');
+    if (!el) return;
+    const cityMap = {};
+    regs.forEach(r => {
+        if (!cityMap[r.city]) cityMap[r.city] = { total: 0, approved: 0 };
+        cityMap[r.city].total++;
+        if (r.status === 'Approved') cityMap[r.city].approved++;
+    });
+    const sorted = Object.entries(cityMap)
+        .map(([city, d]) => ({ city, ...d, rate: Math.round(d.approved/d.total*100) }))
+        .sort((a,b) => b.rate - a.rate).slice(0, 8);
+    if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
+    el.innerHTML = sorted.map(c => `
+        <div class="bar-row">
+            <div class="bar-label-row">
+                <span>${escHtml(c.city)}</span>
+                <strong>${c.approved}/${c.total} — ${c.rate}%</strong>
+            </div>
+            <div class="bar-track">
+                <div class="bar-fill" style="width:${c.rate}%;background:#16A34A"></div>
+            </div>
+        </div>`).join('');
 }
 
 function renderMemberBars(regs) {
@@ -756,6 +869,189 @@ function renderVenueBars(regs) {
     const counts = {};
     regs.forEach(r => { counts[r.venueType] = (counts[r.venueType] || 0) + 1; });
     renderBarSet('venueBars', counts, '#16A34A');
+}
+
+function renderCapacityDistribution(regs) {
+    const counts = {};
+    regs.forEach(r => {
+        const n = parseInt(r.capacity) || 0;
+        const b = n <= 5 ? '1–5 People' : n <= 10 ? '6–10 People' : n <= 20 ? '11–20 People' : '21+ People';
+        counts[b] = (counts[b] || 0) + 1;
+    });
+    renderBarSet('capacityBars', counts, '#F59E0B');
+}
+
+function renderHostingExperience(regs) {
+    const yes = regs.filter(r => r.hostedBefore === 'Yes').length;
+    renderSmallDonut('experienceDonut', 'experienceLegend', [
+        { label: 'Experienced', val: yes,               color: '#16A34A' },
+        { label: 'First-Timers', val: regs.length - yes, color: '#F59E0B' },
+    ]);
+}
+
+function renderHostingFrequency(regs) {
+    const counts = {};
+    regs.forEach(r => { const f = r.hostingFrequency || 'Not specified'; counts[f] = (counts[f]||0)+1; });
+    renderBarSet('freqBars', counts, '#8B5CF6');
+}
+
+function renderPocRole(regs) {
+    const assign = regs.filter(r => r.pocRole === 'assign').length;
+    renderSmallDonut('pocDonut', 'pocLegend', [
+        { label: 'Self',           val: regs.length - assign, color: '#3B82F6' },
+        { label: 'Assign Someone', val: assign,               color: '#EC4899' },
+    ]);
+}
+
+// ══ PARTICIPANT CHARTS ══
+
+function renderRegistrationTrend(parts) {
+    renderTrendChart('regTrendBars', groupByMonth(parts, 'registeredAt'), '#7C3AED');
+}
+
+function renderParticipantsByCity(parts) {
+    const counts = {};
+    parts.filter(p => p.status === 'Confirmed').forEach(p => {
+        const c = p.hubCity || 'Unknown'; counts[c] = (counts[c]||0)+1;
+    });
+    renderBarSet('partCityBars', counts, '#0EA5E9');
+}
+
+function renderTopCirclesByParticipants(parts) {
+    const counts = {};
+    parts.filter(p => p.status === 'Confirmed').forEach(p => {
+        const k = p.hubLeader || 'Unknown'; counts[k] = (counts[k]||0)+1;
+    });
+    renderBarSet('topCirclesBars', counts, '#EC4899');
+}
+
+function renderParticipantMembership(parts) {
+    const counts = {};
+    parts.forEach(p => { counts[p.membership] = (counts[p.membership]||0)+1; });
+    renderBarSet('partMemberBars', counts, '#2563EB');
+}
+
+function renderCircleFillRate(hubs, parts) {
+    const el = document.getElementById('fillRateBars');
+    if (!el) return;
+    const approved = hubs.filter(h => h.status === 'Approved');
+    if (!approved.length) { el.innerHTML = '<div class="a-no-data">No approved circles yet</div>'; return; }
+    const data = approved.map(h => {
+        const cap = parseInt(h.capacity) || 0;
+        const reg = parts.filter(p => String(p.hubId) === String(h.id) && p.status === 'Confirmed').length;
+        const pct = cap > 0 ? Math.min(100, Math.round(reg/cap*100)) : 0;
+        return { name: h.fullName, cap, reg, pct };
+    }).sort((a,b) => b.pct - a.pct).slice(0, 8);
+    el.innerHTML = data.map(d => {
+        const col = d.pct >= 90 ? '#DC2626' : d.pct >= 60 ? '#F59E0B' : '#16A34A';
+        return `<div class="bar-row">
+            <div class="bar-label-row">
+                <span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(d.name)}">${escHtml(d.name)}</span>
+                <strong style="color:${col}">${d.reg}/${d.cap} (${d.pct}%)</strong>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:${d.pct}%;background:${col}"></div></div>
+        </div>`;
+    }).join('');
+}
+
+function renderCancellationKpi(parts) {
+    const el = document.getElementById('cancellationKpi');
+    if (!el) return;
+    const total     = parts.length;
+    const cancelled = parts.filter(p => p.status === 'Cancelled').length;
+    const confirmed = total - cancelled;
+    const rate      = total ? Math.round(cancelled/total*100) : 0;
+    const col       = rate > 20 ? '#DC2626' : rate > 10 ? '#F59E0B' : '#16A34A';
+    el.innerHTML = `
+        <div class="kpi-big" style="color:${col}">${rate}%</div>
+        <div class="kpi-sub">of all registrations cancelled</div>
+        <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <div class="kpi-pill" style="background:#dcfce7;color:#16A34A">${confirmed} Confirmed</div>
+            <div class="kpi-pill" style="background:#fee2e2;color:#DC2626">${cancelled} Cancelled</div>
+        </div>`;
+}
+
+function renderCirclesWithNoParticipants(hubs, parts) {
+    const el = document.getElementById('noParticipantsList');
+    if (!el) return;
+    const hubsWithParts = new Set(parts.filter(p => p.status === 'Confirmed').map(p => String(p.hubId)));
+    const empty = hubs.filter(h => h.status === 'Approved' && !hubsWithParts.has(String(h.id)));
+    if (!empty.length) {
+        el.innerHTML = '<div class="a-no-data" style="color:#16A34A">All approved circles have at least one participant!</div>';
+        return;
+    }
+    el.innerHTML = `
+        <div class="empty-circle-count">${empty.length} circle${empty.length > 1 ? 's' : ''} still need${empty.length === 1 ? 's' : ''} participants</div>
+        <div class="empty-circles-grid">${
+            empty.slice(0,9).map(h => `
+                <div class="empty-circle-row">
+                    <span class="ec-dot"></span>
+                    <div>
+                        <div class="ec-name">${escHtml(h.fullName)}</div>
+                        <div class="ec-loc">${escHtml(h.city)}${h.area ? ' · '+escHtml(h.area) : ''}</div>
+                    </div>
+                </div>`).join('')
+        }${empty.length > 9 ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">+${empty.length-9} more</div>` : ''}</div>`;
+}
+
+// ══ COMBINED CHARTS ══
+
+function renderSupplyVsDemand(hubs, parts) {
+    const el = document.getElementById('supplyDemandBars');
+    if (!el) return;
+    const cityMap = {};
+    hubs.filter(h => h.status === 'Approved').forEach(h => {
+        cityMap[h.city] = cityMap[h.city] || { circles: 0, participants: 0 };
+        cityMap[h.city].circles++;
+    });
+    parts.filter(p => p.status === 'Confirmed').forEach(p => {
+        const c = p.hubCity || 'Unknown';
+        cityMap[c] = cityMap[c] || { circles: 0, participants: 0 };
+        cityMap[c].participants++;
+    });
+    const sorted = Object.entries(cityMap).sort((a,b) => b[1].participants - a[1].participants).slice(0, 8);
+    if (!sorted.length) { el.innerHTML = '<div class="a-no-data">No data yet</div>'; return; }
+    const maxC = Math.max(...sorted.map(([,d]) => d.circles));
+    const maxP = Math.max(...sorted.map(([,d]) => d.participants), 1);
+    el.innerHTML = sorted.map(([city, d]) => `
+        <div class="sd-row">
+            <div class="sd-city">${escHtml(city)}</div>
+            <div class="sd-bars">
+                <div class="sd-bar-wrap">
+                    <span class="sd-badge" style="background:#3B82F6">Circles</span>
+                    <div class="bar-track" style="flex:1"><div class="bar-fill" style="width:${Math.round(d.circles/Math.max(maxC,1)*100)}%;background:#3B82F6"></div></div>
+                    <span class="sd-val">${d.circles}</span>
+                </div>
+                <div class="sd-bar-wrap">
+                    <span class="sd-badge" style="background:#7C3AED">People</span>
+                    <div class="bar-track" style="flex:1"><div class="bar-fill" style="width:${Math.round(d.participants/maxP*100)}%;background:#7C3AED"></div></div>
+                    <span class="sd-val">${d.participants}</span>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+function renderCapacityVsRegistered(hubs, parts) {
+    const el = document.getElementById('capacityVsRegistered');
+    if (!el) return;
+    const totalCap = hubs.filter(h => h.status === 'Approved').reduce((s,h) => s + (parseInt(h.capacity)||0), 0);
+    const totalReg = parts.filter(p => p.status === 'Confirmed').length;
+    const pct      = totalCap > 0 ? Math.min(100, Math.round(totalReg/totalCap*100)) : 0;
+    const col      = pct >= 90 ? '#DC2626' : pct >= 60 ? '#F59E0B' : '#3B82F6';
+    el.innerHTML = `
+        <div style="text-align:center;padding:8px 0">
+            <div class="kpi-big" style="color:${col}">${pct}%</div>
+            <div class="kpi-sub">Overall Fill Rate</div>
+            <div class="cap-prog-track"><div class="cap-prog-fill" style="width:${pct}%;background:${col}"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px">
+                <span>${totalReg} Registered</span>
+                <span>${totalCap} Total Spots</span>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+                <div class="kpi-pill" style="background:#eff6ff;color:#3B82F6">${totalCap - totalReg} Spots Available</div>
+                <div class="kpi-pill" style="background:#f0fdf4;color:#16A34A">${totalReg} Filled</div>
+            </div>
+        </div>`;
 }
 
 // ═══════════════════ TOAST NOTIFICATIONS ═══════════════════

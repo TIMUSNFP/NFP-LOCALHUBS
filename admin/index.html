@@ -162,25 +162,107 @@
 
             <!-- Analytics Tab -->
             <div id="tabAnalytics" class="admin-tab hidden">
+
+                <div class="analytics-section-title">Hub Leader Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card">
-                        <h3>Application Status Overview</h3>
+                        <h3>Application Status</h3>
                         <div class="donut-chart-wrap" id="donutChart"></div>
                         <div class="chart-legend" id="chartLegend"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Top Cities</h3>
-                        <div class="city-bars" id="cityBars"></div>
+                        <h3>Applications Over Time</h3>
+                        <div class="trend-chart" id="trendBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Membership Distribution</h3>
-                        <div class="member-bars" id="memberBars"></div>
+                        <h3>Status Funnel</h3>
+                        <div id="funnelChart"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Venue Type Breakdown</h3>
-                        <div class="venue-bars" id="venueBars"></div>
+                        <h3>Applications by City</h3>
+                        <div id="cityBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Applications by Area / Locality</h3>
+                        <div id="areaBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Approval Rate by City</h3>
+                        <div id="approvalCityBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Membership Type</h3>
+                        <div id="memberBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Venue Type</h3>
+                        <div id="venueBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Hosting Capacity</h3>
+                        <div id="capacityBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Hosting Experience</h3>
+                        <div class="donut-chart-wrap" id="experienceDonut"></div>
+                        <div class="chart-legend" id="experienceLegend"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Willing to Host</h3>
+                        <div id="freqBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Circle POC Role</h3>
+                        <div class="donut-chart-wrap" id="pocDonut"></div>
+                        <div class="chart-legend" id="pocLegend"></div>
                     </div>
                 </div>
+
+                <div class="analytics-section-title">Participant Insights</div>
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Registrations Over Time</h3>
+                        <div class="trend-chart" id="regTrendBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Participants by City</h3>
+                        <div id="partCityBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Top Circles by Participants</h3>
+                        <div id="topCirclesBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Participant Membership Type</h3>
+                        <div id="partMemberBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Circle Fill Rate</h3>
+                        <div id="fillRateBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Cancellation Rate</h3>
+                        <div id="cancellationKpi"></div>
+                    </div>
+                    <div class="analytics-card analytics-card-wide">
+                        <h3>Approved Circles with No Participants Yet</h3>
+                        <div id="noParticipantsList"></div>
+                    </div>
+                </div>
+
+                <div class="analytics-section-title">Combined Insights</div>
+                <div class="analytics-grid">
+                    <div class="analytics-card analytics-card-wide">
+                        <h3>Supply vs Demand by City</h3>
+                        <div class="analytics-sublabel">Approved circles (supply) vs confirmed participants (demand) per city</div>
+                        <div id="supplyDemandBars"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Total Capacity vs Registered</h3>
+                        <div id="capacityVsRegistered"></div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Participants Tab -->
