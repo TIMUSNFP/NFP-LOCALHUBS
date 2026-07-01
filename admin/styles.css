@@ -588,6 +588,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     width: 100%;
     min-width: 0;
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 280px);
     -webkit-overflow-scrolling: touch;
     position: relative;
 }
