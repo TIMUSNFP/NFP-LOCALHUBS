@@ -387,10 +387,10 @@ function renderTable(regs) {
     if (emptyEl) emptyEl.classList.remove('visible');
     tbody.innerHTML = regs.map(r => `
         <tr data-id="${escHtml(r.id)}">
-            <td class="td-id" style="min-width:180px">${escHtml(r.id)}</td>
-            <td class="td-name" style="min-width:140px"><button class="name-link" onclick="viewHubParticipants('${escHtml(r.id)}')">${escHtml(r.fullName)}</button></td>
+            <td class="td-id td-sticky-1">${escHtml(r.id)}</td>
+            <td class="td-name td-sticky-2"><button class="name-link" onclick="viewHubParticipants('${escHtml(r.id)}')">${escHtml(r.fullName)}</button></td>
+            <td class="td-sticky-3" style="min-width:130px">${escHtml(r.mobile)}</td>
             <td class="td-email" style="min-width:180px">${escHtml(r.email)}</td>
-            <td>${escHtml(r.mobile)}</td>
             <td>${escHtml(r.membership)}</td>
             <td>${escHtml(r.city)}</td>
             <td>${escHtml(r.area)}</td>
@@ -1173,10 +1173,10 @@ function renderParticipantTable(parts) {
 
     tbody.innerHTML = parts.map(p => `
         <tr>
-            <td class="td-id" style="min-width:200px">${escHtml(p.id)}</td>
-            <td class="td-name"><button class="name-link" onclick="viewParticipantDetails('${escHtml(p.id)}')">${escHtml(p.fullName)}</button></td>
+            <td class="td-id td-sticky-1" style="min-width:200px">${escHtml(p.id)}</td>
+            <td class="td-name td-sticky-2">${escHtml(p.fullName)}</td>
+            <td class="td-sticky-3" style="min-width:130px">${escHtml(p.mobile)}</td>
             <td class="td-email">${escHtml(p.email)}</td>
-            <td>${escHtml(p.mobile)}</td>
             <td>${escHtml(p.membership)}</td>
             <td class="td-name">${escHtml(p.hubLeader)}'s Circle</td>
             <td>${escHtml(p.hubCity)}</td>

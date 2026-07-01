@@ -346,7 +346,11 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .sb-link:hover { background: rgba(255,255,255,.08); color: var(--white); }
 .sb-link.active { background: var(--primary); color: var(--white); }
-.sb-icon { font-size: 18px; flex-shrink: 0; }
+.sb-icon { font-size: 16px; flex-shrink: 0; }
+.sb-action { font-size: 12px; padding: 6px 16px 6px 28px; color: rgba(255,255,255,.5); margin-bottom: 2px; }
+.sb-action:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.06); }
+.sb-divider { height: 1px; background: rgba(255,255,255,.1); margin: 6px 16px 8px; }
+.sb-section-label { margin-top: 20px; }
 .sb-footer {
     padding: 16px 12px 20px;
     border-top: 1px solid rgba(255,255,255,.08);
@@ -723,7 +727,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     letter-spacing: .2px;
 }
 .analytics-section-title:first-child { margin-top: 0; }
-.analytics-sublabel { font-size: 12px; color: var(--muted); margin: -16px 0 14px; }
+.analytics-sublabel { font-size: 12px; color: var(--muted); margin: 2px 0 14px; }
 
 .analytics-grid {
     display: grid;
@@ -753,6 +757,29 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 .legend-label { flex: 1; font-weight: 500; }
 .legend-val { font-weight: 700; color: var(--dark); }
+
+/* ── Sticky table columns ── */
+/* Hub leaders table: col 1 = Reg.ID (180px), col 2 = Full Name (140px), col 3 = Mobile (130px) */
+#hubTableWrap .data-table th:nth-child(1),
+#hubTableWrap .data-table td:nth-child(1) { position: sticky; left: 0;     z-index: 1; background: var(--white); }
+#hubTableWrap .data-table th:nth-child(2),
+#hubTableWrap .data-table td:nth-child(2) { position: sticky; left: 180px; z-index: 1; background: var(--white); }
+#hubTableWrap .data-table th:nth-child(3),
+#hubTableWrap .data-table td:nth-child(3) { position: sticky; left: 320px; z-index: 1; background: var(--white); box-shadow: 3px 0 8px rgba(0,0,0,.07); }
+/* Participant table: col 1 = Participant ID (200px), col 2 = Full Name (140px), col 3 = Mobile (130px) */
+#partTableWrap .data-table th:nth-child(1),
+#partTableWrap .data-table td:nth-child(1) { position: sticky; left: 0;     z-index: 1; background: var(--white); }
+#partTableWrap .data-table th:nth-child(2),
+#partTableWrap .data-table td:nth-child(2) { position: sticky; left: 200px; z-index: 1; background: var(--white); }
+#partTableWrap .data-table th:nth-child(3),
+#partTableWrap .data-table td:nth-child(3) { position: sticky; left: 340px; z-index: 1; background: var(--white); box-shadow: 3px 0 8px rgba(0,0,0,.07); }
+/* Header row is already sticky top:0 z-index:2; bump sticky-column headers above body cells */
+#hubTableWrap  .data-table thead th:nth-child(1),
+#hubTableWrap  .data-table thead th:nth-child(2),
+#hubTableWrap  .data-table thead th:nth-child(3),
+#partTableWrap .data-table thead th:nth-child(1),
+#partTableWrap .data-table thead th:nth-child(2),
+#partTableWrap .data-table thead th:nth-child(3) { z-index: 4; background: #FAFAFA; }
 
 .bar-row { margin-bottom: 12px; }
 .bar-label-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text); margin-bottom: 5px; }

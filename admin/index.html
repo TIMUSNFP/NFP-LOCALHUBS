@@ -56,28 +56,31 @@
                 <span class="sb-tag">Admin</span>
             </div>
             <nav class="sb-nav">
-                <div class="sb-section-label">Circle Hosts</div>
+                <div class="sb-section-label">Hub Leaders</div>
                 <a class="sb-link active" id="navApplications" onclick="showAdminTab('applications', this)">
-                    <span>Applications</span>
+                    <span class="sb-icon">&#128203;</span><span>Applications</span>
                 </a>
                 <a class="sb-link" id="navAnalytics" onclick="showAdminTab('analytics', this)">
-                    <span>Analytics</span>
+                    <span class="sb-icon">&#128200;</span><span>Analytics</span>
                 </a>
-                <a class="sb-link" onclick="exportCSV()">
-                    <span>Export CSV</span>
+                <div class="sb-divider"></div>
+                <a class="sb-link sb-action" onclick="exportCSV()">
+                    <span class="sb-icon">&#8659;</span><span>Export CSV</span>
                 </a>
-                <a class="sb-link" onclick="syncToSheets('hubs')">
-                    <span>&#128196; Sync to Google Sheets</span>
+                <a class="sb-link sb-action" onclick="syncToSheets('hubs')">
+                    <span class="sb-icon">&#9729;</span><span>Sync to Sheets</span>
                 </a>
-                <div class="sb-section-label" style="margin-top:12px">Participants</div>
+
+                <div class="sb-section-label">Participants</div>
                 <a class="sb-link" id="navParticipants" onclick="showAdminTab('participants', this)">
-                    <span class="sb-icon">&#128100;</span><span>Registrations</span>
+                    <span class="sb-icon">&#128101;</span><span>Registrations</span>
                 </a>
-                <a class="sb-link" onclick="exportParticipantsCSV()">
-                    <span>Export CSV</span>
+                <div class="sb-divider"></div>
+                <a class="sb-link sb-action" onclick="exportParticipantsCSV()">
+                    <span class="sb-icon">&#8659;</span><span>Export CSV</span>
                 </a>
-                <a class="sb-link" onclick="syncToSheets('participants')">
-                    <span>&#128196; Sync to Google Sheets</span>
+                <a class="sb-link sb-action" onclick="syncToSheets('participants')">
+                    <span class="sb-icon">&#9729;</span><span>Sync to Sheets</span>
                 </a>
             </nav>
             <div class="sb-footer">
@@ -144,7 +147,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Reg. ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
+                                <th>Reg. ID</th><th>Full Name</th><th>Mobile</th><th>Email</th>
                                 <th>Membership</th><th>City</th><th>Area</th><th>Address</th>
                                 <th>Venue</th><th>Capacity</th><th>Hosted Before</th>
                                 <th>Hosting Frequency</th><th>Date</th><th>Status</th><th>Actions</th>
@@ -313,7 +316,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Participant ID</th><th>Full Name</th><th>Email</th><th>Mobile</th>
+                                <th>Participant ID</th><th>Full Name</th><th>Mobile</th><th>Email</th>
                                 <th>Membership</th><th>Circle Host</th><th>Circle City</th><th>Circle Area</th>
                                 <th>Note</th><th>Registered On</th><th>Status</th><th>Actions</th>
                             </tr>
