@@ -176,40 +176,43 @@ router.post('/sync-sheets', async (req, res) => {
     return res.status(400).json({ error: 'type must be "hubs" or "participants"' });
   }
 
+  // Manual formatting — avoids locale/ICU availability issues in serverless envs.
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const fmt = (iso) => {
     if (!iso) return '';
-    return new Date(iso).toLocaleString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
-    });
+    const d = new Date(iso);
+    const date = `${String(d.getDate()).padStart(2,'0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    const h = d.getHours();
+    const time = `${String(h % 12 || 12).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
+    return `${date} ${time}`;
   };
 
-  let rows;
-  if (type === 'hubs') {
-    const dbRows = await db.all('SELECT * FROM hubs ORDER BY submitted_at ASC');
-    rows = dbRows.map(hubRowToJson).map(r => [
-      r.id, r.fullName, r.email, r.mobile, r.membership,
-      r.city, r.area, r.address || '', r.pincode || '',
-      r.venueType, r.capacity, r.hostedBefore, r.hostingFrequency || '',
-      r.pocRole === 'assign' ? 'Will assign someone else' : 'Self',
-      fmt(r.submittedAt), r.status,
-    ]);
-  } else {
-    const dbRows = await db.all(
-      `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
-       FROM participants p JOIN hubs h ON h.id = p.hub_id ORDER BY p.registered_at ASC`
-    );
-    rows = dbRows.map(row => {
-      const p = { ...participantRowToJson(row), hubLeader: row.hub_leader, hubCity: row.hub_city, hubArea: row.hub_area };
-      return [
-        p.id, p.fullName, p.email, p.mobile, p.membership,
-        p.hubLeader, p.hubCity, p.hubArea, p.note || '',
-        fmt(p.registeredAt), p.status,
-      ];
-    });
-  }
-
   try {
+    let rows;
+    if (type === 'hubs') {
+      const dbRows = await db.all('SELECT * FROM hubs ORDER BY submitted_at ASC');
+      rows = dbRows.map(hubRowToJson).map(r => [
+        r.id, r.fullName, r.email, r.mobile, r.membership,
+        r.city, r.area, r.address || '', r.pincode || '',
+        r.venueType, r.capacity, r.hostedBefore, r.hostingFrequency || '',
+        r.pocRole === 'assign' ? 'Will assign someone else' : 'Self',
+        fmt(r.submittedAt), r.status,
+      ]);
+    } else {
+      const dbRows = await db.all(
+        `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
+         FROM participants p JOIN hubs h ON h.id = p.hub_id ORDER BY p.registered_at ASC`
+      );
+      rows = dbRows.map(row => {
+        const p = { ...participantRowToJson(row), hubLeader: row.hub_leader, hubCity: row.hub_city, hubArea: row.hub_area };
+        return [
+          p.id, p.fullName, p.email, p.mobile, p.membership,
+          p.hubLeader, p.hubCity, p.hubArea, p.note || '',
+          fmt(p.registeredAt), p.status,
+        ];
+      });
+    }
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

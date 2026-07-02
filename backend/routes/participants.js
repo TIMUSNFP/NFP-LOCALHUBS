@@ -2,6 +2,7 @@
 const express = require('express');
 const db = require('../db');
 const { generateParticipantId } = require('../utils');
+const { sendParticipantConfirmed } = require('../mailer');
 
 const router = express.Router();
 
@@ -96,6 +97,9 @@ router.post('/', async (req, res) => {
       participant.email, participant.mobile, participant.membership, participant.note, participant.hub_id,
     ]
   );
+
+  // Fire confirmation email — non-blocking, errors are swallowed in mailer.
+  sendParticipantConfirmed(participant, hub);
 
   res.status(201).json({
     id,
