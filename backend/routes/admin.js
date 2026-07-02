@@ -6,6 +6,7 @@ const db = require('../db');
 const { hubRowToJson, participantRowToJson, geocodeHub } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
 const { readFormSettings } = require('./settings');
+const { sendHubApproved, sendHubRejected, sendParticipantCancelled } = require('../mailer');
 
 const router = express.Router();
 
@@ -100,6 +101,11 @@ router.patch('/hubs/:id/status', async (req, res) => {
   }
 
   const updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+
+  // Fire approval/rejection email — non-blocking, errors are swallowed in mailer.
+  if (status === 'Approved') sendHubApproved(updated);
+  else sendHubRejected(updated);
+
   res.json(hubRowToJson(updated));
 });
 
@@ -138,6 +144,12 @@ router.patch('/participants/:id/status', async (req, res) => {
   await db.run('UPDATE participants SET status = $1 WHERE id = $2', [status, req.params.id]);
 
   const updated = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
+
+  if (status === 'Cancelled') {
+    const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [updated.hub_id]);
+    sendParticipantCancelled(updated, hub);
+  }
+
   res.json(participantRowToJson(updated));
 });
 
@@ -166,7 +178,10 @@ router.post('/sync-sheets', async (req, res) => {
 
   const fmt = (iso) => {
     if (!iso) return '';
-    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(iso).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+    });
   };
 
   let rows;
