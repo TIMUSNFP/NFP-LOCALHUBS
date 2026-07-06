@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     handleNavbarScroll();
     checkAdminSession();
     initTableScrollFade();
+    initHubColumnFilters();
 });
 
 function handleNavbarScroll() {
@@ -342,6 +343,153 @@ async function showAdminTab(tab, linkEl) {
     closeSidebar();
 }
 
+// ═══════════════════ COLUMN FILTERS (HUBS, Excel-style) ═══════════════════
+const HUB_FILTER_COLUMNS = [
+    { key: 'id',               label: 'Reg. ID' },
+    { key: 'fullName',         label: 'Full Name' },
+    { key: 'mobile',           label: 'Mobile' },
+    { key: 'email',            label: 'Email' },
+    { key: 'membership',       label: 'Membership' },
+    { key: 'city',             label: 'City' },
+    { key: 'area',             label: 'Area' },
+    { key: 'address',          label: 'Address' },
+    { key: 'venueType',        label: 'Venue' },
+    { key: 'capacity',         label: 'Capacity' },
+    { key: 'hostedBefore',     label: 'Hosted Before' },
+    { key: 'hostingFrequency', label: 'Hosting Frequency' },
+    { key: 'submittedAt',      label: 'Date' },
+    { key: 'status',           label: 'Status' },
+];
+
+let hubColumnFilters = {}; // colKey -> Set of allowed values ("absent" key = no filter on that column)
+let activeFilterCol  = null;
+
+function initHubColumnFilters() {
+    const row = document.getElementById('hubTableHeaderRow');
+    if (!row) return;
+    const ths = row.querySelectorAll('th');
+    HUB_FILTER_COLUMNS.forEach((col, i) => {
+        const th = ths[i];
+        if (!th) return;
+        const label = th.textContent.trim();
+        th.innerHTML = `<div class="th-inner"><span class="th-label">${label}</span><button type="button" class="col-filter-btn" data-col="${col.key}" onclick="toggleColumnFilter(event,'${col.key}')" title="Filter ${label}">&#9660;</button></div>`;
+    });
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById('colFilterPanel');
+        if (!panel || panel.classList.contains('hidden')) return;
+        if (panel.contains(e.target) || e.target.closest('.col-filter-btn')) return;
+        closeColumnFilterPanel();
+    });
+    window.addEventListener('resize', closeColumnFilterPanel);
+}
+
+function getHubColumnValue(record, key) {
+    if (key === 'submittedAt') return record.submittedAt ? formatDate(record.submittedAt) : '—';
+    if (key === 'hostedBefore') return record.hostedBefore === 'Yes' ? 'Yes' : 'No';
+    const v = record[key];
+    return (v === null || v === undefined || String(v).trim() === '') ? '—' : String(v).trim();
+}
+
+function toggleColumnFilter(evt, colKey) {
+    evt.stopPropagation();
+    if (activeFilterCol === colKey) { closeColumnFilterPanel(); return; }
+    openColumnFilterPanel(evt.currentTarget, colKey);
+}
+
+function openColumnFilterPanel(btnEl, colKey) {
+    activeFilterCol = colKey;
+    const panel = document.getElementById('colFilterPanel');
+    if (!panel) return;
+
+    const uniqueValues = [...new Set(allHubs.map(r => getHubColumnValue(r, colKey)))]
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const selected = hubColumnFilters[colKey]; // Set or undefined (undefined = all selected)
+
+    panel.innerHTML = `
+        <div class="cfp-search"><input type="text" placeholder="Search values..." oninput="filterColumnValueList(this.value)" /></div>
+        <div class="cfp-selectall"><label><input type="checkbox" id="cfpSelectAll" ${!selected ? 'checked' : ''} onchange="toggleAllColumnValues(this.checked)"> Select All</label></div>
+        <div class="cfp-list" id="cfpList">
+            ${uniqueValues.map(v => `
+                <label class="cfp-item">
+                    <input type="checkbox" value="${escHtml(v)}" ${!selected || selected.has(v) ? 'checked' : ''}>
+                    <span>${escHtml(v)}</span>
+                </label>
+            `).join('')}
+        </div>
+        <div class="cfp-actions">
+            <button type="button" class="cfp-clear" onclick="clearColumnFilter('${colKey}')">Clear</button>
+            <button type="button" class="cfp-apply" onclick="applyColumnFilter('${colKey}')">Apply</button>
+        </div>
+    `;
+
+    panel.classList.remove('hidden');
+    positionColumnFilterPanel(btnEl, panel);
+}
+
+function positionColumnFilterPanel(btnEl, panel) {
+    const rect = btnEl.getBoundingClientRect();
+    const panelWidth = 220;
+    let left = rect.left;
+    if (left + panelWidth > window.innerWidth - 12) left = window.innerWidth - panelWidth - 12;
+    panel.style.top  = `${rect.bottom + 6}px`;
+    panel.style.left = `${Math.max(12, left)}px`;
+}
+
+function filterColumnValueList(query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll('#cfpList .cfp-item').forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+
+function toggleAllColumnValues(checked) {
+    document.querySelectorAll('#cfpList .cfp-item').forEach(item => {
+        if (item.style.display === 'none') return;
+        item.querySelector('input').checked = checked;
+    });
+}
+
+function applyColumnFilter(colKey) {
+    const checkboxes = document.querySelectorAll('#cfpList .cfp-item input');
+    const checkedValues = [...checkboxes].filter(cb => cb.checked).map(cb => cb.value);
+    if (checkedValues.length === checkboxes.length) {
+        delete hubColumnFilters[colKey]; // everything selected = no filter
+    } else {
+        hubColumnFilters[colKey] = new Set(checkedValues);
+    }
+    updateFilterIconStates();
+    closeColumnFilterPanel();
+    applyFilters();
+}
+
+function clearColumnFilter(colKey) {
+    delete hubColumnFilters[colKey];
+    updateFilterIconStates();
+    closeColumnFilterPanel();
+    applyFilters();
+}
+
+function updateFilterIconStates() {
+    document.querySelectorAll('.col-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', !!hubColumnFilters[btn.getAttribute('data-col')]);
+    });
+}
+
+function closeColumnFilterPanel() {
+    const panel = document.getElementById('colFilterPanel');
+    if (panel) panel.classList.add('hidden');
+    activeFilterCol = null;
+}
+
+function applyHubColumnFilters(regs) {
+    Object.keys(hubColumnFilters).forEach(key => {
+        const allowed = hubColumnFilters[key];
+        if (!allowed || allowed.size === 0) return;
+        regs = regs.filter(r => allowed.has(getHubColumnValue(r, key)));
+    });
+    return regs;
+}
+
 // ═══════════════════ TABLE RENDERING (HUBS) ═══════════════════
 function applyFilters() {
     const search = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
@@ -357,6 +505,7 @@ function applyFilters() {
             String(r.id || '').toLowerCase().includes(search)
         );
     }
+    regs = applyHubColumnFilters(regs);
     renderTable(regs);
 }
 
