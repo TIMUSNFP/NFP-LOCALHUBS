@@ -1,21 +1,44 @@
-// mailer.js — Resend-based email utility for NFP Circles.
-// All outbound emails are sent from the address set in FROM_EMAIL env var.
-// If RESEND_API_KEY is missing, every send is a no-op (safe for local dev).
-const { Resend } = require('resend');
+// mailer.js — SMTP-based email utility for NFP Circles (via nodemailer).
+// All outbound emails are sent from the address set in FROM_EMAIL env var,
+// authenticated through the SMTP account in SMTP_USER / SMTP_PASS.
+// If SMTP is not configured, every send is a no-op (safe for local dev).
+const nodemailer = require('nodemailer');
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM = process.env.FROM_EMAIL || 'NFP Circles <noreply@networkfp.com>';
+// Build the SMTP transport from environment variables. Common providers:
+//   Google Workspace / Gmail : host smtp.gmail.com,   port 465 (secure)
+//   Microsoft 365 / Outlook  : host smtp.office365.com, port 587 (STARTTLS)
+//   Zoho Mail                : host smtp.zoho.com,     port 465 (secure)
+// SMTP_PORT 465 => implicit TLS (secure), any other port => STARTTLS.
+const SMTP_HOST = (process.env.SMTP_HOST || '').trim();
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465', 10);
+const SMTP_USER = (process.env.SMTP_USER || '').trim();
+const SMTP_PASS = (process.env.SMTP_PASS || '').trim();
+
+// FROM_EMAIL should match the authenticated mailbox (or a permitted alias),
+// otherwise most SMTP providers reject or rewrite the From header.
+const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>` : 'NFP Circles <noreply@networkfp.com>');
 
 const HUB_LEADER_URL = 'https://nfp-circles.vercel.app/circle-leaders/';
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
+const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/EsFjHO5h4kb7eMJ4EFiWRM';
+const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
+
+const transporter = (SMTP_HOST && SMTP_USER && SMTP_PASS)
+  ? nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465, // true for 465, false for 587/25 (STARTTLS)
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
+  : null;
 
 async function send({ to, subject, html }) {
-  if (!resend) {
-    console.log(`[mailer] RESEND_API_KEY not set — skipping email to ${to}: "${subject}"`);
+  if (!transporter) {
+    console.log(`[mailer] SMTP not configured — skipping email to ${to}: "${subject}"`);
     return;
   }
   try {
-    await resend.emails.send({ from: FROM, to, subject, html });
+    await transporter.sendMail({ from: FROM, to, subject, html });
   } catch (err) {
     // Never let an email failure break the API response.
     console.error(`[mailer] Failed to send "${subject}" to ${to}:`, err.message);
@@ -31,33 +54,31 @@ function wrap(body) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { margin: 0; padding: 0; background: #f5f5f5; font-family: Arial, sans-serif; color: #1a1a1a; }
-    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .header { background: #1a3a5c; padding: 28px 32px; text-align: center; }
-    .header-title { color: #ffffff; font-size: 22px; font-weight: 700; margin: 0; letter-spacing: 0.5px; }
-    .header-sub { color: #a8c4e0; font-size: 13px; margin: 6px 0 0; }
+    body { margin: 0; padding: 0; background: #EFE7DC; font-family: Arial, sans-serif; color: #333333; }
+    .container { max-width: 600px; margin: 40px auto; background: #FFFFFF; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: #FFFFFF; padding: 24px 32px; text-align: center; border-top: 4px solid #FF5000; border-bottom: 1px solid #EFE7DC; }
+    .header img { width: 220px; height: auto; display: inline-block; }
     .body { padding: 32px; }
-    .body h2 { margin: 0 0 16px; font-size: 22px; color: #1a3a5c; }
-    .body p { margin: 0 0 14px; font-size: 15px; line-height: 1.6; color: #444; }
-    .badge { display: inline-block; background: #e8f4ea; color: #2e7d32; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; margin-bottom: 20px; }
-    .badge.rejected { background: #fdecea; color: #c62828; }
-    .info-box { background: #f0f4ff; border-left: 4px solid #1a3a5c; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
-    .info-box p { margin: 4px 0; font-size: 14px; color: #333; }
-    .info-box strong { color: #1a3a5c; }
-    .id-box { background: #1a3a5c; color: #fff; border-radius: 6px; padding: 14px 20px; text-align: center; margin: 20px 0; }
-    .id-box span { display: block; font-size: 12px; opacity: 0.7; margin-bottom: 4px; }
+    .body h2 { margin: 0 0 16px; font-size: 22px; color: #333333; }
+    .body p { margin: 0 0 14px; font-size: 15px; line-height: 1.6; color: #333333; }
+    .badge { display: inline-block; background: #D7E7DF; color: #333333; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; margin-bottom: 20px; }
+    .badge.rejected { background: #B0B0B0; color: #FFFFFF; }
+    .info-box { background: #EFE7DC; border-left: 4px solid #FF5000; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
+    .info-box p { margin: 4px 0; font-size: 14px; color: #333333; }
+    .info-box strong { color: #6A7D8B; }
+    .id-box { background: #FF5000; color: #FFFFFF; border-radius: 6px; padding: 14px 20px; text-align: center; margin: 20px 0; }
+    .id-box span { display: block; font-size: 12px; opacity: 0.85; margin-bottom: 4px; }
     .id-box strong { font-size: 18px; letter-spacing: 1px; }
     .btn-wrap { text-align: center; margin: 24px 0 8px; }
-    .btn { display: inline-block; background: #1a3a5c; color: #ffffff !important; text-decoration: none; padding: 13px 32px; border-radius: 6px; font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
-    .footer { background: #f0f0f0; padding: 18px 32px; text-align: center; font-size: 12px; color: #888; }
-    .footer a { color: #1a3a5c; text-decoration: none; }
+    .btn { display: inline-block; background: #FF5000; color: #FFFFFF !important; text-decoration: none; padding: 13px 32px; border-radius: 6px; font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
+    .footer { background: #EFE7DC; padding: 18px 32px; text-align: center; font-size: 12px; color: #6A7D8B; }
+    .footer a { color: #FF5000; text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="header-title">NFP Circles</div>
-      <div class="header-sub">Network FP</div>
+      <img src="${LOGO_URL}" alt="Network FP" width="220" height="67" style="width:220px;height:auto;display:inline-block;" />
     </div>
     <div class="body">${body}</div>
     <div class="footer">
@@ -87,9 +108,9 @@ async function sendHubApproved(hub) {
     </div>
     <p>Your circle is now live and visible to participants who can register with you. Please keep your Hub ID safe — you may need it for future correspondence with our team.</p>
     <div class="btn-wrap">
-      <a class="btn" href="${HUB_LEADER_URL}">Visit Circle Leaders Portal</a>
+      <a class="btn" href="${HUB_LEADERS_WHATSAPP_URL}">Join the Hub Leaders WhatsApp Group</a>
     </div>
-    <p>If you have any questions, please reach out to us at <a href="mailto:support@networkfp.com">support@networkfp.com</a>.</p>
+    <p>If you have any questions, please reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p>Thank you for being a part of the NFP community!</p>
   `);
 
@@ -115,7 +136,7 @@ async function sendHubRejected(hub) {
     <div class="btn-wrap">
       <a class="btn" href="${HUB_LEADER_URL}">Reapply as Circle Leader</a>
     </div>
-    <p>If you have questions or would like more details, please contact us at <a href="mailto:support@networkfp.com">support@networkfp.com</a>.</p>
+    <p>If you have questions or would like more details, please contact us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p>We appreciate your enthusiasm for the NFP Circles programme and hope to welcome you in the future.</p>
   `);
 
@@ -146,7 +167,7 @@ async function sendParticipantConfirmed(participant, hub) {
     <div class="btn-wrap">
       <a class="btn" href="${PARTICIPANT_URL}">Find More Circles Near You</a>
     </div>
-    <p>For any queries, write to us at <a href="mailto:support@networkfp.com">support@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p>Welcome to the NFP Circles community!</p>
   `);
 
@@ -173,7 +194,7 @@ async function sendParticipantCancelled(participant, hub) {
     <div class="btn-wrap">
       <a class="btn" href="${PARTICIPANT_URL}">Find a Circle Near You</a>
     </div>
-    <p>For any queries, contact us at <a href="mailto:support@networkfp.com">support@networkfp.com</a>.</p>
+    <p>For any queries, contact us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p>We hope to have you back in an NFP Circle soon.</p>
   `);
 
