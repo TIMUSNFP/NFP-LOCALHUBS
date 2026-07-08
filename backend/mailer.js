@@ -18,7 +18,6 @@ const SMTP_PASS = (process.env.SMTP_PASS || '').trim();
 // otherwise most SMTP providers reject or rewrite the From header.
 const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>` : 'NFP Circles <noreply@networkfp.com>');
 
-const HUB_LEADER_URL = 'https://nfp-circles.vercel.app/circle-leaders/';
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
 const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/EsFjHO5h4kb7eMJ4EFiWRM';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
@@ -126,18 +125,19 @@ async function sendHubApproved(hub) {
 async function sendHubRejected(hub) {
   const html = wrap(`
     <div class="badge rejected">Application Update</div>
-    <h2>Hello, ${hub.full_name}</h2>
-    <p>Thank you for your interest in hosting an NFP Circle. After reviewing your application, we regret to inform you that we are unable to approve it at this time.</p>
+    <h2>Hello, ${hub.full_name},</h2>
+    <p>Thank you so much for your interest in hosting an NFP Circle, and we're sorry for the delay in getting back to you.</p>
+    <p>After carefully reviewing your application, we're not able to approve it at this time. We know this isn't the news you were hoping for, and we're genuinely sorry. This decision isn't a reflection of you — it's mainly driven by the current demand and circle density in your area, as well as other operational factors on our end at this time.</p>
     <div class="info-box">
       <p><strong>Application ID:</strong> ${hub.id}</p>
       <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
     </div>
-    <p>This decision may be due to capacity limits in your area or other operational reasons. We encourage you to reapply in the future as new slots open up.</p>
+    <p>We'd still love to have you be part of the NFP community. While hosting isn't possible right now, you're welcome to join an existing circle near you as a participant — it's a great way to stay connected and involved, and you'll be first in line if a hosting opportunity opens up in your area in the future.</p>
     <div class="btn-wrap">
-      <a class="btn" href="${HUB_LEADER_URL}">Reapply as Circle Leader</a>
+      <a class="btn" href="${PARTICIPANT_URL}">Find a Circle Near You</a>
     </div>
-    <p>If you have questions or would like more details, please contact us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
-    <p>We appreciate your enthusiasm for the NFP Circles programme and hope to welcome you in the future.</p>
+    <p>If you have any questions, feel free to reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>Once again, we're sorry we couldn't say yes this time, and we truly appreciate your enthusiasm for the NFP Circles programme.</p>
   `);
 
   await send({
