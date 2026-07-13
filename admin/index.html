@@ -142,14 +142,26 @@
                         <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:0;min-width:auto">Applications</button>
                     </div>
                 </div>
+                <div class="bulk-action-bar hidden" id="hubBulkBar">
+                    <span class="bulk-count" id="hubBulkCount">0 selected</span>
+                    <div class="bulk-actions">
+                        <button class="act-btn act-approve" onclick="bulkUpdateHubs('Approved')">Approve Selected</button>
+                        <button class="act-btn act-reject" onclick="bulkUpdateHubs('Rejected')">Reject Selected</button>
+                        <button class="act-btn act-reset" onclick="bulkUpdateHubs('Pending')">Reset Selected</button>
+                        <button class="act-btn bulk-clear" onclick="clearHubSelection()">Clear</button>
+                    </div>
+                </div>
                 <div class="table-wrap-outer" id="hubTableOuter">
                 <div class="table-wrap" id="hubTableWrap">
                     <table class="data-table">
                         <thead>
                             <tr id="hubTableHeaderRow">
-                                <th style="position:sticky;left:0px;  z-index:5;background:#FAFAFA">Reg. ID</th>
-                                <th style="position:sticky;left:180px;z-index:5;background:#FAFAFA">Full Name</th>
-                                <th style="position:sticky;left:320px;z-index:5;background:#FAFAFA;box-shadow:3px 0 8px rgba(0,0,0,.08)">Mobile</th>
+                                <th style="position:sticky;left:0px;  z-index:5;background:#FAFAFA;width:40px" class="th-checkbox-col">
+                                    <input type="checkbox" id="selectAllHubs" onchange="toggleSelectAllHubs(this.checked)">
+                                </th>
+                                <th style="position:sticky;left:40px;  z-index:5;background:#FAFAFA">Reg. ID</th>
+                                <th style="position:sticky;left:220px;z-index:5;background:#FAFAFA">Full Name</th>
+                                <th style="position:sticky;left:360px;z-index:5;background:#FAFAFA;box-shadow:3px 0 8px rgba(0,0,0,.08)">Mobile</th>
                                 <th>Email</th><th>Membership</th><th>City</th><th>Area</th><th>Address</th>
                                 <th>Venue</th><th>Capacity</th><th>Hosted Before</th>
                                 <th>Hosting Frequency</th><th>Date</th><th>Status</th><th>Actions</th>

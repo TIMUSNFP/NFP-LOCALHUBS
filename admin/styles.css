@@ -529,6 +529,33 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     justify-content: center;
     text-align: center;
 }
+
+/* Bulk action bar — appears above the table when 1+ rows are checkbox-selected */
+.bulk-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #FFF4EC;
+    border: 1.5px solid var(--primary);
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+}
+.bulk-action-bar.hidden { display: none; }
+.bulk-count { font-size: 13px; font-weight: 700; color: var(--dark); white-space: nowrap; }
+.bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.bulk-clear { background: #fff; border-color: var(--border); color: var(--muted); }
+.bulk-clear:hover { background: var(--bg); color: var(--dark); }
+
+/* Checkbox column (bulk select) */
+.th-checkbox-col, .td-checkbox-col { text-align: center; padding-left: 12px !important; padding-right: 4px !important; }
+.th-checkbox-col input[type="checkbox"], .td-checkbox-col input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
 .search-box {
     flex: 1 1 320px;
     max-width: 460px;
@@ -832,13 +859,15 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .legend-val { font-weight: 700; color: var(--dark); }
 
 /* ── Sticky table columns ── */
-/* Hub leaders table: col 1 = Reg.ID (180px), col 2 = Full Name (140px), col 3 = Mobile (130px) */
+/* Hub leaders table: col 1 = checkbox (40px), col 2 = Reg.ID (180px), col 3 = Full Name (140px), col 4 = Mobile (130px) */
 #hubTableWrap .data-table th:nth-child(1),
 #hubTableWrap .data-table td:nth-child(1) { position: sticky; left: 0;     z-index: 1; background: var(--white); }
 #hubTableWrap .data-table th:nth-child(2),
-#hubTableWrap .data-table td:nth-child(2) { position: sticky; left: 180px; z-index: 1; background: var(--white); }
+#hubTableWrap .data-table td:nth-child(2) { position: sticky; left: 40px;  z-index: 1; background: var(--white); }
 #hubTableWrap .data-table th:nth-child(3),
-#hubTableWrap .data-table td:nth-child(3) { position: sticky; left: 320px; z-index: 1; background: var(--white); box-shadow: 3px 0 8px rgba(0,0,0,.07); }
+#hubTableWrap .data-table td:nth-child(3) { position: sticky; left: 220px; z-index: 1; background: var(--white); }
+#hubTableWrap .data-table th:nth-child(4),
+#hubTableWrap .data-table td:nth-child(4) { position: sticky; left: 360px; z-index: 1; background: var(--white); box-shadow: 3px 0 8px rgba(0,0,0,.07); }
 /* Participant table: col 1 = Participant ID (200px), col 2 = Full Name (140px), col 3 = Mobile (130px) */
 #partTableWrap .data-table th:nth-child(1),
 #partTableWrap .data-table td:nth-child(1) { position: sticky; left: 0;     z-index: 1; background: var(--white); }
@@ -850,6 +879,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 #hubTableWrap  .data-table thead th:nth-child(1),
 #hubTableWrap  .data-table thead th:nth-child(2),
 #hubTableWrap  .data-table thead th:nth-child(3),
+#hubTableWrap  .data-table thead th:nth-child(4),
 #partTableWrap .data-table thead th:nth-child(1),
 #partTableWrap .data-table thead th:nth-child(2),
 #partTableWrap .data-table thead th:nth-child(3) { z-index: 4; background: #FAFAFA; }

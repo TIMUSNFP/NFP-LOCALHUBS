@@ -20,6 +20,8 @@ let pendingRegId     = null;
 let allHubs          = [];
 let allParticipants  = [];
 let trendMode        = 'day';
+let selectedHubIds   = new Set(); // bulk-select state for the Applications table
+let pendingBulkAction = null;     // { ids, status } awaiting confirm-modal approval
 
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -368,8 +370,9 @@ function initHubColumnFilters() {
     const row = document.getElementById('hubTableHeaderRow');
     if (!row) return;
     const ths = row.querySelectorAll('th');
+    // ths[0] is the bulk-select checkbox column — filterable columns start at index 1.
     HUB_FILTER_COLUMNS.forEach((col, i) => {
-        const th = ths[i];
+        const th = ths[i + 1];
         if (!th) return;
         const label = th.textContent.trim();
         th.innerHTML = `<div class="th-inner"><span class="th-label">${label}</span><button type="button" class="col-filter-btn" data-col="${col.key}" onclick="toggleColumnFilter(event,'${col.key}')" title="Filter ${label}">&#9660;</button></div>`;
@@ -531,14 +534,18 @@ function renderTable(regs) {
     if (!regs || regs.length === 0) {
         tbody.innerHTML = '';
         if (emptyEl) emptyEl.classList.add('visible');
+        updateSelectAllState();
         return;
     }
     if (emptyEl) emptyEl.classList.remove('visible');
     tbody.innerHTML = regs.map(r => `
         <tr data-id="${escHtml(r.id)}">
-            <td class="td-id"    style="min-width:180px;position:sticky;left:0px;  background:#fff;z-index:2">${escHtml(r.id)}</td>
-            <td class="td-name"  style="min-width:140px;position:sticky;left:180px;background:#fff;z-index:2"><button class="name-link" onclick="viewHubParticipants('${escHtml(r.id)}')">${escHtml(r.fullName)}</button></td>
-            <td style="min-width:130px;position:sticky;left:320px;background:#fff;z-index:2;box-shadow:3px 0 8px rgba(0,0,0,.08)">${escHtml(r.mobile)}</td>
+            <td style="width:40px;position:sticky;left:0px;background:#fff;z-index:2" class="td-checkbox-col">
+                <input type="checkbox" class="hub-row-checkbox" value="${escHtml(r.id)}" ${selectedHubIds.has(r.id) ? 'checked' : ''} onchange="toggleHubSelection('${escHtml(r.id)}', this.checked)">
+            </td>
+            <td class="td-id"    style="min-width:180px;position:sticky;left:40px;  background:#fff;z-index:2">${escHtml(r.id)}</td>
+            <td class="td-name"  style="min-width:140px;position:sticky;left:220px;background:#fff;z-index:2"><button class="name-link" onclick="viewHubParticipants('${escHtml(r.id)}')">${escHtml(r.fullName)}</button></td>
+            <td style="min-width:130px;position:sticky;left:360px;background:#fff;z-index:2;box-shadow:3px 0 8px rgba(0,0,0,.08)">${escHtml(r.mobile)}</td>
             <td class="td-email" style="min-width:180px">${escHtml(r.email)}</td>
             <td>${escHtml(r.membership)}</td>
             <td>${escHtml(r.city)}</td>
@@ -567,6 +574,7 @@ function renderTable(regs) {
         </tr>
     `).join('');
     setTimeout(refreshScrollFade, 50);
+    updateSelectAllState();
 }
 
 function statusBadge(status) {
@@ -670,6 +678,92 @@ async function executeReset() {
     }
     closeConfirmModal();
     pendingRegId = null;
+}
+
+// ═══════════════════ BULK SELECTION (HUBS) ═══════════════════
+function toggleHubSelection(id, checked) {
+    if (checked) selectedHubIds.add(id);
+    else selectedHubIds.delete(id);
+    updateBulkBar();
+    updateSelectAllState();
+}
+
+function toggleSelectAllHubs(checked) {
+    // Only affects the currently rendered (filtered) rows, not the full dataset.
+    document.querySelectorAll('#tableBody .hub-row-checkbox').forEach(cb => {
+        cb.checked = checked;
+        if (checked) selectedHubIds.add(cb.value);
+        else selectedHubIds.delete(cb.value);
+    });
+    updateBulkBar();
+}
+
+function updateSelectAllState() {
+    const selectAll = document.getElementById('selectAllHubs');
+    if (!selectAll) return;
+    const boxes = [...document.querySelectorAll('#tableBody .hub-row-checkbox')];
+    const checkedCount = boxes.filter(cb => cb.checked).length;
+    selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+}
+
+function updateBulkBar() {
+    const bar = document.getElementById('hubBulkBar');
+    const countEl = document.getElementById('hubBulkCount');
+    if (!bar) return;
+    bar.classList.toggle('hidden', selectedHubIds.size === 0);
+    if (countEl) countEl.textContent = `${selectedHubIds.size} selected`;
+}
+
+function clearHubSelection() {
+    selectedHubIds.clear();
+    document.querySelectorAll('#tableBody .hub-row-checkbox').forEach(cb => { cb.checked = false; });
+    updateBulkBar();
+    updateSelectAllState();
+}
+
+function bulkUpdateHubs(status) {
+    if (selectedHubIds.size === 0) return;
+    const ids   = [...selectedHubIds];
+    const count = ids.length;
+    const plural = count > 1 ? 's' : '';
+    const copy = {
+        Approved: { verb: 'approve', label: 'Approve', emoji: '✅', danger: false, note: 'This will send an approval email to each of them.' },
+        Rejected: { verb: 'reject',  label: 'Reject',  emoji: '❌', danger: true,  note: 'This will send a rejection email to each of them.' },
+        Pending:  { verb: 'reset',   label: 'Reset',   emoji: '↩️', danger: false, note: 'No emails are sent for this.' },
+    }[status];
+    if (!copy) return;
+
+    pendingBulkAction = { ids, status };
+    openConfirmModal(
+        `${copy.label} ${count} Application${plural}`,
+        `Are you sure you want to ${copy.verb} <strong>${count}</strong> selected application${plural}? ${copy.note}`,
+        copy.emoji,
+        executeBulkUpdate,
+        copy.label,
+        copy.danger
+    );
+}
+
+async function executeBulkUpdate() {
+    if (!pendingBulkAction) return;
+    const { ids, status } = pendingBulkAction;
+    closeConfirmModal();
+    pendingBulkAction = null;
+
+    let successCount = 0;
+    for (const id of ids) {
+        const ok = await updateHubStatus(id, status);
+        if (ok) successCount++;
+    }
+    clearHubSelection();
+    await updateDashboard();
+
+    if (successCount === ids.length) {
+        showToast(`${successCount} application${successCount > 1 ? 's' : ''} updated successfully!`, 'success');
+    } else {
+        showToast(`${successCount}/${ids.length} updated — some failed, please check and retry.`, 'warning');
+    }
 }
 
 function viewDetails(id) {
