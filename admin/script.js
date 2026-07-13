@@ -293,10 +293,14 @@ function updateStats() {
     const pending  = allHubs.filter(r => r.status === 'Pending').length;
     const approved = allHubs.filter(r => r.status === 'Approved').length;
     const rejected = allHubs.filter(r => r.status === 'Rejected').length;
+    const cities   = new Set(
+        allHubs.filter(r => r.status === 'Approved' && r.city).map(r => r.city.trim().toLowerCase())
+    ).size;
     animateCount('statTotal',    total);
     animateCount('statPending',  pending);
     animateCount('statApproved', approved);
     animateCount('statRejected', rejected);
+    animateCount('statCities',   cities);
 }
 
 function animateCount(id, target) {
