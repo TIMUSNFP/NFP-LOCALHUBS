@@ -619,6 +619,17 @@ function resetMapView() {
     if (badge) badge.textContent = `${allApprovedHubs.length} circle${allApprovedHubs.length !== 1 ? 's' : ''}`;
 }
 
+// Approximate distance between two lat/lng points, in kilometers (Haversine formula).
+function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function findNearMe() {
     if (!navigator.geolocation) {
         showToast('Geolocation is not supported by your browser.', 'warning');
@@ -630,21 +641,34 @@ function findNearMe() {
             const { latitude, longitude } = pos.coords;
             if (leafletMap) leafletMap.flyTo([latitude, longitude], 11, { duration: 1.5 });
 
-            // Find closest hub
-            let closest = null, minDist = Infinity;
-            allApprovedHubs.forEach(hub => {
-                const coords = getHubCoords(hub);
-                if (!coords) return;
-                const dist = Math.hypot(coords[0] - latitude, coords[1] - longitude);
-                if (dist < minDist) { minDist = dist; closest = hub; }
-            });
+            // Compute distance to every hub and refresh the list, nearest first —
+            // mirrors the live-update behaviour of the city/area search box.
+            const withDistance = allApprovedHubs
+                .map(hub => {
+                    const coords = getHubCoords(hub);
+                    if (!coords) return null;
+                    return { ...hub, distanceKm: haversineKm(latitude, longitude, coords[0], coords[1]) };
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.distanceKm - b.distanceKm);
 
-            if (closest) {
-                showToast(`Nearest Circle found in ${closest.city}!`, 'success');
-                setTimeout(() => selectHubById(closest.id), 800);
-            } else {
+            if (withDistance.length === 0) {
                 showToast('No Circles near you yet. Check back soon!', 'info');
+                return;
             }
+
+            // Clear the city/area text search so it doesn't conflict visually.
+            const citySearchEl = document.getElementById('hubCitySearch');
+            if (citySearchEl) citySearchEl.value = '';
+
+            filteredHubs = withDistance;
+            renderHubCards(filteredHubs);
+            const badge = document.getElementById('mapCountBadge');
+            if (badge) badge.textContent = `${filteredHubs.length} circle${filteredHubs.length !== 1 ? 's' : ''}`;
+
+            const closest = withDistance[0];
+            showToast(`Nearest Circle found in ${closest.city}!`, 'success');
+            setTimeout(() => selectHubById(closest.id), 800);
         },
         () => showToast('Could not get your location. Please allow location access.', 'error')
     );
