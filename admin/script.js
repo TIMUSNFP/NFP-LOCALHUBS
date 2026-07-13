@@ -1273,14 +1273,23 @@ function renderCancellationKpi(parts) {
 function renderCitiesKpi(hubs) {
     const el = document.getElementById('citiesKpi');
     if (!el) return;
-    const norm = s => s.trim().toLowerCase();
-    const approvedCities = new Set(hubs.filter(h => h.status === 'Approved' && h.city).map(h => norm(h.city)));
-    const allCities      = new Set(hubs.filter(h => h.city).map(h => norm(h.city)));
+    // Dedupe case-insensitively, but keep the first-seen casing for display.
+    const approvedCities = new Map();
+    hubs.filter(h => h.status === 'Approved' && h.city).forEach(h => {
+        const key = h.city.trim().toLowerCase();
+        if (!approvedCities.has(key)) approvedCities.set(key, h.city.trim());
+    });
+    const sortedCities = [...approvedCities.values()].sort((a, b) => a.localeCompare(b));
+    const allCitiesCount = new Set(hubs.filter(h => h.city).map(h => h.city.trim().toLowerCase())).size;
+
     el.innerHTML = `
-        <div class="kpi-big" style="color:var(--primary)">${approvedCities.size}</div>
+        <div class="kpi-big" style="color:var(--primary)">${sortedCities.length}</div>
         <div class="kpi-sub">cities with an approved Circle</div>
-        <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-            <div class="kpi-pill" style="background:#FFF4EC;color:var(--primary)">${allCities.size} Cities Applied From</div>
+        <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <div class="kpi-pill" style="background:#FFF4EC;color:var(--primary)">${allCitiesCount} Cities Applied From</div>
+        </div>
+        <div class="city-chip-list">
+            ${sortedCities.map(c => `<span class="city-chip">${escHtml(c)}</span>`).join('')}
         </div>`;
 }
 
