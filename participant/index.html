@@ -392,10 +392,6 @@
                 <div class="hsb-input-wrap">
                     <input type="text" id="hubCitySearch" class="hsb-input" placeholder="Search by city or area..." oninput="filterHubs()">
                 </div>
-                <div class="hsb-input-wrap hsb-pin-wrap">
-                    <input type="text" id="hubPincodeSearch" class="hsb-input" placeholder="Enter 6-digit PIN code..." maxlength="6" inputmode="numeric">
-                </div>
-                <button class="btn-nearme btn-pin-search" onclick="searchByPincode()">Search</button>
                 <button class="btn-nearme" onclick="findNearMe()">Near Me</button>
                 <button class="btn-outline btn-sm" onclick="resetMapView()">All Circles</button>
             </div>
@@ -421,7 +417,6 @@
                         <option value="city">Sort: City</option>
                         <option value="name">Sort: Name</option>
                         <option value="capacity">Sort: Capacity</option>
-                        <option value="distance">Sort: Nearest to my PIN</option>
                     </select>
                 </div>
                 <div class="hub-cards-list" id="hubCardsList">

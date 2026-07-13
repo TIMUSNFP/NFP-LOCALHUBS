@@ -322,7 +322,6 @@ let hubMarkers      = [];
 let selectedHubId   = null;
 let allApprovedHubs = [];
 let filteredHubs    = [];
-let lastPincodeSearchActive = false;
 
 function initMap() {
     if (!window.L) { console.warn('Leaflet not loaded'); return; }
@@ -452,7 +451,6 @@ function buildHubPopupHTML(hub) {
 }
 
 function filterHubs() {
-    lastPincodeSearchActive = false;
     const q = (document.getElementById('hubCitySearch')?.value || '').toLowerCase().trim();
     if (!q) {
         filteredHubs = [...allApprovedHubs];
@@ -483,20 +481,6 @@ function filterHubs() {
 
 function sortAndRenderHubs() {
     const sortBy = document.getElementById('hubSortBy')?.value || 'city';
-    if (sortBy === 'distance') {
-        // Distance sort only makes sense right after a PIN search (hubs carry distanceKm).
-        // If the user picks it manually without having run a PIN search, fall back to city sort.
-        if (!lastPincodeSearchActive || !filteredHubs.some(h => typeof h.distanceKm === 'number')) {
-            showToast('Run a PIN code search first to sort by nearest distance.', 'info');
-            const sel = document.getElementById('hubSortBy');
-            if (sel) sel.value = 'city';
-            sortAndRenderHubs();
-            return;
-        }
-        const sorted = [...filteredHubs].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
-        renderHubCards(sorted);
-        return;
-    }
     const sorted = [...filteredHubs].sort((a, b) => {
         if (sortBy === 'name')     return a.fullName.localeCompare(b.fullName);
         if (sortBy === 'capacity') return capacityOrder(a.capacity) - capacityOrder(b.capacity);
@@ -626,9 +610,6 @@ function resetMapView() {
     if (leafletMap) leafletMap.flyTo([20.5937, 78.9629], 5, { duration: 1.2 });
     const searchEl = document.getElementById('hubCitySearch');
     if (searchEl) searchEl.value = '';
-    const pinEl = document.getElementById('hubPincodeSearch');
-    if (pinEl) pinEl.value = '';
-    lastPincodeSearchActive = false;
     const sortEl = document.getElementById('hubSortBy');
     if (sortEl) sortEl.value = 'city';
     filteredHubs = [...allApprovedHubs];
@@ -667,70 +648,6 @@ function findNearMe() {
         },
         () => showToast('Could not get your location. Please allow location access.', 'error')
     );
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  PIN-CODE PROXIMITY SEARCH (NEW)
-// ═══════════════════════════════════════════════════════════════
-
-async function searchByPincode() {
-    const input   = document.getElementById('hubPincodeSearch');
-    const pincode = (input?.value || '').trim();
-
-    if (!/^\d{6}$/.test(pincode)) {
-        showToast('Please enter a valid 6-digit PIN code.', 'warning');
-        return;
-    }
-
-    showToast('Searching for Circles near that PIN code...', 'info');
-
-    let hubs;
-    try {
-        const res = await fetch(`${API_BASE}/api/geo/nearby-hubs?pincode=${encodeURIComponent(pincode)}`);
-        if (res.status === 404) {
-            const body = await res.json().catch(() => ({}));
-            showToast(body.error || 'Could not locate that PIN code.', 'error');
-            return;
-        }
-        if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
-        hubs = await res.json();
-    } catch (err) {
-        console.warn('PIN code search failed:', err);
-        showToast('Could not search by PIN code right now. Please try again later.', 'error');
-        return;
-    }
-
-    if (!Array.isArray(hubs) || hubs.length === 0) {
-        showToast('No Circles found near that PIN code yet. Check back soon!', 'info');
-        filteredHubs = [];
-        renderHubCards(filteredHubs);
-        return;
-    }
-
-    // Hubs already come sorted ascending by distanceKm from the server.
-    filteredHubs = hubs;
-    lastPincodeSearchActive = true;
-
-    // Reflect "Sort: Nearest to my PIN" as the active sort option.
-    const sortEl = document.getElementById('hubSortBy');
-    if (sortEl) sortEl.value = 'distance';
-
-    // Clear the city/area text search so it doesn't conflict visually.
-    const citySearchEl = document.getElementById('hubCitySearch');
-    if (citySearchEl) citySearchEl.value = '';
-
-    renderHubCards(filteredHubs);
-
-    const badge = document.getElementById('mapCountBadge');
-    if (badge) badge.textContent = `${filteredHubs.length} circle${filteredHubs.length !== 1 ? 's' : ''}`;
-
-    // Fly the map to the nearest hub (consistent with findNearMe() UX — simplest reliable approach
-    // since the backend response is hub-objects-with-distanceKm rather than a separate geocoded point).
-    const nearest = filteredHubs[0];
-    const coords   = getHubCoords(nearest);
-    if (coords && leafletMap) leafletMap.flyTo(coords, 11, { duration: 1.5 });
-
-    showToast(`Found ${filteredHubs.length} Circle${filteredHubs.length !== 1 ? 's' : ''} near PIN ${pincode}!`, 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════

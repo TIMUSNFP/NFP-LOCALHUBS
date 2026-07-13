@@ -780,10 +780,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--dark);
 }
 .hsb-input::placeholder { color: var(--light-text); }
-/* PIN-code proximity search — reuses the same input-wrap treatment, narrower since it only holds 6 digits */
-.hsb-pin-wrap { flex: 0 0 220px; min-width: 180px; }
-.btn-pin-search { background: var(--primary); }
-.btn-pin-search:hover { background: var(--primary-dark); }
 .btn-nearme {
     background: var(--primary);
     color: var(--white);
