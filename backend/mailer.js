@@ -60,6 +60,7 @@ function wrap(body) {
     .body { padding: 32px; }
     .body h2 { margin: 0 0 16px; font-size: 22px; color: #333333; }
     .body p { margin: 0 0 14px; font-size: 15px; line-height: 1.6; color: #333333; }
+    .section-heading { font-size: 17px; font-weight: 800; color: #333333; margin: 24px 0 4px; }
     .badge { display: inline-block; background: #D7E7DF; color: #333333; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; margin-bottom: 20px; }
     .badge.rejected { background: #B0B0B0; color: #FFFFFF; }
     .info-box { background: #EFE7DC; border-left: 4px solid #FF5000; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
@@ -104,8 +105,10 @@ async function sendHubApproved(hub) {
       <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
       <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
       <p><strong>Capacity:</strong> ${hub.capacity || '—'}</p>
+      <p><strong>Event Date:</strong> 5 Aug 2026, 4:00 PM – 7:30 PM</p>
     </div>
     <p>Your circle is now live and visible to participants who can register with you. Please keep your Hub ID safe — you may need it for future correspondence with our team.</p>
+    <p class="section-heading">What to Expect Next</p>
     <div class="btn-wrap">
       <a class="btn" href="${HUB_LEADERS_WHATSAPP_URL}">Join the Hub Leaders WhatsApp Group</a>
     </div>
