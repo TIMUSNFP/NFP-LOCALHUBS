@@ -1271,26 +1271,11 @@ function renderCancellationKpi(parts) {
 }
 
 function renderCitiesKpi(hubs) {
-    const el = document.getElementById('citiesKpi');
-    if (!el) return;
-    // Dedupe case-insensitively, but keep the first-seen casing for display.
-    const approvedCities = new Map();
+    const counts = {};
     hubs.filter(h => h.status === 'Approved' && h.city).forEach(h => {
-        const key = h.city.trim().toLowerCase();
-        if (!approvedCities.has(key)) approvedCities.set(key, h.city.trim());
+        counts[h.city] = (counts[h.city] || 0) + 1;
     });
-    const sortedCities = [...approvedCities.values()].sort((a, b) => a.localeCompare(b));
-    const allCitiesCount = new Set(hubs.filter(h => h.city).map(h => h.city.trim().toLowerCase())).size;
-
-    el.innerHTML = `
-        <div class="kpi-big" style="color:var(--primary)">${sortedCities.length}</div>
-        <div class="kpi-sub">cities with an approved Circle</div>
-        <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-            <div class="kpi-pill" style="background:#FFF4EC;color:var(--primary)">${allCitiesCount} Cities Applied From</div>
-        </div>
-        <div class="city-chip-list">
-            ${sortedCities.map(c => `<span class="city-chip">${escHtml(c)}</span>`).join('')}
-        </div>`;
+    renderBarSet('citiesKpi', counts, 'var(--primary)');
 }
 
 function renderCirclesWithNoParticipants(hubs, parts) {
