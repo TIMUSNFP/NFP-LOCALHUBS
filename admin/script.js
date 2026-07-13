@@ -558,6 +558,9 @@ function renderTable(regs) {
                     ${r.status !== 'Rejected'
                         ? `<button class="act-btn act-reject" onclick="confirmReject('${escHtml(r.id)}')">Reject</button>`
                         : ''}
+                    ${r.status !== 'Pending'
+                        ? `<button class="act-btn act-reset" onclick="confirmReset('${escHtml(r.id)}')">Reset to Pending</button>`
+                        : ''}
                     <button class="act-btn act-view" onclick="viewDetails('${escHtml(r.id)}')">View</button>
                 </div>
             </td>
@@ -603,6 +606,19 @@ function confirmReject(id) {
     );
 }
 
+function confirmReset(id) {
+    const reg = allHubs.find(r => String(r.id) === String(id));
+    if (!reg) return;
+    pendingRegId  = id;
+    openConfirmModal(
+        'Reset to Pending',
+        `Reset <strong>${escHtml(reg.fullName)}</strong>'s application back to Pending? No email is sent for this — you can then Approve or Reject again to trigger a fresh notification.`,
+        '↩️',
+        executeReset,
+        'Reset'
+    );
+}
+
 async function updateHubStatus(id, status) {
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/status`, {
@@ -638,6 +654,19 @@ async function executeReject() {
         await updateDashboard();
     } else {
         showToast('Failed to reject application.', 'error');
+    }
+    closeConfirmModal();
+    pendingRegId = null;
+}
+
+async function executeReset() {
+    if (!pendingRegId) return;
+    const ok = await updateHubStatus(pendingRegId, 'Pending');
+    if (ok) {
+        showToast('Application reset to Pending.', 'success');
+        await updateDashboard();
+    } else {
+        showToast('Failed to reset application.', 'error');
     }
     closeConfirmModal();
     pendingRegId = null;

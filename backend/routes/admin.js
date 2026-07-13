@@ -10,7 +10,7 @@ const { sendHubApproved, sendHubRejected, sendParticipantCancelled } = require('
 
 const router = express.Router();
 
-const VALID_HUB_STATUSES = ['Approved', 'Rejected'];
+const VALID_HUB_STATUSES = ['Approved', 'Rejected', 'Pending'];
 const VALID_PARTICIPANT_STATUSES = ['Confirmed', 'Cancelled'];
 
 // POST /api/admin/login — public.
@@ -103,8 +103,10 @@ router.patch('/hubs/:id/status', async (req, res) => {
   const updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
 
   // Fire approval/rejection email — non-blocking, errors are swallowed in mailer.
+  // Resetting back to Pending is silent (no email) — it's an internal correction,
+  // not a decision the applicant needs to hear about.
   if (status === 'Approved') sendHubApproved(updated);
-  else sendHubRejected(updated);
+  else if (status === 'Rejected') sendHubRejected(updated);
 
   res.json(hubRowToJson(updated));
 });
