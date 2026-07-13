@@ -216,6 +216,20 @@ function escHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+// "City - Circle Leader Name" — used wherever a circle's display name is shown.
+function circleName(hub) {
+    return `${escHtml(hub.city)} - ${escHtml(hub.fullName)}`;
+}
+
+// Structured address line — "Street/Area, City - PIN Code" — used wherever a
+// circle's location is shown. Falls back to Area when no street address was
+// given, and omits the PIN code segment only if it's genuinely missing.
+function formatHubAddress(hub) {
+    const streetOrArea = hub.address || hub.area || '';
+    const line = [streetOrArea, hub.city].filter(Boolean).map(escHtml).join(', ');
+    return hub.pincode ? `${line} - ${escHtml(hub.pincode)}` : line;
+}
+
 // ═══════════════════ TOAST NOTIFICATIONS ═══════════════════
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
@@ -417,12 +431,12 @@ function buildHubPopupHTML(hub) {
     const { isFull, spotsLabel } = getHubSpotsInfo(hub);
     return `
         <div class="hub-popup">
-            <div class="hp-header">${escHtml(hub.fullName)}'s Circle
+            <div class="hp-header">${circleName(hub)}
                 ${isPending ? '<span class="hp-pending-badge">Opening Soon</span>' : ''}
                 ${!isPending && isFull ? '<span class="hp-pending-badge" style="background:#ef4444">Full</span>' : ''}
             </div>
             <div class="hp-body">
-                <div class="hp-row"><span>${escHtml(hub.address || hub.area)}, ${escHtml(hub.city)}</span></div>
+                <div class="hp-row"><span>${formatHubAddress(hub)}</span></div>
                 <div class="hp-row"><span>${escHtml(hub.venueType)}</span></div>
                 <div class="hp-row"><span>${escHtml(spotsLabel)}</span></div>
                 <div class="hp-row"><span>${escHtml(hub.membership)}</span></div>
@@ -523,8 +537,8 @@ function renderHubCards(hubs) {
              onclick="${isPending || isFull ? '' : `highlightHubOnMap('${escHtml(hub.id)}')`}">
             <div class="hci-top">
                 <div>
-                    <div class="hci-name">${escHtml(hub.fullName)}'s Circle</div>
-                    <div class="hci-city">${escHtml(hub.address ? hub.address + ', ' + hub.city : hub.area + ', ' + hub.city)}</div>
+                    <div class="hci-name">${circleName(hub)}</div>
+                    <div class="hci-city">${formatHubAddress(hub)}</div>
                 </div>
                 <span class="hci-badge${isPending ? ' hci-badge-pending' : ''}"${badgeStyle}>
                     ${escHtml(badgeText)}
@@ -582,8 +596,8 @@ function selectHubById(hubId) {
     if (hubCard) {
         hubCard.innerHTML = `
             <div class="shc-label">You're registering at</div>
-            <div class="shc-name">${escHtml(hub.fullName)}'s Circle</div>
-            <div class="shc-detail">${escHtml(hub.area)}, ${escHtml(hub.city)} &mdash; ${escHtml(hub.venueType)}</div>
+            <div class="shc-name">${circleName(hub)}</div>
+            <div class="shc-detail">${formatHubAddress(hub)} &mdash; ${escHtml(hub.venueType)}</div>
             <div class="shc-tags">
                 <span class="shc-tag">${escHtml(hub.capacity)}</span>
                 <span class="shc-tag">${escHtml(hub.membership)}</span>
