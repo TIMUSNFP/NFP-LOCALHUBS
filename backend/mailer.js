@@ -61,6 +61,8 @@ function wrap(body) {
     .body h2 { margin: 0 0 16px; font-size: 22px; color: #333333; }
     .body p { margin: 0 0 14px; font-size: 15px; line-height: 1.6; color: #333333; }
     .section-heading { font-size: 17px; font-weight: 800; color: #333333; margin: 24px 0 4px; }
+    .next-steps { margin: 0 0 8px; padding-left: 22px; }
+    .next-steps li { font-size: 14px; line-height: 1.7; color: #333333; margin-bottom: 6px; }
     .badge { display: inline-block; background: #D7E7DF; color: #333333; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; margin-bottom: 20px; }
     .badge.rejected { background: #B0B0B0; color: #FFFFFF; }
     .info-box { background: #EFE7DC; border-left: 4px solid #FF5000; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
@@ -97,21 +99,29 @@ async function sendHubApproved(hub) {
     <div class="badge">✓ Application Approved</div>
     <h2>Welcome to NFP Circles, ${hub.full_name}!</h2>
     <p>We're excited to let you know that your application to host an NFP Circle has been <strong>approved</strong>. You are now an official NFP Circle Leader.</p>
-    <div class="id-box">
-      <span>Your Hub ID</span>
-      <strong>${hub.id}</strong>
-    </div>
     <div class="info-box">
       <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
       <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
       <p><strong>Capacity:</strong> ${hub.capacity || '—'}</p>
       <p><strong>Event Date:</strong> 5 Aug 2026, 4:00 PM – 7:30 PM</p>
     </div>
-    <p>Your circle is now live and visible to participants who can register with you. Please keep your Hub ID safe — you may need it for future correspondence with our team.</p>
-    <p class="section-heading">What to Expect Next</p>
+    <p>Your circle is now live and visible to participants who can register with you.</p>
+    <p class="section-heading">What to Expect Next?</p>
+    <ol class="next-steps">
+      <li>Your circle goes live — members in your city can start joining your circle.</li>
+      <li>Get added to the official Circle Leaders Group for all communications.</li>
+      <li>Get notified when your circle is full, and know your participants.</li>
+      <li>Join the all Circle Leads briefing call — 10 days prior to the event.</li>
+      <li>Get ready to host your circle in your city on 5 Aug 2026, 4:00 PM – 7:30 PM.</li>
+    </ol>
     <div class="btn-wrap">
       <a class="btn" href="${HUB_LEADERS_WHATSAPP_URL}">Join the Hub Leaders WhatsApp Group</a>
     </div>
+    <p class="section-heading">Please Note</p>
+    <ol class="next-steps">
+      <li>Network FP will have the final standing on dissolving or merging any Circles as per the requirement of the city, and will have the final call around participants and leaders.</li>
+      <li>NFP Circles are meant for peer learning and knowledge sharing only. Circle Leads and Members are expected to refrain from using these sessions for direct product sales, solicitation, or promotion of personal business interests.</li>
+    </ol>
     <p>If you have any questions, please reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p>Thank you for being a part of the NFP community!</p>
   `);
