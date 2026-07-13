@@ -293,14 +293,10 @@ function updateStats() {
     const pending  = allHubs.filter(r => r.status === 'Pending').length;
     const approved = allHubs.filter(r => r.status === 'Approved').length;
     const rejected = allHubs.filter(r => r.status === 'Rejected').length;
-    const cities   = new Set(
-        allHubs.filter(r => r.status === 'Approved' && r.city).map(r => r.city.trim().toLowerCase())
-    ).size;
     animateCount('statTotal',    total);
     animateCount('statPending',  pending);
     animateCount('statApproved', approved);
     animateCount('statRejected', rejected);
-    animateCount('statCities',   cities);
 }
 
 function animateCount(id, target) {
@@ -951,6 +947,7 @@ function renderAnalytics() {
     renderApplicationTrend(hubs);
     renderStatusFunnel(hubs, parts);
     renderCityBars(hubs);
+    renderCitiesKpi(hubs);
     renderAreaBars(hubs);
     renderApprovalByCity(hubs);
     renderMemberBars(hubs);
@@ -1270,6 +1267,20 @@ function renderCancellationKpi(parts) {
         <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
             <div class="kpi-pill" style="background:#dcfce7;color:#16A34A">${confirmed} Confirmed</div>
             <div class="kpi-pill" style="background:#fee2e2;color:#DC2626">${cancelled} Cancelled</div>
+        </div>`;
+}
+
+function renderCitiesKpi(hubs) {
+    const el = document.getElementById('citiesKpi');
+    if (!el) return;
+    const norm = s => s.trim().toLowerCase();
+    const approvedCities = new Set(hubs.filter(h => h.status === 'Approved' && h.city).map(h => norm(h.city)));
+    const allCities      = new Set(hubs.filter(h => h.city).map(h => norm(h.city)));
+    el.innerHTML = `
+        <div class="kpi-big" style="color:var(--primary)">${approvedCities.size}</div>
+        <div class="kpi-sub">cities with an approved Circle</div>
+        <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <div class="kpi-pill" style="background:#FFF4EC;color:var(--primary)">${allCities.size} Cities Applied From</div>
         </div>`;
 }
 
