@@ -948,6 +948,7 @@ function renderAnalytics() {
     renderStatusFunnel(hubs, parts);
     renderCityBars(hubs);
     renderCitiesKpi(hubs);
+    renderCitiesNeedingCircles(hubs);
     renderAreaBars(hubs);
     renderApprovalByCity(hubs);
     renderMemberBars(hubs);
@@ -1290,6 +1291,30 @@ function renderCitiesKpi(hubs) {
         counts[city] = (counts[city] || 0) + 1;
     });
     renderBarSet('citiesKpi', counts, 'var(--primary)');
+}
+
+function renderCitiesNeedingCircles(hubs) {
+    const el = document.getElementById('citiesNeedingList');
+    if (!el) return;
+    const approvedCities = new Set();
+    hubs.filter(h => h.status === 'Approved' && h.city).forEach(h => {
+        approvedCities.add(CITY_ALIASES[h.city] || h.city);
+    });
+    const missing = TARGET_CITIES.filter(city => !approvedCities.has(city));
+    if (!missing.length) {
+        el.innerHTML = '<div class="a-no-data" style="color:#16A34A">Every target city has an approved Circle!</div>';
+        return;
+    }
+    el.classList.add('chart-scroll');
+    el.innerHTML = `
+        <div class="empty-circle-count">${missing.length} of ${TARGET_CITIES.length} target cities still need a Circle</div>
+        <div class="empty-circles-grid">${
+            missing.map(city => `
+                <div class="empty-circle-row">
+                    <span class="ec-dot"></span>
+                    <div class="ec-name">${escHtml(city)}</div>
+                </div>`).join('')
+        }</div>`;
 }
 
 function renderCirclesWithNoParticipants(hubs, parts) {
