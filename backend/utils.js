@@ -88,14 +88,15 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Geocodes a single free-text query against Nominatim. Returns [lat, lng] or null.
-// Uses a hard timeout so a slow geocoder can never hang the request indefinitely.
-async function geocodeQuery(query) {
+// Runs one Nominatim lookup — either a structured query (params object, e.g.
+// { street, postalcode, city }) or a freeform { q: '...' } query — and returns
+// [lat, lng] or null. Hard timeout so a slow geocoder can never hang the request.
+async function runGeocodeRequest(params) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4000);
   try {
-    const url = `${NOMINATIM_URL}?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=in`;
-    const res = await fetch(url, {
+    const qs = new URLSearchParams({ format: 'json', limit: '1', countrycodes: 'in', ...params });
+    const res = await fetch(`${NOMINATIM_URL}?${qs}`, {
       headers: {
         Accept: 'application/json',
         'User-Agent': NOMINATIM_USER_AGENT,
@@ -117,16 +118,33 @@ async function geocodeQuery(query) {
   return null;
 }
 
-// Mirrors geocodeHub() in script.js: tries address -> area -> city, most specific first,
-// with a 300ms delay between fallback attempts.
-async function geocodeHub({ address, area, city }) {
-  const queries = [];
-  if (address) queries.push(`${address}, ${city}, India`);
-  queries.push(`${area}, ${city}, India`);
-  queries.push(`${city}, India`);
+// Geocodes a single free-text query against Nominatim. Returns [lat, lng] or null.
+async function geocodeQuery(query) {
+  return runGeocodeRequest({ q: query });
+}
 
-  for (const query of queries) {
-    const coords = await geocodeQuery(query);
+// Tries the most specific lookup first, falling back to progressively coarser ones,
+// with a 300ms delay between attempts (Nominatim's usage policy caps at 1 req/sec).
+// PIN code is used wherever available via Nominatim's structured `postalcode` param,
+// which narrows results to the actual postal area — free-text address matching alone
+// was frequently falling back to the city centroid for Indian addresses.
+async function geocodeHub({ address, area, city, pincode }) {
+  const attempts = [];
+
+  if (address && pincode) {
+    attempts.push(() => runGeocodeRequest({ street: address, postalcode: pincode, city, country: 'India' }));
+  }
+  if (address) {
+    attempts.push(() => geocodeQuery(pincode ? `${address}, ${pincode}, ${city}, India` : `${address}, ${city}, India`));
+  }
+  if (pincode) {
+    attempts.push(() => runGeocodeRequest({ postalcode: pincode, city, country: 'India' }));
+  }
+  attempts.push(() => geocodeQuery(`${area}, ${city}, India`));
+  attempts.push(() => geocodeQuery(`${city}, India`));
+
+  for (const attempt of attempts) {
+    const coords = await attempt();
     if (coords) return coords;
     await sleep(300);
   }

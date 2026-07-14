@@ -90,7 +90,7 @@ router.patch('/hubs/:id/status', async (req, res) => {
   // time to resolve a precise pin — and it keeps public submission fast.
   if (status === 'Approved' && (hub.lat == null || hub.lng == null)) {
     try {
-      const coords = await geocodeHub({ address: hub.address, area: hub.area, city: hub.city });
+      const coords = await geocodeHub({ address: hub.address, area: hub.area, city: hub.city, pincode: hub.pincode });
       if (coords) {
         const [lat, lng] = coords;
         await db.run('UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3', [lat, lng, req.params.id]);
