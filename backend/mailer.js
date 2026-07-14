@@ -22,6 +22,13 @@ const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
 const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/EsFjHO5h4kb7eMJ4EFiWRM';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
 
+// Full mailing address for a hub — "Street, Area, City - PIN Code", skipping any
+// pieces the leader didn't provide.
+function formatHubAddress(hub) {
+  const line = [hub.address, hub.area, hub.city].filter(Boolean).join(', ');
+  return hub.pincode ? `${line} - ${hub.pincode}` : line;
+}
+
 const transporter = (SMTP_HOST && SMTP_USER && SMTP_PASS)
   ? nodemailer.createTransport({
       host: SMTP_HOST,
@@ -68,6 +75,9 @@ function wrap(body) {
     .info-box { background: #EFE7DC; border-left: 4px solid #FF5000; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
     .info-box p { margin: 4px 0; font-size: 14px; color: #333333; }
     .info-box strong { color: #6A7D8B; }
+    .theme-block { background: #D7E7DF; border-radius: 8px; padding: 16px 20px; margin: 20px 0; text-align: center; }
+    .theme-block .theme-title { font-size: 16px; font-weight: 800; color: #333333; margin: 0 0 4px; }
+    .theme-block .theme-tag { font-size: 13px; color: #6A7D8B; font-style: italic; margin: 0; }
     .id-box { background: #FF5000; color: #FFFFFF; border-radius: 6px; padding: 14px 20px; text-align: center; margin: 20px 0; }
     .id-box span { display: block; font-size: 12px; opacity: 0.85; margin-bottom: 4px; }
     .id-box strong { font-size: 18px; letter-spacing: 1px; }
@@ -164,24 +174,32 @@ async function sendHubRejected(hub) {
 
 async function sendParticipantConfirmed(participant, hub) {
   const html = wrap(`
-    <div class="badge">✓ Registration Confirmed</div>
-    <h2>You're in, ${participant.full_name}!</h2>
-    <p>Your registration for the NFP Circle has been confirmed. We look forward to seeing you at your local circle.</p>
-    <div class="id-box">
-      <span>Your Participant ID</span>
-      <strong>${participant.id}</strong>
+    <div class="badge">✅ Registration Confirmed</div>
+    <h2>You're in, ${participant.full_name}! 🎉</h2>
+    <p>Your registration for the NFP Circle has been confirmed. We look forward to seeing you at your local Circle Meet.</p>
+    <div class="theme-block">
+      <p class="theme-title">Theme 01: Team Management</p>
+      <p class="theme-tag">Come with challenges. Leave with solutions.</p>
     </div>
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${hub.full_name}</p>
-      <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
-      <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
+      <p><strong>Address:</strong> ${formatHubAddress(hub)}</p>
+      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
     </div>
-    <p>Your Circle Leader will be in touch with further details about meeting schedules and venue. Please save your Participant ID for your records.</p>
-    <div class="btn-wrap">
-      <a class="btn" href="${PARTICIPANT_URL}">Find More Circles Near You</a>
-    </div>
+    <p>Your Circle Lead &amp; the NFP Team will be in touch with further steps.</p>
+    <p>You'll soon receive the complete agenda for what's happening on 5th Aug. Till then, stay tuned!</p>
+    <p class="section-heading">Your NFP Circle Experience:</p>
+    <ul class="next-steps" style="list-style:none;padding-left:0">
+      <li>1️⃣ Build Your Team</li>
+      <li>2️⃣ Learn from Peers</li>
+      <li>3️⃣ Vote Live</li>
+      <li>4️⃣ Ask Anything</li>
+      <li>5️⃣ Keynote Address</li>
+    </ul>
+    <p class="section-heading">Please Note</p>
+    <p>NFP Circles are a space for open peer learning. We request all participants to keep sessions free of solicitation, direct sales pitches, or promotion of personal business interests.</p>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
-    <p>Welcome to the NFP Circles community!</p>
+    <p>Welcome to the NFP Circles community! 🙌</p>
   `);
 
   await send({
