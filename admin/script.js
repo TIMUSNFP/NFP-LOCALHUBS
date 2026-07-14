@@ -1270,10 +1270,24 @@ function renderCancellationKpi(parts) {
         </div>`;
 }
 
+// Priority expansion cities — shown even at 0 approved Circles so gaps are visible at a glance.
+const TARGET_CITIES = [
+    'Mumbai', 'Bengaluru', 'Pune', 'Hyderabad', 'Chennai', 'Thane', 'Delhi', 'Kolkata',
+    'Ahmedabad', 'Vadodara', 'Navi Mumbai', 'Jaipur', 'Surat', 'Gurugram', 'Coimbatore',
+    'Aurangabad', 'Nashik', 'Chandigarh', 'Lucknow', 'Noida', 'Kalyan-Dombivli', 'Indore',
+    'Guwahati', 'Kanpur', 'Rajkot', 'Faridabad', 'Jalgaon', 'Nagpur', 'Kolhapur', 'Goa',
+    'Howrah', 'Ghaziabad', 'Kochi', 'Mangaluru', 'Navsari', 'Valsad', 'Belagavi', 'Mysuru',
+    'Bhubaneswar', 'Amravati',
+];
+// City names as stored in some existing records that should count toward a target city above.
+const CITY_ALIASES = { 'Gurgaon (Gurugram)': 'Gurugram' };
+
 function renderCitiesKpi(hubs) {
     const counts = {};
+    TARGET_CITIES.forEach(city => { counts[city] = 0; });
     hubs.filter(h => h.status === 'Approved' && h.city).forEach(h => {
-        counts[h.city] = (counts[h.city] || 0) + 1;
+        const city = CITY_ALIASES[h.city] || h.city;
+        counts[city] = (counts[city] || 0) + 1;
     });
     renderBarSet('citiesKpi', counts, 'var(--primary)');
 }
