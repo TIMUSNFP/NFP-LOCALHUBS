@@ -364,7 +364,7 @@ function createHubPinIcon(isSelected, isPending) {
 // Fetch hubs from the backend API (replaces localStorage-based getRegistrations())
 async function fetchHubs() {
     try {
-        const res = await fetch(`${API_BASE}/api/hubs?status=Approved,Pending`);
+        const res = await fetch(`${API_BASE}/api/hubs?status=Approved`);
         if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
         const data = await res.json();
         return Array.isArray(data) ? data : [];
@@ -380,10 +380,11 @@ async function refreshMapMarkers() {
     hubMarkers.forEach(m => leafletMap.removeLayer(m));
     hubMarkers = [];
 
-    // Show Approved and Pending hubs; Rejected are hidden (server already filters by status param,
-    // but we defensively filter again in case the API returns extra statuses)
+    // Only Approved circles are ever shown to participants — Pending and Rejected
+    // hubs stay invisible until an admin approves them (server already filters by
+    // status param, but we defensively filter again in case that ever changes).
     const hubs = await fetchHubs();
-    allApprovedHubs = hubs.filter(r => r.status === 'Approved' || r.status === 'Pending');
+    allApprovedHubs = hubs.filter(r => r.status === 'Approved');
     filteredHubs    = [...allApprovedHubs];
 
     const badge = document.getElementById('mapCountBadge');
