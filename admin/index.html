@@ -304,6 +304,10 @@
                         <div class="sc-body"><span class="sc-val" id="pStatTotal">0</span><span class="sc-lbl">Total Participants</span></div>
                         <div class="sc-trend">All Registrations</div>
                     </div>
+                    <div class="stat-card sc-pending">
+                        <div class="sc-body"><span class="sc-val" id="pStatPending">0</span><span class="sc-lbl">Pending Review</span></div>
+                        <div class="sc-trend">Awaiting Approval</div>
+                    </div>
                     <div class="stat-card sc-approved">
                         <div class="sc-body"><span class="sc-val" id="pStatConfirmed">0</span><span class="sc-lbl">Confirmed</span></div>
                         <div class="sc-trend">Active Participants</div>
@@ -312,7 +316,7 @@
                         <div class="sc-body"><span class="sc-val" id="pStatCancelled">0</span><span class="sc-lbl">Cancelled</span></div>
                         <div class="sc-trend">Withdrawn</div>
                     </div>
-                    <div class="stat-card sc-pending">
+                    <div class="stat-card sc-circles">
                         <div class="sc-body"><span class="sc-val" id="pStatHubs">0</span><span class="sc-lbl">Circles with Participants</span></div>
                         <div class="sc-trend">Active Circles</div>
                     </div>
@@ -325,6 +329,7 @@
                     </div>
                     <div class="filter-chips">
                         <button class="chip active" data-pfilter="all" onclick="setPFilter('all', this)">All</button>
+                        <button class="chip" data-pfilter="Pending" onclick="setPFilter('Pending', this)">Pending</button>
                         <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
                         <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
                     </div>
@@ -339,6 +344,7 @@
                     <div class="bulk-actions">
                         <button class="act-btn act-approve" onclick="bulkUpdateParticipants('Confirmed')">Confirm Selected</button>
                         <button class="act-btn act-reject" onclick="bulkUpdateParticipants('Cancelled')">Cancel Selected</button>
+                        <button class="act-btn act-reset" onclick="bulkUpdateParticipants('Pending')">Reset Selected</button>
                         <button class="act-btn bulk-clear" onclick="clearParticipantSelection()">Clear</button>
                     </div>
                 </div>

@@ -463,6 +463,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     min-width: 0;
     width: 100%;
 }
+/* Participants tab has a 5th "Pending" card — Applications tab stays at 4. */
+#tabParticipants .stats-grid { grid-template-columns: repeat(5, 1fr); }
 .stat-card {
     background: var(--white);
     border-radius: var(--radius-lg);
@@ -489,6 +491,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .sc-pending::after { background: var(--warning); }
 .sc-approved::after { background: var(--success); }
 .sc-rejected::after { background: var(--danger); }
+.sc-circles::after { background: #8B5CF6; }
 .sc-icon { font-size: 28px; flex-shrink: 0; }
 .sc-body {
     flex: 1;

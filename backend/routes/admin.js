@@ -6,12 +6,12 @@ const db = require('../db');
 const { hubRowToJson, participantRowToJson, geocodeHub } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
 const { readFormSettings } = require('./settings');
-const { sendHubApproved, sendHubRejected, sendParticipantCancelled } = require('../mailer');
+const { sendHubApproved, sendHubRejected, sendParticipantConfirmed, sendParticipantCancelled } = require('../mailer');
 
 const router = express.Router();
 
 const VALID_HUB_STATUSES = ['Approved', 'Rejected', 'Pending'];
-const VALID_PARTICIPANT_STATUSES = ['Confirmed', 'Cancelled'];
+const VALID_PARTICIPANT_STATUSES = ['Confirmed', 'Cancelled', 'Pending'];
 
 // POST /api/admin/login — public.
 router.post('/login', async (req, res) => {
@@ -147,9 +147,12 @@ router.patch('/participants/:id/status', async (req, res) => {
 
   const updated = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
 
-  if (status === 'Cancelled') {
+  // Fire confirmation/cancellation email — non-blocking, errors are swallowed in mailer.
+  // Resetting back to Pending is silent (no email) — same convention as hubs.
+  if (status === 'Confirmed' || status === 'Cancelled') {
     const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [updated.hub_id]);
-    sendParticipantCancelled(updated, hub);
+    if (status === 'Confirmed') sendParticipantConfirmed(updated, hub);
+    else sendParticipantCancelled(updated, hub);
   }
 
   res.json(participantRowToJson(updated));

@@ -1563,11 +1563,13 @@ function closeSidebar() {
 function updateParticipantStats() {
     const parts     = allParticipants;
     const total     = parts.length;
+    const pending   = parts.filter(p => p.status === 'Pending').length;
     const confirmed = parts.filter(p => p.status === 'Confirmed').length;
     const cancelled = parts.filter(p => p.status === 'Cancelled').length;
     const hubs      = new Set(parts.map(p => p.hubId)).size;
 
     animateCount('pStatTotal',     total);
+    animateCount('pStatPending',   pending);
     animateCount('pStatConfirmed', confirmed);
     animateCount('pStatCancelled', cancelled);
     animateCount('pStatHubs',      hubs);
@@ -1635,10 +1637,15 @@ function renderParticipantTable(parts) {
             <td>${participantStatusBadge(p.status)}</td>
             <td>
                 <div class="action-btns">
+                    ${p.status !== 'Confirmed'
+                        ? `<button class="act-btn act-approve" onclick="confirmParticipant('${escHtml(p.id)}')">Confirm</button>`
+                        : ''}
                     ${p.status !== 'Cancelled'
                         ? `<button class="act-btn act-reject" onclick="cancelParticipant('${escHtml(p.id)}')">Cancel</button>`
-                        : `<button class="act-btn act-approve" onclick="reinstateParticipant('${escHtml(p.id)}')">Reinstate</button>`
-                    }
+                        : ''}
+                    ${p.status !== 'Pending'
+                        ? `<button class="act-btn act-reset" onclick="resetParticipant('${escHtml(p.id)}')">Reset to Pending</button>`
+                        : ''}
                     <button class="act-btn act-view" onclick="viewParticipantDetails('${escHtml(p.id)}')">View</button>
                     <button class="act-btn act-delete" onclick="deleteParticipant('${escHtml(p.id)}')">Delete</button>
                 </div>
@@ -1668,10 +1675,33 @@ async function updateParticipantStatus(id, status) {
     }
 }
 
+function confirmParticipant(id) {
+    const p = allParticipants.find(p => String(p.id) === String(id));
+    if (!p) return;
+    openConfirmModal(
+        'Confirm Registration',
+        `Confirm <strong>${escHtml(p.fullName)}</strong>'s registration? This will send them a confirmation email.`,
+        '✅',
+        async () => {
+            const ok = await updateParticipantStatus(id, 'Confirmed');
+            if (ok) {
+                showToast('Registration confirmed.', 'success');
+                await loadParticipants();
+                updateParticipantStats();
+                applyParticipantFilters();
+            } else {
+                showToast('Failed to confirm registration.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Confirm'
+    );
+}
+
 function cancelParticipant(id) {
     openConfirmModal(
         'Cancel Registration',
-        'Are you sure you want to cancel this participant registration?',
+        'Are you sure you want to cancel this participant registration? This will send them a cancellation email.',
         '❌',
         async () => {
             const ok = await updateParticipantStatus(id, 'Cancelled');
@@ -1685,21 +1715,32 @@ function cancelParticipant(id) {
             }
             closeConfirmModal();
         },
-        'Cancel Registration',
+        'Yes, Cancel',
         true
     );
 }
 
-async function reinstateParticipant(id) {
-    const ok = await updateParticipantStatus(id, 'Confirmed');
-    if (ok) {
-        showToast('Participant reinstated.', 'success');
-        await loadParticipants();
-        updateParticipantStats();
-        applyParticipantFilters();
-    } else {
-        showToast('Failed to reinstate participant.', 'error');
-    }
+function resetParticipant(id) {
+    const p = allParticipants.find(p => String(p.id) === String(id));
+    if (!p) return;
+    openConfirmModal(
+        'Reset to Pending',
+        `Reset <strong>${escHtml(p.fullName)}</strong>'s registration back to Pending? No email is sent for this — you can then Confirm or Cancel again to trigger a fresh notification.`,
+        '↩️',
+        async () => {
+            const ok = await updateParticipantStatus(id, 'Pending');
+            if (ok) {
+                showToast('Registration reset to Pending.', 'success');
+                await loadParticipants();
+                updateParticipantStats();
+                applyParticipantFilters();
+            } else {
+                showToast('Failed to reset registration.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Reset'
+    );
 }
 
 // ═══════════════════ BULK SELECTION (PARTICIPANTS) ═══════════════════
@@ -1750,8 +1791,9 @@ function bulkUpdateParticipants(status) {
     const count = ids.length;
     const plural = count > 1 ? 's' : '';
     const copy = {
-        Confirmed: { verb: 'confirm', title: 'Confirm', btnText: 'Confirm',     emoji: '✅', danger: false, note: '' },
+        Confirmed: { verb: 'confirm', title: 'Confirm', btnText: 'Confirm',     emoji: '✅', danger: false, note: ' This will send a confirmation email to each of them.' },
         Cancelled: { verb: 'cancel',  title: 'Cancel',  btnText: 'Yes, Cancel', emoji: '❌', danger: true,  note: ' This will send a cancellation email to each of them.' },
+        Pending:   { verb: 'reset',   title: 'Reset',   btnText: 'Reset',       emoji: '↩️', danger: false, note: ' No emails are sent for this.' },
     }[status];
     if (!copy) return;
 
