@@ -19,7 +19,7 @@ const SMTP_PASS = (process.env.SMTP_PASS || '').trim();
 const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>` : 'NFP Circles <noreply@networkfp.com>');
 
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
-const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/EsFjHO5h4kb7eMJ4EFiWRM';
+const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/L2G7DQQgWDcCiqV85giWtA?s=sh&p=i&ilr=1&amv=2';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
 
 // Full mailing address for a hub — "Street, Area, City - PIN Code", skipping any
@@ -127,6 +127,7 @@ async function sendHubApproved(hub) {
     <div class="btn-wrap">
       <a class="btn" href="${HUB_LEADERS_WHATSAPP_URL}">Join the Hub Leaders WhatsApp Group</a>
     </div>
+    <p style="font-size:13px;color:#6A7D8B;text-align:center;margin-top:-4px">If you've already joined the group, please ignore this message.</p>
     <p class="section-heading">Please Note</p>
     <ol class="next-steps">
       <li>Network FP will have the final standing on dissolving or merging any Circles as per the requirement of the city, and will have the final call around participants and leaders.</li>
