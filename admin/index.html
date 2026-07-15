@@ -334,14 +334,25 @@
                         <button class="btn-export form-toggle" id="participantFormToggle" onclick="toggleParticipantForm()" style="margin-left:0;min-width:auto">Registrations</button>
                     </div>
                 </div>
+                <div class="bulk-action-bar hidden" id="partBulkBar">
+                    <span class="bulk-count" id="partBulkCount">0 selected</span>
+                    <div class="bulk-actions">
+                        <button class="act-btn act-approve" onclick="bulkUpdateParticipants('Confirmed')">Confirm Selected</button>
+                        <button class="act-btn act-reject" onclick="bulkUpdateParticipants('Cancelled')">Cancel Selected</button>
+                        <button class="act-btn bulk-clear" onclick="clearParticipantSelection()">Clear</button>
+                    </div>
+                </div>
                 <div class="table-wrap-outer" id="partTableOuter">
                 <div class="table-wrap" id="partTableWrap">
                     <table class="data-table">
                         <thead>
-                            <tr>
-                                <th style="position:sticky;left:0px;  z-index:5;background:#FAFAFA">Participant ID</th>
-                                <th style="position:sticky;left:200px;z-index:5;background:#FAFAFA">Full Name</th>
-                                <th style="position:sticky;left:340px;z-index:5;background:#FAFAFA;box-shadow:3px 0 8px rgba(0,0,0,.08)">Mobile</th>
+                            <tr id="partTableHeaderRow">
+                                <th style="position:sticky;left:0px;  z-index:5;background:#FAFAFA;width:40px" class="th-checkbox-col">
+                                    <input type="checkbox" id="selectAllParticipants" onchange="toggleSelectAllParticipants(this.checked)">
+                                </th>
+                                <th style="position:sticky;left:40px;  z-index:5;background:#FAFAFA">Participant ID</th>
+                                <th style="position:sticky;left:240px;z-index:5;background:#FAFAFA">Full Name</th>
+                                <th style="position:sticky;left:380px;z-index:5;background:#FAFAFA;box-shadow:3px 0 8px rgba(0,0,0,.08)">Mobile</th>
                                 <th>Email</th><th>Membership</th><th>Circle Host</th><th>Circle City</th><th>Circle Area</th>
                                 <th>Note</th><th>Registered On</th><th>Status</th><th>Actions</th>
                             </tr>

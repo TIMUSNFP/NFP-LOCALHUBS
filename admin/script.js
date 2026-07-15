@@ -22,6 +22,8 @@ let allParticipants  = [];
 let trendMode        = 'day';
 let selectedHubIds   = new Set(); // bulk-select state for the Applications table
 let pendingBulkAction = null;     // { ids, status } awaiting confirm-modal approval
+let selectedParticipantIds = new Set(); // bulk-select state for the Participants table
+let pendingBulkActionP     = null;      // { ids, status } awaiting confirm-modal approval
 
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAdminSession();
     initTableScrollFade();
     initHubColumnFilters();
+    initParticipantColumnFilters();
 });
 
 function handleNavbarScroll() {
@@ -491,6 +494,127 @@ function applyHubColumnFilters(regs) {
         regs = regs.filter(r => allowed.has(getHubColumnValue(r, key)));
     });
     return regs;
+}
+
+// ═══════════════════ COLUMN FILTERS (PARTICIPANTS, Excel-style) ═══════════════════
+const PARTICIPANT_FILTER_COLUMNS = [
+    { key: 'id',           label: 'Participant ID' },
+    { key: 'fullName',     label: 'Full Name' },
+    { key: 'mobile',       label: 'Mobile' },
+    { key: 'email',        label: 'Email' },
+    { key: 'membership',   label: 'Membership' },
+    { key: 'hubLeader',    label: 'Circle Host' },
+    { key: 'hubCity',      label: 'Circle City' },
+    { key: 'hubArea',      label: 'Circle Area' },
+    { key: 'note',         label: 'Note' },
+    { key: 'registeredAt', label: 'Registered On' },
+    { key: 'status',       label: 'Status' },
+];
+
+let participantColumnFilters = {}; // colKey -> Set of allowed values ("absent" key = no filter on that column)
+let activeFilterColP = null;
+
+function initParticipantColumnFilters() {
+    const row = document.getElementById('partTableHeaderRow');
+    if (!row) return;
+    const ths = row.querySelectorAll('th');
+    // ths[0] is the bulk-select checkbox column — filterable columns start at index 1.
+    PARTICIPANT_FILTER_COLUMNS.forEach((col, i) => {
+        const th = ths[i + 1];
+        if (!th) return;
+        const label = th.textContent.trim();
+        th.innerHTML = `<div class="th-inner"><span class="th-label">${label}</span><button type="button" class="col-filter-btn" data-colp="${col.key}" onclick="toggleColumnFilterP(event,'${col.key}')" title="Filter ${label}">&#9660;</button></div>`;
+    });
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById('colFilterPanel');
+        if (!panel || panel.classList.contains('hidden') || activeFilterColP === null) return;
+        if (panel.contains(e.target) || e.target.closest('.col-filter-btn')) return;
+        closeColumnFilterPanelP();
+    });
+    window.addEventListener('resize', () => { if (activeFilterColP !== null) closeColumnFilterPanelP(); });
+}
+
+function getParticipantColumnValue(record, key) {
+    if (key === 'registeredAt') return record.registeredAt ? formatDate(record.registeredAt) : '—';
+    const v = record[key];
+    return (v === null || v === undefined || String(v).trim() === '') ? '—' : String(v).trim();
+}
+
+function toggleColumnFilterP(evt, colKey) {
+    evt.stopPropagation();
+    if (activeFilterColP === colKey) { closeColumnFilterPanelP(); return; }
+    openColumnFilterPanelP(evt.currentTarget, colKey);
+}
+
+function openColumnFilterPanelP(btnEl, colKey) {
+    activeFilterColP = colKey;
+    const panel = document.getElementById('colFilterPanel');
+    if (!panel) return;
+
+    const uniqueValues = [...new Set(allParticipants.map(r => getParticipantColumnValue(r, colKey)))]
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const selected = participantColumnFilters[colKey]; // Set or undefined (undefined = all selected)
+
+    panel.innerHTML = `
+        <div class="cfp-search"><input type="text" placeholder="Search values..." oninput="filterColumnValueList(this.value)" /></div>
+        <div class="cfp-selectall"><label><input type="checkbox" id="cfpSelectAll" ${!selected ? 'checked' : ''} onchange="toggleAllColumnValues(this.checked)"> Select All</label></div>
+        <div class="cfp-list" id="cfpList">
+            ${uniqueValues.map(v => `
+                <label class="cfp-item">
+                    <input type="checkbox" value="${escHtml(v)}" ${!selected || selected.has(v) ? 'checked' : ''}>
+                    <span>${escHtml(v)}</span>
+                </label>
+            `).join('')}
+        </div>
+        <div class="cfp-actions">
+            <button type="button" class="cfp-clear" onclick="clearColumnFilterP('${colKey}')">Clear</button>
+            <button type="button" class="cfp-apply" onclick="applyColumnFilterP('${colKey}')">Apply</button>
+        </div>
+    `;
+
+    panel.classList.remove('hidden');
+    positionColumnFilterPanel(btnEl, panel);
+}
+
+function applyColumnFilterP(colKey) {
+    const checkboxes = document.querySelectorAll('#cfpList .cfp-item input');
+    const checkedValues = [...checkboxes].filter(cb => cb.checked).map(cb => cb.value);
+    if (checkedValues.length === checkboxes.length) {
+        delete participantColumnFilters[colKey]; // everything selected = no filter
+    } else {
+        participantColumnFilters[colKey] = new Set(checkedValues);
+    }
+    updateFilterIconStatesP();
+    closeColumnFilterPanelP();
+    applyParticipantFilters();
+}
+
+function clearColumnFilterP(colKey) {
+    delete participantColumnFilters[colKey];
+    updateFilterIconStatesP();
+    closeColumnFilterPanelP();
+    applyParticipantFilters();
+}
+
+function updateFilterIconStatesP() {
+    document.querySelectorAll('.col-filter-btn[data-colp]').forEach(btn => {
+        btn.classList.toggle('active', !!participantColumnFilters[btn.getAttribute('data-colp')]);
+    });
+}
+
+function closeColumnFilterPanelP() {
+    const panel = document.getElementById('colFilterPanel');
+    if (panel) panel.classList.add('hidden');
+    activeFilterColP = null;
+}
+
+function applyParticipantColumnFilters(parts) {
+    Object.keys(participantColumnFilters).forEach(key => {
+        const allowed = participantColumnFilters[key];
+        if (!allowed || allowed.size === 0) return;
+        parts = parts.filter(r => allowed.has(getParticipantColumnValue(r, key)));
+    });
+    return parts;
 }
 
 // ═══════════════════ TABLE RENDERING (HUBS) ═══════════════════
@@ -1462,6 +1586,7 @@ function applyParticipantFilters() {
         (p.hubCity || '').toLowerCase().includes(q) ||
         (p.hubLeader || '').toLowerCase().includes(q)
     );
+    parts = applyParticipantColumnFilters(parts);
     renderParticipantTable(parts);
 }
 
@@ -1487,15 +1612,19 @@ function renderParticipantTable(parts) {
     if (!parts || parts.length === 0) {
         tbody.innerHTML = '';
         if (emptyEl) emptyEl.classList.add('visible');
+        updateSelectAllStateP();
         return;
     }
     if (emptyEl) emptyEl.classList.remove('visible');
 
     tbody.innerHTML = parts.map(p => `
-        <tr>
-            <td class="td-id"   style="min-width:200px;position:sticky;left:0px;  background:#fff;z-index:2">${escHtml(p.id)}</td>
-            <td class="td-name" style="min-width:140px;position:sticky;left:200px;background:#fff;z-index:2"><button class="name-link" onclick="viewParticipantDetails('${escHtml(p.id)}')">${escHtml(p.fullName)}</button></td>
-            <td style="min-width:130px;position:sticky;left:340px;background:#fff;z-index:2;box-shadow:3px 0 8px rgba(0,0,0,.08)">${escHtml(p.mobile)}</td>
+        <tr data-id="${escHtml(p.id)}">
+            <td style="width:40px;position:sticky;left:0px;background:#fff;z-index:2" class="td-checkbox-col">
+                <input type="checkbox" class="participant-row-checkbox" value="${escHtml(p.id)}" ${selectedParticipantIds.has(p.id) ? 'checked' : ''} onchange="toggleParticipantSelection('${escHtml(p.id)}', this.checked)">
+            </td>
+            <td class="td-id"   style="min-width:200px;position:sticky;left:40px;  background:#fff;z-index:2">${escHtml(p.id)}</td>
+            <td class="td-name" style="min-width:140px;position:sticky;left:240px;background:#fff;z-index:2"><button class="name-link" onclick="viewParticipantDetails('${escHtml(p.id)}')">${escHtml(p.fullName)}</button></td>
+            <td style="min-width:130px;position:sticky;left:380px;background:#fff;z-index:2;box-shadow:3px 0 8px rgba(0,0,0,.08)">${escHtml(p.mobile)}</td>
             <td class="td-email">${escHtml(p.email)}</td>
             <td>${escHtml(p.membership)}</td>
             <td class="td-name">${escHtml(p.hubLeader)}'s Circle</td>
@@ -1517,6 +1646,7 @@ function renderParticipantTable(parts) {
         </tr>
     `).join('');
     setTimeout(refreshScrollFade, 50);
+    updateSelectAllStateP();
 }
 
 function participantStatusBadge(status) {
@@ -1569,6 +1699,93 @@ async function reinstateParticipant(id) {
         applyParticipantFilters();
     } else {
         showToast('Failed to reinstate participant.', 'error');
+    }
+}
+
+// ═══════════════════ BULK SELECTION (PARTICIPANTS) ═══════════════════
+function toggleParticipantSelection(id, checked) {
+    if (checked) selectedParticipantIds.add(id);
+    else selectedParticipantIds.delete(id);
+    updateBulkBarP();
+    updateSelectAllStateP();
+}
+
+function toggleSelectAllParticipants(checked) {
+    // Only affects the currently rendered (filtered) rows, not the full dataset.
+    document.querySelectorAll('#pTableBody .participant-row-checkbox').forEach(cb => {
+        cb.checked = checked;
+        if (checked) selectedParticipantIds.add(cb.value);
+        else selectedParticipantIds.delete(cb.value);
+    });
+    updateBulkBarP();
+}
+
+function updateSelectAllStateP() {
+    const selectAll = document.getElementById('selectAllParticipants');
+    if (!selectAll) return;
+    const boxes = [...document.querySelectorAll('#pTableBody .participant-row-checkbox')];
+    const checkedCount = boxes.filter(cb => cb.checked).length;
+    selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+}
+
+function updateBulkBarP() {
+    const bar = document.getElementById('partBulkBar');
+    const countEl = document.getElementById('partBulkCount');
+    if (!bar) return;
+    bar.classList.toggle('hidden', selectedParticipantIds.size === 0);
+    if (countEl) countEl.textContent = `${selectedParticipantIds.size} selected`;
+}
+
+function clearParticipantSelection() {
+    selectedParticipantIds.clear();
+    document.querySelectorAll('#pTableBody .participant-row-checkbox').forEach(cb => { cb.checked = false; });
+    updateBulkBarP();
+    updateSelectAllStateP();
+}
+
+function bulkUpdateParticipants(status) {
+    if (selectedParticipantIds.size === 0) return;
+    const ids   = [...selectedParticipantIds];
+    const count = ids.length;
+    const plural = count > 1 ? 's' : '';
+    const copy = {
+        Confirmed: { verb: 'confirm', title: 'Confirm', btnText: 'Confirm',     emoji: '✅', danger: false, note: '' },
+        Cancelled: { verb: 'cancel',  title: 'Cancel',  btnText: 'Yes, Cancel', emoji: '❌', danger: true,  note: ' This will send a cancellation email to each of them.' },
+    }[status];
+    if (!copy) return;
+
+    pendingBulkActionP = { ids, status };
+    openConfirmModal(
+        `${copy.title} ${count} Registration${plural}`,
+        `Are you sure you want to ${copy.verb} <strong>${count}</strong> selected registration${plural}?${copy.note}`,
+        copy.emoji,
+        executeBulkUpdateParticipants,
+        copy.btnText,
+        copy.danger
+    );
+}
+
+async function executeBulkUpdateParticipants() {
+    if (!pendingBulkActionP) return;
+    const { ids, status } = pendingBulkActionP;
+    closeConfirmModal();
+    pendingBulkActionP = null;
+
+    let successCount = 0;
+    for (const id of ids) {
+        const ok = await updateParticipantStatus(id, status);
+        if (ok) successCount++;
+    }
+    clearParticipantSelection();
+    await loadParticipants();
+    updateParticipantStats();
+    applyParticipantFilters();
+
+    if (successCount === ids.length) {
+        showToast(`${successCount} registration${successCount > 1 ? 's' : ''} updated successfully!`, 'success');
+    } else {
+        showToast(`${successCount}/${ids.length} updated — some failed, please check and retry.`, 'warning');
     }
 }
 

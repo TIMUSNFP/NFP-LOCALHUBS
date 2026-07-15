@@ -868,13 +868,15 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 #hubTableWrap .data-table td:nth-child(3) { position: sticky; left: 220px; z-index: 1; background: var(--white); }
 #hubTableWrap .data-table th:nth-child(4),
 #hubTableWrap .data-table td:nth-child(4) { position: sticky; left: 360px; z-index: 1; background: var(--white); box-shadow: 3px 0 8px rgba(0,0,0,.07); }
-/* Participant table: col 1 = Participant ID (200px), col 2 = Full Name (140px), col 3 = Mobile (130px) */
+/* Participant table: col 1 = checkbox (40px), col 2 = Participant ID (200px), col 3 = Full Name (140px), col 4 = Mobile (130px) */
 #partTableWrap .data-table th:nth-child(1),
 #partTableWrap .data-table td:nth-child(1) { position: sticky; left: 0;     z-index: 1; background: var(--white); }
 #partTableWrap .data-table th:nth-child(2),
-#partTableWrap .data-table td:nth-child(2) { position: sticky; left: 200px; z-index: 1; background: var(--white); }
+#partTableWrap .data-table td:nth-child(2) { position: sticky; left: 40px;  z-index: 1; background: var(--white); }
 #partTableWrap .data-table th:nth-child(3),
-#partTableWrap .data-table td:nth-child(3) { position: sticky; left: 340px; z-index: 1; background: var(--white); box-shadow: 3px 0 8px rgba(0,0,0,.07); }
+#partTableWrap .data-table td:nth-child(3) { position: sticky; left: 240px; z-index: 1; background: var(--white); }
+#partTableWrap .data-table th:nth-child(4),
+#partTableWrap .data-table td:nth-child(4) { position: sticky; left: 380px; z-index: 1; background: var(--white); box-shadow: 3px 0 8px rgba(0,0,0,.07); }
 /* Header row is already sticky top:0 z-index:2; bump sticky-column headers above body cells */
 #hubTableWrap  .data-table thead th:nth-child(1),
 #hubTableWrap  .data-table thead th:nth-child(2),
@@ -882,7 +884,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 #hubTableWrap  .data-table thead th:nth-child(4),
 #partTableWrap .data-table thead th:nth-child(1),
 #partTableWrap .data-table thead th:nth-child(2),
-#partTableWrap .data-table thead th:nth-child(3) { z-index: 4; background: #FAFAFA; }
+#partTableWrap .data-table thead th:nth-child(3),
+#partTableWrap .data-table thead th:nth-child(4) { z-index: 4; background: #FAFAFA; }
 
 .bar-row { margin-bottom: 12px; }
 .bar-label-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text); margin-bottom: 5px; }
