@@ -131,6 +131,25 @@ router.get('/participants', async (req, res) => {
   );
 });
 
+// DELETE /api/admin/hubs/:id — permanently remove a hub leader application. This is
+// how an admin frees up an email/mobile so the person can apply again. Blocked if
+// the circle already has participants registered under it — those must be moved
+// or deleted first so a hub delete never silently orphans participant data.
+router.delete('/hubs/:id', async (req, res) => {
+  const existing = await db.get('SELECT id FROM hubs WHERE id = $1', [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Hub not found' });
+
+  const countRow = await db.get('SELECT COUNT(*) as cnt FROM participants WHERE hub_id = $1', [req.params.id]);
+  if (countRow && Number(countRow.cnt) > 0) {
+    return res.status(409).json({
+      error: `This circle has ${countRow.cnt} participant(s) registered. Remove or reassign them before deleting the hub.`,
+    });
+  }
+
+  await db.run('DELETE FROM hubs WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 // PATCH /api/admin/participants/:id/status
 router.patch('/participants/:id/status', async (req, res) => {
   const { status } = req.body || {};

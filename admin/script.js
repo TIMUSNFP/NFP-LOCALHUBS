@@ -693,6 +693,7 @@ function renderTable(regs) {
                         ? `<button class="act-btn act-reset" onclick="confirmReset('${escHtml(r.id)}')">Reset to Pending</button>`
                         : ''}
                     <button class="act-btn act-view" onclick="viewDetails('${escHtml(r.id)}')">View</button>
+                    <button class="act-btn act-delete" onclick="deleteHub('${escHtml(r.id)}')">Delete</button>
                 </div>
             </td>
         </tr>
@@ -802,6 +803,36 @@ async function executeReset() {
     }
     closeConfirmModal();
     pendingRegId = null;
+}
+
+// Permanently delete a hub leader application — frees up their email/mobile so
+// they can apply again. Backend blocks this if participants are still registered
+// under the circle.
+function deleteHub(id) {
+    const reg = allHubs.find(r => String(r.id) === String(id));
+    if (!reg) return;
+    openConfirmModal(
+        'Delete Application',
+        `Permanently delete <strong>${escHtml(reg.fullName)}</strong>'s Circle Host application? This frees up their email and mobile so they can apply again. This cannot be undone.`,
+        '🗑️',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Application deleted.', 'success');
+                    await updateDashboard();
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    showToast(body.error || 'Failed to delete application.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Delete',
+        true
+    );
 }
 
 // ═══════════════════ BULK SELECTION (HUBS) ═══════════════════
