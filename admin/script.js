@@ -693,7 +693,7 @@ function renderTable(regs) {
                         ? `<button class="act-btn act-reset" onclick="confirmReset('${escHtml(r.id)}')">Reset to Pending</button>`
                         : ''}
                     ${r.status === 'Approved'
-                        ? `<button class="act-btn act-view" onclick="sendHubRoster('${escHtml(r.id)}')">Send Roster</button>`
+                        ? `<button class="act-btn act-view" onclick="sendHubRoster('${escHtml(r.id)}')" title="${r.rosterSentAt ? 'Last sent ' + formatDate(r.rosterSentAt) : 'Never sent'}">${r.rosterSentAt ? 'Resend Roster' : 'Send Roster'}</button>`
                         : ''}
                     <button class="act-btn act-view" onclick="viewDetails('${escHtml(r.id)}')">View</button>
                     <button class="act-btn act-delete" onclick="deleteHub('${escHtml(r.id)}')">Delete</button>
@@ -853,6 +853,7 @@ function sendHubRoster(id) {
                 const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/send-roster`, { method: 'POST' });
                 if (res.ok) {
                     showToast('Roster email sent.', 'success');
+                    await updateDashboard();
                 } else {
                     const body = await res.json().catch(() => ({}));
                     showToast(body.error || 'Failed to send roster email.', 'error');
@@ -899,6 +900,7 @@ async function executeBulkSendRoster() {
         } catch (e) { /* keep going through the rest of the selection */ }
     }
     clearHubSelection();
+    await updateDashboard();
 
     if (successCount === ids.length) {
         showToast(`${successCount} roster email${successCount > 1 ? 's' : ''} sent!`, 'success');
@@ -924,6 +926,28 @@ function sendAllApprovedRosters() {
         '📋',
         executeBulkSendRoster,
         'Send to All',
+        false
+    );
+}
+
+// Only targets hubs that have never received a roster email (rosterSentAt is
+// empty) — the safe way to "catch up" stragglers without re-emailing leaders
+// who've already gotten one.
+function sendUnsentApprovedRosters() {
+    const unsent = allHubs.filter(r => r.status === 'Approved' && !r.rosterSentAt);
+    if (unsent.length === 0) {
+        showToast('Every approved circle has already been sent a roster email.', 'success');
+        return;
+    }
+    const count = unsent.length;
+    const plural = count > 1 ? 's' : '';
+    pendingBulkAction = { ids: unsent.map(r => r.id), status: '__send_roster__' };
+    openConfirmModal(
+        `Send Roster Email to ${count} Never-Sent Circle${plural}`,
+        `These <strong>${count}</strong> approved circle leader${plural} have never received a roster email. Send it to them now? This sends real emails immediately.`,
+        '📋',
+        executeBulkSendRoster,
+        'Send',
         false
     );
 }

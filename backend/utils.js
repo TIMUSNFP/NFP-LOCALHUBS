@@ -49,6 +49,7 @@ function hubRowToJson(row) {
     pocRole: row.poc_role,
     lat: row.lat,
     lng: row.lng,
+    rosterSentAt: row.roster_sent_at,
   };
 }
 

@@ -24,7 +24,8 @@ create table if not exists hubs (
   hosted_before text,
   hosting_frequency text,
   lat double precision,
-  lng double precision
+  lng double precision,
+  roster_sent_at text
 );
 
 -- Participant registrations (each tied to an approved hub)

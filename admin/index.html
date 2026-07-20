@@ -138,6 +138,7 @@
                         <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
                     </div>
                     <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                        <button class="btn-export btn-sheets" id="sendUnsentRosterBtn" onclick="sendUnsentApprovedRosters()">&#128203; Send Roster to Never-Sent</button>
                         <button class="btn-export btn-sheets" id="sendAllRosterBtn" onclick="sendAllApprovedRosters()">&#128203; Send Roster to All Approved</button>
                         <button class="btn-export btn-sheets" id="syncHubsBtn" onclick="syncToSheets('hubs')">&#128196; Sync to Sheets</button>
                         <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:0;min-width:auto">Applications</button>

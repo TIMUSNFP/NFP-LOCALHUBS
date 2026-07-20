@@ -147,7 +147,11 @@ router.post('/hubs/:id/send-roster', async (req, res) => {
   );
 
   await sendHubRosterUpdate(hub, participants);
-  res.json({ ok: true, participantCount: participants.length });
+
+  const rosterSentAt = new Date().toISOString();
+  await db.run('UPDATE hubs SET roster_sent_at = $1 WHERE id = $2', [rosterSentAt, req.params.id]);
+
+  res.json({ ok: true, participantCount: participants.length, rosterSentAt });
 });
 
 // DELETE /api/admin/hubs/:id — permanently remove a hub leader application. This is
