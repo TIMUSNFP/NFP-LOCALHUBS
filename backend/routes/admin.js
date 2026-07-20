@@ -6,7 +6,7 @@ const db = require('../db');
 const { hubRowToJson, participantRowToJson, geocodeHub } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
 const { readFormSettings } = require('./settings');
-const { sendHubApproved, sendHubRejected, sendParticipantConfirmed, sendParticipantCancelled } = require('../mailer');
+const { sendHubApproved, sendHubRejected, sendParticipantConfirmed, sendParticipantCancelled, sendHubRosterUpdate } = require('../mailer');
 
 const router = express.Router();
 
@@ -129,6 +129,25 @@ router.get('/participants', async (req, res) => {
       hubVenue: row.hub_venue,
     }))
   );
+});
+
+// POST /api/admin/hubs/:id/send-roster — email an approved Circle Leader their
+// current list of Confirmed participants (name + mobile). On-demand only, not
+// tied to a status change, so it can be re-sent as new participants confirm.
+router.post('/hubs/:id/send-roster', async (req, res) => {
+  const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+  if (!hub) return res.status(404).json({ error: 'Hub not found' });
+  if (hub.status !== 'Approved') {
+    return res.status(400).json({ error: 'Only approved circles can receive a roster email.' });
+  }
+
+  const participants = await db.all(
+    "SELECT * FROM participants WHERE hub_id = $1 AND status = 'Confirmed' ORDER BY registered_at ASC",
+    [req.params.id]
+  );
+
+  await sendHubRosterUpdate(hub, participants);
+  res.json({ ok: true, participantCount: participants.length });
 });
 
 // DELETE /api/admin/hubs/:id — permanently remove a hub leader application. This is

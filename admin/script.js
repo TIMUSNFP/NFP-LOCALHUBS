@@ -692,6 +692,9 @@ function renderTable(regs) {
                     ${r.status !== 'Pending'
                         ? `<button class="act-btn act-reset" onclick="confirmReset('${escHtml(r.id)}')">Reset to Pending</button>`
                         : ''}
+                    ${r.status === 'Approved'
+                        ? `<button class="act-btn act-view" onclick="sendHubRoster('${escHtml(r.id)}')">Send Roster</button>`
+                        : ''}
                     <button class="act-btn act-view" onclick="viewDetails('${escHtml(r.id)}')">View</button>
                     <button class="act-btn act-delete" onclick="deleteHub('${escHtml(r.id)}')">Delete</button>
                 </div>
@@ -832,6 +835,96 @@ function deleteHub(id) {
         },
         'Delete',
         true
+    );
+}
+
+// Email an approved Circle Leader their current list of Confirmed participants
+// (name + mobile). Safe to re-send as new participants confirm.
+function sendHubRoster(id) {
+    const reg = allHubs.find(r => String(r.id) === String(id));
+    if (!reg) return;
+    const n = reg.participantCount || 0;
+    openConfirmModal(
+        'Send Roster Email',
+        `Email <strong>${escHtml(reg.fullName)}</strong> the current list of confirmed participants for their circle in ${escHtml(reg.city)}? (${n} confirmed right now.) This sends a real email immediately.`,
+        '📋',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/send-roster`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('Roster email sent.', 'success');
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    showToast(body.error || 'Failed to send roster email.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Send',
+        false
+    );
+}
+
+// Bulk version — loops the same endpoint over the selected hubs, same pattern
+// as bulkUpdateHubs. Non-Approved hubs in the selection are skipped server-side.
+function bulkSendHubRoster() {
+    if (selectedHubIds.size === 0) return;
+    const ids = [...selectedHubIds];
+    const count = ids.length;
+    const plural = count > 1 ? 's' : '';
+    openConfirmModal(
+        `Send Roster Email${plural} to ${count} Circle${plural}`,
+        `Email the current confirmed-participant list to <strong>${count}</strong> selected circle leader${plural}? Only Approved circles will actually receive an email. This sends real emails immediately.`,
+        '📋',
+        executeBulkSendRoster,
+        'Send',
+        false
+    );
+    pendingBulkAction = { ids, status: '__send_roster__' };
+}
+
+async function executeBulkSendRoster() {
+    if (!pendingBulkAction) return;
+    const { ids } = pendingBulkAction;
+    closeConfirmModal();
+    pendingBulkAction = null;
+
+    let successCount = 0;
+    for (const id of ids) {
+        try {
+            const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/send-roster`, { method: 'POST' });
+            if (res.ok) successCount++;
+        } catch (e) { /* keep going through the rest of the selection */ }
+    }
+    clearHubSelection();
+
+    if (successCount === ids.length) {
+        showToast(`${successCount} roster email${successCount > 1 ? 's' : ''} sent!`, 'success');
+    } else {
+        showToast(`${successCount}/${ids.length} sent — the rest were skipped (not Approved) or failed.`, 'warning');
+    }
+}
+
+// One-click version — no selection needed. Sends the roster email to every
+// currently Approved hub, regardless of what's selected or filtered on screen.
+function sendAllApprovedRosters() {
+    const approved = allHubs.filter(r => r.status === 'Approved');
+    if (approved.length === 0) {
+        showToast('No approved circles to send to.', 'warning');
+        return;
+    }
+    const count = approved.length;
+    const plural = count > 1 ? 's' : '';
+    pendingBulkAction = { ids: approved.map(r => r.id), status: '__send_roster__' };
+    openConfirmModal(
+        `Send Roster Email to All ${count} Approved Circle${plural}`,
+        `Email the current confirmed-participant list to <strong>all ${count}</strong> approved circle leader${plural}? This sends real emails immediately.`,
+        '📋',
+        executeBulkSendRoster,
+        'Send to All',
+        false
     );
 }
 

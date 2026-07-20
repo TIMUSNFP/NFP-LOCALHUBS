@@ -75,6 +75,10 @@ function wrap(body) {
     .info-box { background: #EFE7DC; border-left: 4px solid #FF5000; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
     .info-box p { margin: 4px 0; font-size: 14px; color: #333333; }
     .info-box strong { color: #6A7D8B; }
+    .roster-table { width: 100%; border-collapse: collapse; margin: 16px 0 20px; }
+    .roster-table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: #6A7D8B; padding: 0 0 8px; border-bottom: 2px solid #EFE7DC; }
+    .roster-table td { font-size: 14px; color: #333333; padding: 10px 0; border-bottom: 1px solid #EFE7DC; }
+    .roster-table td:first-child { font-weight: 700; }
     .theme-block { background: #D7E7DF; border-radius: 8px; padding: 16px 20px; margin: 20px 0; text-align: center; }
     .theme-block .theme-title { font-size: 16px; font-weight: 800; color: #333333; margin: 0 0 4px; }
     .theme-block .theme-tag { font-size: 13px; color: #6A7D8B; font-style: italic; margin: 0; }
@@ -237,9 +241,78 @@ async function sendParticipantCancelled(participant, hub) {
   });
 }
 
+// ─── Hub Roster Update ────────────────────────────────────────────────────────
+// Sent on-demand by an admin (not tied to a status change) — gives an approved
+// Circle Leader the current list of their Confirmed participants. If the circle
+// is empty or still under capacity, adds an encouraging "we're still filling it"
+// note instead of leaving them wondering why turnout looks low.
+
+async function sendHubRosterUpdate(hub, participants) {
+  const count = participants.length;
+  const capacityNum = parseInt(hub.capacity, 10) || null;
+
+  const tableHtml = count === 0 ? '' : `
+    <table class="roster-table" role="presentation">
+      <tr><th>Participant</th><th>Mobile</th></tr>
+      ${participants.map(p => `
+        <tr>
+          <td>${p.full_name}</td>
+          <td>${p.mobile}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  let noteHtml = '';
+  if (count === 0) {
+    noteHtml = `
+      <div class="info-box">
+        <p>No participants have confirmed for your circle yet — but don't worry! We're actively promoting your circle to NFP Members in ${hub.city}, and registrations are rolling in daily.</p>
+        <p><strong>Please be patient, we are working towards filling your circle.</strong> We'll keep you posted as new participants join.</p>
+      </div>
+    `;
+  } else if (capacityNum && count < capacityNum) {
+    noteHtml = `
+      <div class="info-box">
+        <p>Your circle currently has <strong>${count}</strong> confirmed participant${count > 1 ? 's' : ''}, with room for up to <strong>${capacityNum}</strong>. We're continuing to promote your circle to NFP Members in ${hub.city}.</p>
+        <p><strong>Please be patient, we are working towards filling your circle</strong> further before the big day.</p>
+      </div>
+    `;
+  }
+
+  const html = wrap(`
+    <div class="badge">📋 Your Circle Roster</div>
+    <h2>Hi ${hub.full_name}, here's who's joining your Circle!</h2>
+    <p>As your NFP Circle Meet on 5th Aug approaches, here's the latest list of participants confirmed for your circle at ${formatHubAddress(hub)}.</p>
+    ${tableHtml}
+    ${noteHtml}
+    <div class="info-box">
+      <p><strong>Date &amp; Time:</strong> 5th Aug 2026, Wed | 4:00 PM to 7:30 PM</p>
+      <p><strong>Venue:</strong> ${formatHubAddress(hub)}</p>
+    </div>
+    <p class="section-heading">What to do next</p>
+    <p>Please create a <strong>WhatsApp group</strong> for your circle and add your participants to it, along with:</p>
+    <ul class="next-steps">
+      <li><strong>Sumit Sawant</strong> — 7208931022</li>
+      <li><strong>Mrs. Priya</strong> — 98920 22653</li>
+    </ul>
+    <p>This will be the main channel for coordinating your Circle Meet, so please <strong>set it up at the earliest</strong>.</p>
+    <p>Feel free to reach out to your participants ahead of time to introduce yourself and share any last-minute details.</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a> or call us at <a href="tel:+917208931022">7208931022</a>.</p>
+    <p>Looking forward to a great Circle Meet! 🙌</p>
+  `);
+
+  await send({
+    to: hub.email,
+    subject: `Your NFP Circle Roster — ${hub.city}`,
+    html,
+  });
+}
+
 module.exports = {
   sendHubApproved,
   sendHubRejected,
   sendParticipantConfirmed,
   sendParticipantCancelled,
+  sendHubRosterUpdate,
 };
