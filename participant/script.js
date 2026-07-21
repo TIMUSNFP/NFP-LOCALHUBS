@@ -395,10 +395,20 @@ async function refreshMapMarkers() {
     allApprovedHubs.forEach(hub => {
         const coords = getHubCoords(hub);
         if (!coords) return;
-        const count = placed.get(hub.city) || 0;
-        placed.set(hub.city, count + 1);
+        // Bucket by the hub's actual (rounded) coordinate, not by city name —
+        // jitter should only kick in for hubs that land on essentially the same
+        // point (e.g. several addresses that all geocoded to the city centroid),
+        // not for every hub that merely shares a city with others. The old
+        // per-city counter grew unboundedly (0.04 + count*0.015 degrees, tens of
+        // km for a city with many circles), which is how pins ended up on
+        // highways outside the city or in the sea for coastal cities like Mumbai.
+        const bucketKey = `${coords[0].toFixed(4)},${coords[1].toFixed(4)}`;
+        const count = placed.get(bucketKey) || 0;
+        placed.set(bucketKey, count + 1);
         const angle  = count * (Math.PI * 2 / 6);
-        const radius = count === 0 ? 0 : 0.04 + count * 0.015;
+        // Small, capped spiral (max ~330m) — enough to make overlapping pins
+        // individually clickable without flying them away from their real area.
+        const radius = count === 0 ? 0 : Math.min(0.0008 + count * 0.0006, 0.003);
         const lat    = coords[0] + Math.sin(angle) * radius;
         const lng    = coords[1] + Math.cos(angle) * radius;
 

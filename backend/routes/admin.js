@@ -162,6 +162,8 @@ router.patch('/hubs/:id', async (req, res) => {
   const setClauses = [];
   const values = [];
   const notifyDiff = [];
+  const LOCATION_FIELDS = ['address', 'area', 'city', 'pincode'];
+  let locationChanged = false;
 
   for (const [field, column] of Object.entries(EDITABLE_HUB_FIELDS)) {
     if (!Object.prototype.hasOwnProperty.call(body, field)) continue;
@@ -172,6 +174,7 @@ router.patch('/hubs/:id', async (req, res) => {
     values.push(newValue);
     setClauses.push(`${column} = $${values.length}`);
 
+    if (LOCATION_FIELDS.includes(field)) locationChanged = true;
     if (NOTIFY_HUB_FIELDS[field]) {
       notifyDiff.push({ field, label: NOTIFY_HUB_FIELDS[field], oldValue, newValue });
     }
@@ -202,7 +205,30 @@ router.patch('/hubs/:id', async (req, res) => {
   values.push(req.params.id);
   await db.run(`UPDATE hubs SET ${setClauses.join(', ')} WHERE id = $${values.length}`, values);
 
-  const updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+  let updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+
+  // The map pin is only ever set once, at approval time — if an admin corrects
+  // the address/area/city/pincode afterward, re-geocode now so the pin doesn't
+  // silently keep pointing at the old (or wrong) location. Best-effort, same
+  // as the approval-time geocode: a geocoder hiccup should never break the save.
+  if (locationChanged) {
+    try {
+      const coords = await geocodeHub({
+        address: updated.address,
+        area: updated.area,
+        city: updated.city,
+        pincode: updated.pincode,
+      });
+      if (coords) {
+        const [lat, lng] = coords;
+        await db.run('UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3', [lat, lng, req.params.id]);
+        updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+      }
+    } catch (e) {
+      // Best-effort; existing lat/lng (however stale) is left untouched.
+    }
+  }
+
   res.json(hubRowToJson(updated));
 });
 
