@@ -1009,6 +1009,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     backdrop-filter: blur(3px);
 }
 .modal-overlay.visible { display: flex; }
+/* The confirm dialog can open on top of the details modal (e.g. confirming a
+   "Notify Participants" action without closing the details modal first) — it
+   must always stack above every other modal-overlay regardless of DOM order. */
+#confirmOverlay { z-index: 6000; }
 .modal {
     background: var(--white);
     border-radius: var(--radius-xl);
