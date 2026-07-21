@@ -206,6 +206,41 @@ async function geocodeQuery(query) {
   return runGeocodeRequest({ q: query });
 }
 
+// A bare `postalcode` structured search, when Nominatim has no data for that
+// exact pincode, has been observed to silently substitute an unrelated
+// postcode's centroid in the same city rather than returning no results (e.g.
+// asking for Mumbai pincode 400093 came back with a point tagged 400051) — and
+// because that result is still "somewhere in the right city" it would pass
+// isPlausibleGeocode and get accepted, pre-empting the more precise area-level
+// fallback that runs after it. Requests addressdetails and only accepts the
+// result if it actually echoes back the pincode that was asked for.
+async function runVerifiedPostcodeRequest(params, expectedPincode) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const qs = new URLSearchParams({ format: 'json', limit: '1', countrycodes: 'in', addressdetails: '1', ...params });
+    const res = await fetch(`${NOMINATIM_URL}?${qs}`, {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': NOMINATIM_USER_AGENT,
+      },
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0 && data[0].address && data[0].address.postcode === expectedPincode) {
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
+    }
+  } catch (e) {
+    // try next query (includes abort/timeout)
+  } finally {
+    clearTimeout(timer);
+  }
+  return null;
+}
+
 // Tries the most specific lookup first, falling back to progressively coarser ones,
 // with a 300ms delay between attempts (Nominatim's usage policy caps at 1 req/sec).
 // PIN code is used wherever available via Nominatim's structured `postalcode` param,
@@ -223,7 +258,7 @@ async function geocodeHub({ address, area, city, pincode }) {
   const attempts = [];
 
   if (address && pincode) {
-    attempts.push(() => runGeocodeRequest({ street: address, postalcode: pincode, city, country: 'India' }));
+    attempts.push(() => runVerifiedPostcodeRequest({ street: address, postalcode: pincode, city, country: 'India' }, pincode));
   }
   if (address) {
     attempts.push(() => geocodeQuery(pincode ? `${address}, ${pincode}, ${city}, India` : `${address}, ${city}, India`));
@@ -238,17 +273,22 @@ async function geocodeHub({ address, area, city, pincode }) {
       geocodeQuery(pincode ? `${strippedAddress}, ${pincode}, ${city}, India` : `${strippedAddress}, ${city}, India`)
     );
   }
-  if (pincode) {
-    attempts.push(() => runGeocodeRequest({ postalcode: pincode, city, country: 'India' }));
-    // Retried without the city constraint too — if the stored city name doesn't
-    // exactly match Nominatim's administrative-area name, adding it can cause an
-    // otherwise-findable postcode match to fail.
-    attempts.push(() => runGeocodeRequest({ postalcode: pincode, country: 'India' }));
-  }
+  // Area-level lookups are the most reliably precise fallback for Indian
+  // addresses — well-known localities like "Andheri East" are mapped in OSM
+  // even when the exact building isn't. Tried before the bare-postcode
+  // structured queries below, since those have been observed to silently
+  // return an unrelated postcode's centroid rather than failing outright.
   if (area && pincode) {
     attempts.push(() => geocodeQuery(`${area}, ${pincode}, ${city}, India`));
   }
   attempts.push(() => geocodeQuery(`${area}, ${city}, India`));
+  if (pincode) {
+    attempts.push(() => runVerifiedPostcodeRequest({ postalcode: pincode, city, country: 'India' }, pincode));
+    // Retried without the city constraint too — if the stored city name doesn't
+    // exactly match Nominatim's administrative-area name, adding it can cause an
+    // otherwise-findable postcode match to fail.
+    attempts.push(() => runVerifiedPostcodeRequest({ postalcode: pincode, country: 'India' }, pincode));
+  }
   attempts.push(() => geocodeQuery(`${city}, India`));
 
   for (const attempt of attempts) {
