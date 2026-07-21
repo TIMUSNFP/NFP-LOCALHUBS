@@ -1020,7 +1020,13 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     animation: modalIn .3s cubic-bezier(.34, 1.56, .64, 1);
     box-shadow: var(--shadow-xl);
 }
-.modal-lg { max-width: 640px; text-align: left; }
+.modal-lg {
+    max-width: 1100px;
+    width: 95vw;
+    text-align: left;
+    max-height: 90vh;
+    overflow-y: auto;
+}
 @keyframes modalIn {
     from { transform: scale(.85); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
@@ -1046,6 +1052,15 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     align-items: center;
     justify-content: center;
     transition: all var(--transition);
+}
+/* .modal-lg scrolls internally (tall hub-details content) — keep the close
+   button reachable at all scroll positions instead of scrolling away. */
+.modal-lg .modal-x {
+    position: sticky;
+    float: right;
+    top: 0;
+    margin-bottom: -32px;
+    z-index: 1;
 }
 .modal-x:hover { background: var(--border); color: var(--dark); }
 
