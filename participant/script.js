@@ -679,7 +679,6 @@ function findNearMe() {
 
             const closest = withDistance[0];
             showToast(`Nearest Circle found in ${closest.city}!`, 'success');
-            setTimeout(() => selectHubById(closest.id), 800);
         },
         () => showToast('Could not get your location. Please allow location access.', 'error')
     );
