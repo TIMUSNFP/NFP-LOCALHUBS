@@ -1044,6 +1044,7 @@ function viewDetails(id) {
     const titleEl = document.getElementById('detailsTitle');
     if (titleEl) titleEl.textContent = 'Application Details';
     const content = document.getElementById('detailsContent');
+    const pendingChanges = Array.isArray(reg.pendingChangeSummary) ? reg.pendingChangeSummary : [];
     content.innerHTML = `
         <div class="detail-section">
             <h4>Application Info</h4>
@@ -1063,6 +1064,15 @@ function viewDetails(id) {
                 ${reg.lastUpdated ? `<div class="detail-item"><label>Last Updated</label><span>${formatDate(reg.lastUpdated)}</span></div>` : ''}
             </div>
         </div>
+        ${pendingChanges.length > 0 ? `
+        <div class="change-banner">
+            <strong>${pendingChanges.length} change${pendingChanges.length > 1 ? 's' : ''} not yet notified to participants:</strong>
+            <ul>
+                ${pendingChanges.map(c => `<li>${escHtml(c.label)}: ${escHtml(c.oldValue || '—')} &rarr; ${escHtml(c.newValue || '—')}</li>`).join('')}
+            </ul>
+            <button class="act-btn act-view" onclick="notifyHubUpdate('${escHtml(reg.id)}')" title="${reg.changeNotifiedAt ? 'Last notified ' + formatDate(reg.changeNotifiedAt) : 'Never notified'}">📣 Notify Participants</button>
+        </div>
+        ` : ''}
         <div class="detail-section">
             <h4>Personal Details</h4>
             <div class="detail-grid">
@@ -1132,9 +1142,146 @@ function viewDetails(id) {
             ${reg.status !== 'Rejected'
                 ? `<button class="btn-primary" style="background:var(--danger)" onclick="closeDetailsModal();confirmReject('${escHtml(reg.id)}')">❌ Reject</button>`
                 : ''}
+            <button class="btn-primary" onclick="enterEditMode('${escHtml(reg.id)}')">✏️ Edit Details</button>
         </div>
     `;
     document.getElementById('detailsOverlay').classList.add('visible');
+}
+
+// ═══════════════════ HUB EDIT MODE ═══════════════════
+const CAPACITY_OPTIONS = Array.from({ length: 11 }, (_, i) => `${i + 5} People`);
+const MEMBERSHIP_OPTIONS = ['QPFP Certificant', 'NFP Member', 'Both NFP ProMember & QPFP Certificant'];
+const HOSTING_FREQUENCY_OPTIONS = ['Only host on 5 August', 'Once a Quarter', 'Open to Either'];
+
+function optionsHtml(options, current) {
+    return options.map(o => `<option value="${escHtml(o)}" ${o === current ? 'selected' : ''}>${escHtml(o)}</option>`).join('');
+}
+
+function enterEditMode(id) {
+    const reg = allHubs.find(r => String(r.id) === String(id));
+    if (!reg) return;
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = 'Edit Circle Leader Details';
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `
+        <div class="detail-section">
+            <h4>Personal Details</h4>
+            <div class="detail-grid">
+                <div class="detail-item"><label>Full Name</label><input id="editFullName" class="form-input" value="${escHtml(reg.fullName)}"></div>
+                <div class="detail-item"><label>Email</label><input id="editEmail" class="form-input" type="email" value="${escHtml(reg.email)}"></div>
+                <div class="detail-item"><label>Mobile</label><input id="editMobile" class="form-input" value="${escHtml(reg.mobile)}"></div>
+                <div class="detail-item">
+                    <label>Membership Type</label>
+                    <select id="editMembership" class="form-input">${optionsHtml(MEMBERSHIP_OPTIONS, reg.membership)}</select>
+                </div>
+            </div>
+        </div>
+        <div class="detail-section">
+            <h4>Circle / Venue Details</h4>
+            <div class="detail-grid">
+                <div class="detail-item"><label>City</label><input id="editCity" class="form-input" value="${escHtml(reg.city)}"></div>
+                <div class="detail-item"><label>Area / Locality</label><input id="editArea" class="form-input" value="${escHtml(reg.area)}"></div>
+                <div class="detail-item"><label>PIN Code</label><input id="editPincode" class="form-input" value="${escHtml(reg.pincode)}"></div>
+                <div class="detail-item"><label>Full Address</label><input id="editAddress" class="form-input" value="${escHtml(reg.address || '')}"></div>
+                <div class="detail-item"><label>Venue Type</label><input id="editVenueType" class="form-input" value="${escHtml(reg.venueType)}"></div>
+                <div class="detail-item">
+                    <label>Hosting Capacity</label>
+                    <select id="editCapacity" class="form-input">${optionsHtml(CAPACITY_OPTIONS, reg.capacity)}</select>
+                </div>
+                <div class="detail-item">
+                    <label>Hosted NFP Event Before?</label>
+                    <select id="editHostedBefore" class="form-input">${optionsHtml(['Yes', 'No'], reg.hostedBefore)}</select>
+                </div>
+                <div class="detail-item">
+                    <label>Willing to Host NFP Circle</label>
+                    <select id="editHostingFrequency" class="form-input">${optionsHtml(HOSTING_FREQUENCY_OPTIONS, reg.hostingFrequency)}</select>
+                </div>
+                <div class="detail-item">
+                    <label>Circle POC</label>
+                    <select id="editPocRole" class="form-input">
+                        <option value="self" ${reg.pocRole !== 'assign' ? 'selected' : ''}>I will be the POC</option>
+                        <option value="assign" ${reg.pocRole === 'assign' ? 'selected' : ''}>Will assign someone else</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn-primary" onclick="saveHubEdits('${escHtml(reg.id)}')">💾 Save Changes</button>
+            <button class="act-btn act-view" onclick="viewDetails('${escHtml(reg.id)}')">Cancel</button>
+        </div>
+    `;
+}
+
+async function saveHubEdits(id) {
+    const body = {
+        fullName: document.getElementById('editFullName').value.trim(),
+        email: document.getElementById('editEmail').value.trim(),
+        mobile: document.getElementById('editMobile').value.trim(),
+        membership: document.getElementById('editMembership').value,
+        city: document.getElementById('editCity').value.trim(),
+        area: document.getElementById('editArea').value.trim(),
+        pincode: document.getElementById('editPincode').value.trim(),
+        address: document.getElementById('editAddress').value.trim(),
+        venueType: document.getElementById('editVenueType').value.trim(),
+        capacity: document.getElementById('editCapacity').value,
+        hostedBefore: document.getElementById('editHostedBefore').value,
+        hostingFrequency: document.getElementById('editHostingFrequency').value,
+        pocRole: document.getElementById('editPocRole').value,
+    };
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (res.ok) {
+            const updated = await res.json();
+            const idx = allHubs.findIndex(r => String(r.id) === String(id));
+            if (idx !== -1) allHubs[idx] = { ...allHubs[idx], ...updated };
+            showToast('Circle Leader details updated.', 'success');
+            viewDetails(id);
+        } else {
+            const errBody = await res.json().catch(() => ({}));
+            showToast(errBody.error || 'Failed to save changes.', 'error');
+        }
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+}
+
+// Email every Confirmed participant about this hub's pending (unnotified)
+// changes, then clear the pending-change banner. Confirmed count is computed
+// from allParticipants rather than the hub row, since that's the exact
+// audience the backend will actually send to.
+function notifyHubUpdate(id) {
+    const reg = allHubs.find(r => String(r.id) === String(id));
+    if (!reg) return;
+    const pendingChanges = Array.isArray(reg.pendingChangeSummary) ? reg.pendingChangeSummary : [];
+    if (pendingChanges.length === 0) return;
+    const confirmedCount = allParticipants.filter(p => String(p.hubId) === String(id) && p.status === 'Confirmed').length;
+    const changeList = pendingChanges.map(c => `${escHtml(c.label)}: ${escHtml(c.oldValue || '—')} &rarr; ${escHtml(c.newValue || '—')}`).join('<br>');
+    openConfirmModal(
+        'Notify Participants of Update',
+        `Email <strong>${confirmedCount}</strong> confirmed participant${confirmedCount === 1 ? '' : 's'} of <strong>${escHtml(reg.fullName)}</strong>'s circle about these changes?<br><br>${changeList}`,
+        '📣',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/notify-update`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('Participants notified.', 'success');
+                    await updateDashboard();
+                    closeDetailsModal();
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    showToast(body.error || 'Failed to notify participants.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Notify'
+    );
 }
 
 // ═══════════════════ CONFIRM MODAL ═══════════════════

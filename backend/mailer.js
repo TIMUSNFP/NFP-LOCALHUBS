@@ -309,10 +309,47 @@ async function sendHubRosterUpdate(hub, participants) {
   });
 }
 
+// ─── Hub Details Updated ──────────────────────────────────────────────────────
+// Sent on-demand by an admin after editing a Circle Leader's details — tells a
+// Confirmed participant exactly which fields changed. If the change touched the
+// venue address, also spells out the new full address so it isn't left buried
+// in a raw old-vs-new diff.
+
+async function sendHubDetailsUpdated(participant, hub, changes) {
+  const diffHtml = changes
+    .map((c) => `<p><strong>${c.label}:</strong> ${c.oldValue || '—'} &rarr; ${c.newValue || '—'}</p>`)
+    .join('');
+
+  const addressChanged = changes.some((c) => ['address', 'area', 'city', 'pincode'].includes(c.field));
+
+  const html = wrap(`
+    <div class="badge">📣 Circle Update</div>
+    <h2>Hi ${participant.full_name}, there's an update to your NFP Circle</h2>
+    <p>Your Circle Leader, <strong>${hub.full_name}</strong>, has updated some details for the circle you're registered with. Here's what changed:</p>
+    <div class="info-box">
+      ${diffHtml}
+    </div>
+    ${addressChanged ? `
+    <div class="info-box">
+      <p><strong>Updated Venue Address:</strong> ${formatHubAddress(hub)}</p>
+    </div>
+    ` : ''}
+    <p>No action is needed from you — just make a note of the change ahead of your Circle Meet.</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+  `);
+
+  await send({
+    to: participant.email,
+    subject: `Update to your NFP Circle — ${hub.city}`,
+    html,
+  });
+}
+
 module.exports = {
   sendHubApproved,
   sendHubRejected,
   sendParticipantConfirmed,
   sendParticipantCancelled,
   sendHubRosterUpdate,
+  sendHubDetailsUpdated,
 };

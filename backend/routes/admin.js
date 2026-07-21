@@ -6,12 +6,50 @@ const db = require('../db');
 const { hubRowToJson, participantRowToJson, geocodeHub } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
 const { readFormSettings } = require('./settings');
-const { sendHubApproved, sendHubRejected, sendParticipantConfirmed, sendParticipantCancelled, sendHubRosterUpdate } = require('../mailer');
+const {
+  sendHubApproved,
+  sendHubRejected,
+  sendParticipantConfirmed,
+  sendParticipantCancelled,
+  sendHubRosterUpdate,
+  sendHubDetailsUpdated,
+} = require('../mailer');
 
 const router = express.Router();
 
 const VALID_HUB_STATUSES = ['Approved', 'Rejected', 'Pending'];
 const VALID_PARTICIPANT_STATUSES = ['Confirmed', 'Cancelled', 'Pending'];
+
+// Fields an admin may correct on a hub, camelCase (API/body) -> DB column.
+const EDITABLE_HUB_FIELDS = {
+  fullName: 'full_name',
+  email: 'email',
+  mobile: 'mobile',
+  membership: 'membership',
+  city: 'city',
+  area: 'area',
+  address: 'address',
+  pincode: 'pincode',
+  venueType: 'venue_type',
+  capacity: 'capacity',
+  hostedBefore: 'hosted_before',
+  hostingFrequency: 'hosting_frequency',
+  pocRole: 'poc_role',
+};
+
+// Subset of EDITABLE_HUB_FIELDS worth telling participants about when changed —
+// e.g. a corrected email or "hosted before?" answer isn't their concern, but the
+// venue address or leader's contact number is.
+const NOTIFY_HUB_FIELDS = {
+  fullName: 'Circle Leader Name',
+  mobile: 'Circle Leader Mobile Number',
+  city: 'City',
+  area: 'Area / Locality',
+  address: 'Address',
+  pincode: 'PIN Code',
+  venueType: 'Venue Type',
+  capacity: 'Hosting Capacity',
+};
 
 // POST /api/admin/login — public.
 router.post('/login', async (req, res) => {
@@ -111,6 +149,63 @@ router.patch('/hubs/:id/status', async (req, res) => {
   res.json(hubRowToJson(updated));
 });
 
+// PATCH /api/admin/hubs/:id — correct a Circle Leader's own details (address,
+// city, venue, etc). Only whitelisted fields are accepted. Any change to a
+// participant-relevant field (NOTIFY_HUB_FIELDS) is accumulated into
+// pending_change_summary so an admin can later email affected participants via
+// POST /hubs/:id/notify-update — it does not send anything itself.
+router.patch('/hubs/:id', async (req, res) => {
+  const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+  if (!hub) return res.status(404).json({ error: 'Hub not found' });
+
+  const body = req.body || {};
+  const setClauses = [];
+  const values = [];
+  const notifyDiff = [];
+
+  for (const [field, column] of Object.entries(EDITABLE_HUB_FIELDS)) {
+    if (!Object.prototype.hasOwnProperty.call(body, field)) continue;
+    const newValue = body[field];
+    const oldValue = hub[column];
+    if (newValue === oldValue) continue;
+
+    values.push(newValue);
+    setClauses.push(`${column} = $${values.length}`);
+
+    if (NOTIFY_HUB_FIELDS[field]) {
+      notifyDiff.push({ field, label: NOTIFY_HUB_FIELDS[field], oldValue, newValue });
+    }
+  }
+
+  if (setClauses.length === 0) {
+    return res.json(hubRowToJson(hub));
+  }
+
+  // Merge this save's diff into any still-unnotified changes: a field already
+  // pending keeps its original oldValue (the value participants last saw), only
+  // its newValue advances — so several edits before a notify collapse into one
+  // net change instead of overwriting each other.
+  const existingSummary = Array.isArray(hub.pending_change_summary) ? hub.pending_change_summary : [];
+  const mergedByField = new Map(existingSummary.map((entry) => [entry.field, entry]));
+  for (const entry of notifyDiff) {
+    const prior = mergedByField.get(entry.field);
+    mergedByField.set(entry.field, prior ? { ...entry, oldValue: prior.oldValue } : entry);
+  }
+  const mergedSummary = Array.from(mergedByField.values());
+
+  values.push(JSON.stringify(mergedSummary));
+  setClauses.push(`pending_change_summary = $${values.length}`);
+
+  values.push(new Date().toISOString());
+  setClauses.push(`last_updated = $${values.length}`);
+
+  values.push(req.params.id);
+  await db.run(`UPDATE hubs SET ${setClauses.join(', ')} WHERE id = $${values.length}`, values);
+
+  const updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+  res.json(hubRowToJson(updated));
+});
+
 // GET /api/admin/participants — all participants, joined with hub fields.
 router.get('/participants', async (req, res) => {
   const rows = await db.all(
@@ -152,6 +247,35 @@ router.post('/hubs/:id/send-roster', async (req, res) => {
   await db.run('UPDATE hubs SET roster_sent_at = $1 WHERE id = $2', [rosterSentAt, req.params.id]);
 
   res.json({ ok: true, participantCount: participants.length, rosterSentAt });
+});
+
+// POST /api/admin/hubs/:id/notify-update — email every Confirmed participant
+// about the hub's pending_change_summary (set by PATCH /hubs/:id), then clear it.
+// Separate, explicit action from saving an edit so an admin can review the diff
+// (and batch several edits) before anyone gets emailed.
+router.post('/hubs/:id/notify-update', async (req, res) => {
+  const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+  if (!hub) return res.status(404).json({ error: 'Hub not found' });
+
+  const changes = Array.isArray(hub.pending_change_summary) ? hub.pending_change_summary : [];
+  if (changes.length === 0) {
+    return res.status(400).json({ error: 'No pending changes to notify participants about.' });
+  }
+
+  const participants = await db.all(
+    "SELECT * FROM participants WHERE hub_id = $1 AND status = 'Confirmed' ORDER BY registered_at ASC",
+    [req.params.id]
+  );
+
+  await Promise.all(participants.map((p) => sendHubDetailsUpdated(p, hub, changes)));
+
+  const changeNotifiedAt = new Date().toISOString();
+  await db.run('UPDATE hubs SET pending_change_summary = NULL, change_notified_at = $1 WHERE id = $2', [
+    changeNotifiedAt,
+    req.params.id,
+  ]);
+
+  res.json({ ok: true, participantCount: participants.length, changeNotifiedAt });
 });
 
 // DELETE /api/admin/hubs/:id — permanently remove a hub leader application. This is

@@ -1065,6 +1065,20 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .detail-item label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .5px; }
 .detail-item span { font-size: 14px; color: var(--dark); font-weight: 500; }
+.detail-item input.form-input, .detail-item select.form-input { padding: 8px 12px; font-size: 14px; }
+
+/* Pending, unnotified hub-detail changes (PATCH /hubs/:id sets these) */
+.change-banner {
+    background: #FEF3E2;
+    border-left: 4px solid var(--warning);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--dark);
+}
+.change-banner ul { margin: 8px 0 12px; padding-left: 18px; }
+.change-banner li { margin-bottom: 4px; }
 
 /* ══════════════════════════════════════════════════════
    UTILITIES

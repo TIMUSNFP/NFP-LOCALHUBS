@@ -50,6 +50,8 @@ function hubRowToJson(row) {
     lat: row.lat,
     lng: row.lng,
     rosterSentAt: row.roster_sent_at,
+    pendingChangeSummary: row.pending_change_summary || null,
+    changeNotifiedAt: row.change_notified_at,
   };
 }
 

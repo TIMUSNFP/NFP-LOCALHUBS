@@ -25,8 +25,18 @@ create table if not exists hubs (
   hosting_frequency text,
   lat double precision,
   lng double precision,
-  roster_sent_at text
+  roster_sent_at text,
+  poc_role text,
+  pending_change_summary jsonb,
+  change_notified_at text
 );
+
+-- Columns added after the table's initial creation — `alter table ... add column
+-- if not exists` so re-running this file against the live DB is a no-op if
+-- already applied, but still brings an older DB up to date.
+alter table hubs add column if not exists poc_role text;
+alter table hubs add column if not exists pending_change_summary jsonb;
+alter table hubs add column if not exists change_notified_at text;
 
 -- Participant registrations (each tied to an approved hub)
 create table if not exists participants (
