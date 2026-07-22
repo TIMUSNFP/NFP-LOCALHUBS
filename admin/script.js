@@ -22,6 +22,7 @@ let allParticipants  = [];
 let trendMode        = 'day';
 let trendModeP       = 'day'; // Registrations Over Time (Participants) — independent of the Applications toggle
 let analyticsRangeDays = null; // null = All Time, otherwise 7/30/90 — global filter for the whole Analytics tab
+let lowParticipantThreshold = 3; // "Circles with ≤N Participants" filter under Supply vs Demand by City
 let selectedHubIds   = new Set(); // bulk-select state for the Applications table
 let pendingBulkAction = null;     // { ids, status } awaiting confirm-modal approval
 let selectedParticipantIds = new Set(); // bulk-select state for the Participants table
@@ -1422,6 +1423,7 @@ function renderAnalytics() {
 
     // Combined
     renderSupplyVsDemand(hubsAll, partsAll);
+    renderLowParticipantCircles(hubsAll, partsAll, lowParticipantThreshold);
     renderCapacityVsRegistered(hubsAll, partsAll);
 }
 
@@ -1799,6 +1801,46 @@ function renderCirclesWithNoParticipants(hubs, parts) {
                     <div>
                         <div class="ec-name">${escHtml(h.fullName)}</div>
                         <div class="ec-loc">${escHtml(h.city)}${h.area ? ' · '+escHtml(h.area) : ''}</div>
+                    </div>
+                </div>`).join('')
+        }</div>`;
+}
+
+function setLowParticipantThreshold(n, btn) {
+    lowParticipantThreshold = n;
+    document.querySelectorAll('.lp-threshold-row .chip').forEach(c => c.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    // State metric (current fill level) — always the full dataset, not the date-range filter.
+    renderLowParticipantCircles(allHubs, allParticipants, lowParticipantThreshold);
+}
+
+function renderLowParticipantCircles(hubs, parts, threshold) {
+    const el = document.getElementById('lowParticipantCirclesList');
+    if (!el) return;
+    const countByHub = {};
+    parts.filter(p => p.status === 'Confirmed').forEach(p => {
+        countByHub[p.hubId] = (countByHub[p.hubId] || 0) + 1;
+    });
+    const matches = hubs
+        .filter(h => h.status === 'Approved')
+        .map(h => ({ hub: h, count: countByHub[String(h.id)] || 0 }))
+        .filter(({ count }) => count <= threshold)
+        .sort((a, b) => a.count - b.count);
+
+    if (!matches.length) {
+        el.innerHTML = `<div class="a-no-data" style="color:#16A34A">No circles with ${threshold} or fewer participants!</div>`;
+        return;
+    }
+    el.classList.add('chart-scroll');
+    el.innerHTML = `
+        <div class="empty-circle-count">${matches.length} circle${matches.length > 1 ? 's' : ''} with ${threshold} or fewer participants</div>
+        <div class="empty-circles-grid">${
+            matches.map(({ hub, count }) => `
+                <div class="empty-circle-row">
+                    <span class="ec-dot"></span>
+                    <div>
+                        <div class="ec-name">${escHtml(hub.fullName)}</div>
+                        <div class="ec-loc">${escHtml(hub.city)}${hub.area ? ' · '+escHtml(hub.area) : ''} — <strong>${count}</strong> participant${count === 1 ? '' : 's'}</div>
                     </div>
                 </div>`).join('')
         }</div>`;

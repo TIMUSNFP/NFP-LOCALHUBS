@@ -317,6 +317,18 @@
                         <h3>Supply vs Demand by City</h3>
                         <div class="analytics-sublabel">Approved circles (supply) vs confirmed participants (demand) per city</div>
                         <div id="supplyDemandBars"></div>
+                        <div class="lp-threshold-row">
+                            <span class="analytics-range-label">Circles with &le;</span>
+                            <div class="filter-chips">
+                                <button class="chip" data-lp="1" onclick="setLowParticipantThreshold(1, this)">1</button>
+                                <button class="chip" data-lp="2" onclick="setLowParticipantThreshold(2, this)">2</button>
+                                <button class="chip active" data-lp="3" onclick="setLowParticipantThreshold(3, this)">3</button>
+                                <button class="chip" data-lp="4" onclick="setLowParticipantThreshold(4, this)">4</button>
+                                <button class="chip" data-lp="5" onclick="setLowParticipantThreshold(5, this)">5</button>
+                            </div>
+                            <span class="analytics-range-label">Participants</span>
+                        </div>
+                        <div id="lowParticipantCirclesList"></div>
                     </div>
                     <div class="analytics-card">
                         <h3>Total Capacity vs Registered</h3>
