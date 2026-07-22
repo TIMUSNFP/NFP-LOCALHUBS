@@ -1358,6 +1358,15 @@ function exportCSV() {
 //  ANALYTICS — FULL SUITE
 // ═══════════════════════════════════════════════════════════════
 
+function showAnalyticsSection(section, btn) {
+    document.querySelectorAll('.analytics-section-toggle .ast-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const sections = { hubs: 'analyticsSectionHubs', participants: 'analyticsSectionParticipants', combined: 'analyticsSectionCombined' };
+    Object.entries(sections).forEach(([key, id]) => {
+        document.getElementById(id)?.classList.toggle('hidden', key !== section);
+    });
+}
+
 function setAnalyticsRange(range, btn) {
     analyticsRangeDays = range === 'all' ? null : range;
     document.querySelectorAll('.analytics-range-bar .chip').forEach(c => c.classList.remove('active'));

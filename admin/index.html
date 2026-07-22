@@ -184,6 +184,11 @@
             <div id="tabAnalytics" class="admin-tab hidden">
 
                 <div class="analytics-range-bar">
+                    <div class="analytics-section-toggle">
+                        <button class="ast-btn active" data-section="hubs" onclick="showAnalyticsSection('hubs', this)">Hub Leader Insights</button>
+                        <button class="ast-btn" data-section="participants" onclick="showAnalyticsSection('participants', this)">Participant Insights</button>
+                        <button class="ast-btn" data-section="combined" onclick="showAnalyticsSection('combined', this)">Combined Insights</button>
+                    </div>
                     <span class="analytics-range-label">Date Range</span>
                     <div class="filter-chips">
                         <button class="chip" data-range="7" onclick="setAnalyticsRange(7, this)">Last 7 Days</button>
@@ -193,6 +198,7 @@
                     </div>
                 </div>
 
+                <div id="analyticsSectionHubs">
                 <div class="analytics-section-title">Hub Leader Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card">
@@ -262,7 +268,9 @@
                         <div class="chart-legend" id="pocLegend"></div>
                     </div>
                 </div>
+                </div>
 
+                <div id="analyticsSectionParticipants" class="hidden">
                 <div class="analytics-section-title">Participant Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card">
@@ -300,7 +308,9 @@
                         <div id="noParticipantsList"></div>
                     </div>
                 </div>
+                </div>
 
+                <div id="analyticsSectionCombined" class="hidden">
                 <div class="analytics-section-title">Combined Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card analytics-card-wide">
@@ -312,6 +322,7 @@
                         <h3>Total Capacity vs Registered</h3>
                         <div id="capacityVsRegistered"></div>
                     </div>
+                </div>
                 </div>
 
             </div>
