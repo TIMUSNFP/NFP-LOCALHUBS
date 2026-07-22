@@ -183,6 +183,16 @@
             <!-- Analytics Tab -->
             <div id="tabAnalytics" class="admin-tab hidden">
 
+                <div class="analytics-range-bar">
+                    <span class="analytics-range-label">Date Range</span>
+                    <div class="filter-chips">
+                        <button class="chip" data-range="7" onclick="setAnalyticsRange(7, this)">Last 7 Days</button>
+                        <button class="chip" data-range="30" onclick="setAnalyticsRange(30, this)">Last 30 Days</button>
+                        <button class="chip" data-range="90" onclick="setAnalyticsRange(90, this)">Last 90 Days</button>
+                        <button class="chip active" data-range="all" onclick="setAnalyticsRange('all', this)">All Time</button>
+                    </div>
+                </div>
+
                 <div class="analytics-section-title">Hub Leader Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card">
@@ -256,7 +266,13 @@
                 <div class="analytics-section-title">Participant Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card">
-                        <h3>Registrations Over Time</h3>
+                        <div class="chart-header">
+                            <h3>Registrations Over Time</h3>
+                            <div class="trend-toggle">
+                                <button class="tt-btn active" id="regTrendDayBtn" onclick="setRegTrendMode('day')">Days</button>
+                                <button class="tt-btn" id="regTrendMonthBtn" onclick="setRegTrendMode('month')">Months</button>
+                            </div>
+                        </div>
                         <div class="trend-chart" id="regTrendBars"></div>
                     </div>
                     <div class="analytics-card">

@@ -20,6 +20,8 @@ let pendingRegId     = null;
 let allHubs          = [];
 let allParticipants  = [];
 let trendMode        = 'day';
+let trendModeP       = 'day'; // Registrations Over Time (Participants) — independent of the Applications toggle
+let analyticsRangeDays = null; // null = All Time, otherwise 7/30/90 — global filter for the whole Analytics tab
 let selectedHubIds   = new Set(); // bulk-select state for the Applications table
 let pendingBulkAction = null;     // { ids, status } awaiting confirm-modal approval
 let selectedParticipantIds = new Set(); // bulk-select state for the Participants table
@@ -1356,18 +1358,41 @@ function exportCSV() {
 //  ANALYTICS — FULL SUITE
 // ═══════════════════════════════════════════════════════════════
 
+function setAnalyticsRange(range, btn) {
+    analyticsRangeDays = range === 'all' ? null : range;
+    document.querySelectorAll('.analytics-range-bar .chip').forEach(c => c.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderAnalytics();
+}
+
+function filterByAnalyticsRange(items, dateField) {
+    if (!analyticsRangeDays) return items;
+    const cutoff = Date.now() - analyticsRangeDays * 86400000;
+    return items.filter(item => {
+        const t = new Date(item[dateField]).getTime();
+        return Number.isFinite(t) && t >= cutoff;
+    });
+}
+
 function renderAnalytics() {
-    const hubs  = allHubs;
-    const parts = allParticipants;
-    if (!hubs.length) return;
+    if (!allHubs.length) return;
+    // "Flow" charts (activity that happened within the selected window) respect the
+    // date-range filter. "State" charts (what's true right now — capacity, fill rate,
+    // which circles are empty) always reflect the full current dataset, since filtering
+    // e.g. "Circles with No Participants" to the last 7 days would hide older empty
+    // circles instead of showing the real current gap.
+    const hubs  = filterByAnalyticsRange(allHubs, 'submittedAt');
+    const parts = filterByAnalyticsRange(allParticipants, 'registeredAt');
+    const hubsAll  = allHubs;
+    const partsAll = allParticipants;
 
     // Hub Leader Insights
     renderDonut(hubs);
     renderApplicationTrend(hubs);
     renderStatusFunnel(hubs, parts);
     renderCityBars(hubs);
-    renderCitiesKpi(hubs);
-    renderCitiesNeedingCircles(hubs);
+    renderCitiesKpi(hubsAll);
+    renderCitiesNeedingCircles(hubsAll);
     renderAreaBars(hubs);
     renderApprovalByCity(hubs);
     renderMemberBars(hubs);
@@ -1382,13 +1407,13 @@ function renderAnalytics() {
     renderParticipantsByCity(parts);
     renderTopCirclesByParticipants(parts);
     renderParticipantMembership(parts);
-    renderCircleFillRate(hubs, parts);
+    renderCircleFillRate(hubsAll, partsAll);
     renderCancellationKpi(parts);
-    renderCirclesWithNoParticipants(hubs, parts);
+    renderCirclesWithNoParticipants(hubsAll, partsAll);
 
     // Combined
-    renderSupplyVsDemand(hubs, parts);
-    renderCapacityVsRegistered(hubs, parts);
+    renderSupplyVsDemand(hubsAll, partsAll);
+    renderCapacityVsRegistered(hubsAll, partsAll);
 }
 
 // ── Shared: horizontal bar set ──
@@ -1492,6 +1517,13 @@ function setTrendMode(mode) {
     document.getElementById('trendDayBtn')?.classList.toggle('active', mode === 'day');
     document.getElementById('trendMonthBtn')?.classList.toggle('active', mode === 'month');
     renderApplicationTrend(allHubs);
+}
+
+function setRegTrendMode(mode) {
+    trendModeP = mode;
+    document.getElementById('regTrendDayBtn')?.classList.toggle('active', mode === 'day');
+    document.getElementById('regTrendMonthBtn')?.classList.toggle('active', mode === 'month');
+    renderRegistrationTrend(allParticipants);
 }
 
 // ══ HUB LEADER CHARTS ══
@@ -1624,7 +1656,10 @@ function renderPocRole(regs) {
 // ══ PARTICIPANT CHARTS ══
 
 function renderRegistrationTrend(parts) {
-    renderTrendChart('regTrendBars', groupByMonth(parts, 'registeredAt'), '#7C3AED');
+    const data = trendModeP === 'day'
+        ? groupByDay(parts, 'registeredAt')
+        : groupByMonth(parts, 'registeredAt');
+    renderTrendChart('regTrendBars', data, '#7C3AED');
 }
 
 function renderParticipantsByCity(parts) {
