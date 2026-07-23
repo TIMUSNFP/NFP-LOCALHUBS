@@ -27,6 +27,17 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Lets one campaign subject read differently per recipient — e.g. "NFP Circles
+// are open in {city}!" becomes "...in Mumbai!" for a Mumbai contact. Strips
+// stray CR/LF from the city before substitution (a subject line becomes an
+// email header at send time, and a newline in the substituted value can be used
+// to inject extra headers — city is admin-imported spreadsheet data, so this is
+// defense in depth rather than a response to any known bad input).
+function renderCrmSubject(template, city) {
+  const safeCity = String(city || 'your city').replace(/[\r\n]+/g, ' ').trim();
+  return String(template || '').replace(/\{city\}/gi, safeCity);
+}
+
 // Column-header aliases so a re-export with slightly different wording/column
 // order still imports correctly — matched case-insensitively against the
 // uploaded sheet's actual header row.
@@ -416,14 +427,17 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
     }
   }
 
+  const renderedSubject = renderCrmSubject(campaign.subject, sampleContact.city);
+
   const html = buildCircleCrmEmailHtml(
     { id: sampleContact.id, full_name: sampleContact.full_name, email: sampleContact.email, city: sampleContact.city },
     hubs,
-    { subject: campaign.subject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : (campaign.target_cities || []) }
+    { subject: renderedSubject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : (campaign.target_cities || []) }
   );
 
   res.json({
     html,
+    subject: renderedSubject,
     sampleContactEmail: sampleContact.email,
     sampleContactCity: sampleContact.city,
     hubCount: hubs.length,
@@ -557,7 +571,11 @@ router.post('/campaigns/:id/process-batch', asyncHandler(async (req, res) => {
       await sendCrmCampaignEmail(
         { id: contact.id, full_name: contact.full_name, email: contact.email, city: contact.city },
         hubs,
-        { subject: campaign.subject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : targetCities }
+        {
+          subject: renderCrmSubject(campaign.subject, contact.city),
+          introHtml: campaign.intro_html,
+          targetCities: mode === 'auto' ? [] : targetCities,
+        }
       );
       await db.run(
         `UPDATE crm_campaign_recipients SET status = 'Sent', sent_at = $1 WHERE id = $2`,

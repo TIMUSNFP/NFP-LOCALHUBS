@@ -2816,12 +2816,13 @@ async function previewCrmCampaign(id, sampleCity) {
         const c = allCrmCampaigns.find(x => x.id === id);
         const isAuto = data.targetMode === 'auto';
         content.innerHTML = `
-            <p style="color:var(--muted);font-size:13px;margin-bottom:12px">
+            <p style="color:var(--muted);font-size:13px;margin-bottom:4px">
                 Showing exactly what <strong>${escHtml(data.sampleContactEmail)}</strong>
                 (${escHtml(data.sampleContactCity || 'unknown city')}) would receive
                 — ${data.hubCount} circle${data.hubCount === 1 ? '' : 's'} featured, ${data.totalRecipients} total recipient${data.totalRecipients === 1 ? '' : 's'}
                 ${isAuto ? ' across all cities' : ''}.
             </p>
+            <p style="font-size:13px;margin-bottom:12px"><strong>Subject:</strong> ${escHtml(data.subject)}</p>
             ${isAuto ? `
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
                 <input type="text" id="crmPreviewCityInput" class="form-input" style="max-width:240px" placeholder="Spot-check a city, e.g. Mumbai" value="${escHtml(sampleCity || '')}">
@@ -2866,9 +2867,13 @@ async function openCrmCampaignModal() {
             </div>
             <div class="detail-item">
                 <label>Email Subject</label>
-                <input type="text" id="crmCSubject" class="form-input" placeholder="e.g. NFP Circles are open near you!">
+                <input type="text" id="crmCSubject" class="form-input" value="NFP Circles are open in {city}!">
             </div>
         </div>
+        <p style="color:var(--muted);font-size:12px;margin:-8px 0 0">
+            Use <code>{city}</code> anywhere in the subject to insert each recipient's own city — e.g. it becomes
+            "NFP Circles are open in Mumbai!" for a Mumbai contact and "...in Delhi!" for a Delhi contact.
+        </p>
         <div class="detail-item" style="margin-top:14px">
             <label>Target</label>
             <select id="crmCTargetMode" class="form-input" onchange="toggleCrmCampaignTargetMode()">
