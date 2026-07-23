@@ -358,9 +358,9 @@ function crmUnsubscribeUrl(contactId) {
 }
 
 const DEFAULT_CRM_INTRO = `
-  <p>NFP Circles are small, in-person peer-learning meetups for financial advisors and wealth
-  professionals — a few hours to connect with peers in your city, discuss real challenges, and
-  walk away with practical ideas you can use right away.</p>
+  <p>NFP Circles are small, in-person peer-learning meetups made specifically for NFP Members —
+  a few hours to connect with peers in your city, discuss real challenges, and walk away with
+  practical ideas you can use right away.</p>
   <p>They're free to attend, run by fellow NFP Members and QPFP Certificants, and built purely
   for peer learning — no sales pitches, no solicitation.</p>
 `;
@@ -371,8 +371,9 @@ function buildCircleCrmEmailHtml(contact, hubs, campaign) {
 
   const hubsHtml = hubs.map((hub) => `
     <div class="info-box">
+      <p><strong>Circle Leader:</strong> ${hub.full_name || hub.fullName || '—'}</p>
       <p><strong>Area:</strong> ${hub.area || '—'}</p>
-      <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
+      <p><strong>Venue Type:</strong> ${hub.venue_type || hub.venueType || '—'}</p>
       <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
     </div>
   `).join('');
@@ -387,6 +388,13 @@ function buildCircleCrmEmailHtml(contact, hubs, campaign) {
     <div class="btn-wrap">
       <a class="btn" href="${PARTICIPANT_URL}">Register for an NFP Circle</a>
     </div>
+    <p class="section-heading">How to Register</p>
+    <ol class="next-steps">
+      <li>Click the <strong>Register for an NFP Circle</strong> button above.</li>
+      <li>Click <strong>Find a Circle</strong>.</li>
+      <li>Type your city into the search box.</li>
+      <li>The Circle(s) open near you will show up on the right-hand side — pick one and register.</li>
+    </ol>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p style="font-size:12px;color:#6A7D8B;text-align:center;margin-top:24px">
       Don't want these emails? <a href="${crmUnsubscribeUrl(contact.id)}">Unsubscribe</a>
