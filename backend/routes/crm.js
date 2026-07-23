@@ -62,6 +62,7 @@ function campaignRowToJson(row) {
     id: row.id,
     name: row.name,
     status: row.status,
+    targetMode: row.target_mode || 'manual',
     targetCities: row.target_cities || [],
     hubIds: row.hub_ids || [],
     subject: row.subject,
@@ -76,6 +77,39 @@ function campaignRowToJson(row) {
     completedAt: row.completed_at,
     lastBatchAt: row.last_batch_at,
   };
+}
+
+// ─── Open-circle lookup, shared by manual suggestions and auto-mode targeting ──
+
+// All Approved hubs with a computed participantCount/isFull, in one query each
+// (not one COUNT query per hub) — used both by hubs-for-cities (manual mode's
+// suggestion list, which shows full hubs too so an admin can still pick one) and
+// by groupOpenHubsByCityKey below (auto mode, which must never feature a full one).
+async function getApprovedHubsWithCounts() {
+  const hubs = await db.all("SELECT * FROM hubs WHERE status = 'Approved' ORDER BY city ASC, area ASC");
+  const countRows = await db.all('SELECT hub_id, COUNT(*)::int AS cnt FROM participants GROUP BY hub_id');
+  const countMap = new Map(countRows.map((r) => [r.hub_id, r.cnt]));
+  return hubs.map((hub) => {
+    const capacityLimit = parseInt(hub.capacity, 10);
+    const participantCount = countMap.get(hub.id) || 0;
+    const isFull = !isNaN(capacityLimit) && capacityLimit > 0 && participantCount >= capacityLimit;
+    return { ...hub, participantCount, isFull };
+  });
+}
+
+// city_key (normalizeCityKey) -> open (non-full) hubs in that city. This is what
+// "auto" mode uses to personalize each recipient's email to their own city —
+// a full circle is never auto-featured, since there's no admin review step in
+// that mode to catch it.
+function groupOpenHubsByCityKey(hubsWithCounts) {
+  const map = new Map();
+  for (const hub of hubsWithCounts) {
+    if (hub.isFull) continue;
+    const key = normalizeCityKey(hub.city);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(hub);
+  }
+  return map;
 }
 
 // ─── Contacts ──────────────────────────────────────────────────────────────────
@@ -151,16 +185,10 @@ router.get('/hubs-for-cities', asyncHandler(async (req, res) => {
   if (cities.length === 0) return res.json([]);
 
   const wantedKeys = new Set(cities.map(normalizeCityKey));
-  const hubs = await db.all("SELECT * FROM hubs WHERE status = 'Approved' ORDER BY city ASC, area ASC");
-
-  const results = [];
-  for (const hub of hubs) {
-    if (!wantedKeys.has(normalizeCityKey(hub.city))) continue;
-    const countRow = await db.get('SELECT COUNT(*)::int AS cnt FROM participants WHERE hub_id = $1', [hub.id]);
-    const capacityLimit = parseInt(hub.capacity, 10);
-    const isFull = !isNaN(capacityLimit) && capacityLimit > 0 && countRow.cnt >= capacityLimit;
-    results.push({ ...hubRowToJson(hub), participantCount: countRow.cnt, isFull });
-  }
+  const hubsWithCounts = await getApprovedHubsWithCounts();
+  const results = hubsWithCounts
+    .filter((hub) => wantedKeys.has(normalizeCityKey(hub.city)))
+    .map((hub) => ({ ...hubRowToJson(hub), participantCount: hub.participantCount, isFull: hub.isFull }));
   res.json(results);
 }));
 
@@ -286,30 +314,53 @@ router.get('/campaigns/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/admin/crm/campaigns — create a Draft.
-// Body: { name, targetCities[], hubIds[], subject, introHtml?, batchSize?, intervalMinutes? }
+// Body: { name, subject, targetMode?, targetCities[], hubIds[], introHtml?, batchSize?, intervalMinutes? }
+// targetMode 'manual' (default): every recipient in targetCities gets the same
+// hubIds list. targetMode 'auto': every contact whose own city currently has at
+// least one open (non-full) Approved circle is a recipient, and each one only
+// ever sees THEIR city's circles — targetCities/hubIds are ignored/unused.
 router.post('/campaigns', asyncHandler(async (req, res) => {
-  const { name, targetCities, hubIds, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
-  if (!name || !subject || !Array.isArray(targetCities) || targetCities.length === 0) {
-    return res.status(400).json({ error: 'name, subject, and targetCities[] are required.' });
+  const { name, targetMode, targetCities, hubIds, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
+  const mode = targetMode === 'auto' ? 'auto' : 'manual';
+  if (!name || !subject) {
+    return res.status(400).json({ error: 'name and subject are required.' });
+  }
+  if (mode === 'manual' && (!Array.isArray(targetCities) || targetCities.length === 0)) {
+    return res.status(400).json({ error: 'targetCities[] is required for a manual campaign.' });
   }
 
   const id = generateCrmCampaignId();
   const now = new Date().toISOString();
-  const totalRow = await db.get(
-    `SELECT COUNT(*)::int AS count FROM crm_contacts WHERE city = ANY($1::text[]) AND unsubscribed_at IS NULL`,
-    [targetCities]
-  );
+
+  let totalCount;
+  if (mode === 'auto') {
+    const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+    const openCityKeys = Array.from(openMap.keys());
+    const totalRow = await db.get(
+      `SELECT COUNT(*)::int AS count FROM crm_contacts WHERE city_key = ANY($1::text[]) AND unsubscribed_at IS NULL`,
+      [openCityKeys]
+    );
+    totalCount = totalRow.count;
+  } else {
+    const totalRow = await db.get(
+      `SELECT COUNT(*)::int AS count FROM crm_contacts WHERE city = ANY($1::text[]) AND unsubscribed_at IS NULL`,
+      [targetCities]
+    );
+    totalCount = totalRow.count;
+  }
 
   await db.run(
     `INSERT INTO crm_campaigns
-       (id, name, status, target_cities, hub_ids, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at)
-     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10)`,
+       (id, name, status, target_mode, target_cities, hub_ids, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at)
+     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
     [
-      id, name, JSON.stringify(targetCities), JSON.stringify(Array.isArray(hubIds) ? hubIds : []),
+      id, name, mode,
+      JSON.stringify(mode === 'manual' ? targetCities : []),
+      JSON.stringify(mode === 'manual' && Array.isArray(hubIds) ? hubIds : []),
       subject, introHtml || null,
       Number.isFinite(Number(batchSize)) && Number(batchSize) > 0 ? Number(batchSize) : 25,
       Number.isFinite(Number(intervalMinutes)) && Number(intervalMinutes) > 0 ? Number(intervalMinutes) : 15,
-      totalRow.count, now,
+      totalCount, now,
     ]
   );
 
@@ -317,34 +368,68 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
   res.json(campaignRowToJson(created));
 }));
 
-// GET /api/admin/crm/campaigns/:id/preview — renders the exact email HTML for one
-// real matching contact (or a synthetic sample), without sending or touching
-// recipient rows.
+// GET /api/admin/crm/campaigns/:id/preview?sampleCity=Mumbai — renders the exact
+// email HTML for one real matching contact (or a synthetic sample), without
+// sending or touching recipient rows. In auto mode, the featured circles are
+// THAT sample contact's own city — pass ?sampleCity= to spot-check a specific
+// city rather than whichever contact happens to sort first.
 router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
   const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-  const targetCities = campaign.target_cities || [];
-  const hubIds = campaign.hub_ids || [];
-  const hubs = hubIds.length ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [hubIds]) : [];
+  const mode = campaign.target_mode || 'manual';
+  const requestedCity = (req.query.sampleCity || '').trim();
 
-  let sampleContact = targetCities.length
-    ? await db.get(
-        `SELECT * FROM crm_contacts WHERE city = ANY($1::text[]) AND unsubscribed_at IS NULL ORDER BY full_name ASC LIMIT 1`,
-        [targetCities]
-      )
-    : null;
-  if (!sampleContact) {
-    sampleContact = { id: 'SAMPLE', full_name: 'Sample Member', email: 'sample@example.com', city: targetCities[0] || '' };
+  let sampleContact;
+  let hubs;
+
+  if (mode === 'auto') {
+    const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+    const openCityKeys = Array.from(openMap.keys());
+    sampleContact = requestedCity
+      ? await db.get(
+          `SELECT * FROM crm_contacts WHERE city_key = $1 AND city_key = ANY($2::text[]) AND unsubscribed_at IS NULL ORDER BY full_name ASC LIMIT 1`,
+          [normalizeCityKey(requestedCity), openCityKeys]
+        )
+      : await db.get(
+          `SELECT * FROM crm_contacts WHERE city_key = ANY($1::text[]) AND unsubscribed_at IS NULL ORDER BY full_name ASC LIMIT 1`,
+          [openCityKeys]
+        );
+    if (!sampleContact) {
+      sampleContact = { id: 'SAMPLE', full_name: 'Sample Member', email: 'sample@example.com', city: requestedCity || '(no city with an open circle yet)' };
+      hubs = [];
+    } else {
+      hubs = openMap.get(sampleContact.city_key) || [];
+    }
+  } else {
+    const targetCities = campaign.target_cities || [];
+    const hubIds = campaign.hub_ids || [];
+    hubs = hubIds.length ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [hubIds]) : [];
+    sampleContact = targetCities.length
+      ? await db.get(
+          `SELECT * FROM crm_contacts WHERE city = ANY($1::text[]) AND unsubscribed_at IS NULL ORDER BY full_name ASC LIMIT 1`,
+          [targetCities]
+        )
+      : null;
+    if (!sampleContact) {
+      sampleContact = { id: 'SAMPLE', full_name: 'Sample Member', email: 'sample@example.com', city: targetCities[0] || '' };
+    }
   }
 
   const html = buildCircleCrmEmailHtml(
     { id: sampleContact.id, full_name: sampleContact.full_name, email: sampleContact.email, city: sampleContact.city },
     hubs,
-    { subject: campaign.subject, introHtml: campaign.intro_html, targetCities }
+    { subject: campaign.subject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : (campaign.target_cities || []) }
   );
 
-  res.json({ html, sampleContactEmail: sampleContact.email, hubCount: hubs.length, totalRecipients: campaign.total_recipients });
+  res.json({
+    html,
+    sampleContactEmail: sampleContact.email,
+    sampleContactCity: sampleContact.city,
+    hubCount: hubs.length,
+    totalRecipients: campaign.total_recipients,
+    targetMode: mode,
+  });
 }));
 
 // POST /api/admin/crm/campaigns/:id/start — snapshots matching contacts into
@@ -359,13 +444,28 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: `Campaign is ${campaign.status.toLowerCase()} and cannot be started.` });
   }
 
-  const targetCities = campaign.target_cities || [];
-  await db.run(
-    `INSERT INTO crm_campaign_recipients (campaign_id, contact_id)
-     SELECT $1, id FROM crm_contacts WHERE city = ANY($2::text[]) AND unsubscribed_at IS NULL
-     ON CONFLICT (campaign_id, contact_id) DO NOTHING`,
-    [campaign.id, targetCities]
-  );
+  const mode = campaign.target_mode || 'manual';
+  if (mode === 'auto') {
+    // Recomputed fresh at start time (not from campaign creation) in case hub
+    // approvals/fills changed in between — a circle that filled up since the
+    // campaign was drafted should not pull in contacts from its city.
+    const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+    const openCityKeys = Array.from(openMap.keys());
+    await db.run(
+      `INSERT INTO crm_campaign_recipients (campaign_id, contact_id)
+       SELECT $1, id FROM crm_contacts WHERE city_key = ANY($2::text[]) AND unsubscribed_at IS NULL
+       ON CONFLICT (campaign_id, contact_id) DO NOTHING`,
+      [campaign.id, openCityKeys]
+    );
+  } else {
+    const targetCities = campaign.target_cities || [];
+    await db.run(
+      `INSERT INTO crm_campaign_recipients (campaign_id, contact_id)
+       SELECT $1, id FROM crm_contacts WHERE city = ANY($2::text[]) AND unsubscribed_at IS NULL
+       ON CONFLICT (campaign_id, contact_id) DO NOTHING`,
+      [campaign.id, targetCities]
+    );
+  }
 
   const totalRow = await db.get(
     'SELECT COUNT(*)::int AS count FROM crm_campaign_recipients WHERE campaign_id = $1',
@@ -412,7 +512,7 @@ router.post('/campaigns/:id/process-batch', asyncHandler(async (req, res) => {
   }
 
   const pending = await db.all(
-    `SELECT r.id AS recipient_id, c.id, c.full_name, c.email, c.city, c.unsubscribed_at
+    `SELECT r.id AS recipient_id, c.id, c.full_name, c.email, c.city, c.city_key, c.unsubscribed_at
      FROM crm_campaign_recipients r
      JOIN crm_contacts c ON c.id = r.contact_id
      WHERE r.campaign_id = $1 AND r.status = 'Pending'
@@ -421,9 +521,20 @@ router.post('/campaigns/:id/process-batch', asyncHandler(async (req, res) => {
     [campaign.id, campaign.batch_size]
   );
 
-  const hubIds = campaign.hub_ids || [];
-  const hubs = hubIds.length ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [hubIds]) : [];
+  const mode = campaign.target_mode || 'manual';
   const targetCities = campaign.target_cities || [];
+
+  // Manual mode: one fixed hub list for everyone in this batch. Auto mode: a
+  // cityKey -> hubs map, looked up per contact below so each person only ever
+  // sees circles in their own city — this is the whole point of "auto" mode.
+  let manualHubs = [];
+  let openMap = null;
+  if (mode === 'auto') {
+    openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+  } else {
+    const hubIds = campaign.hub_ids || [];
+    manualHubs = hubIds.length ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [hubIds]) : [];
+  }
 
   let sentThisBatch = 0;
   let failedThisBatch = 0;
@@ -433,11 +544,20 @@ router.post('/campaigns/:id/process-batch', asyncHandler(async (req, res) => {
       await db.run(`UPDATE crm_campaign_recipients SET status = 'Skipped' WHERE id = $1`, [contact.recipient_id]);
       continue;
     }
+
+    const hubs = mode === 'auto' ? (openMap.get(contact.city_key) || []) : manualHubs;
+    if (mode === 'auto' && hubs.length === 0) {
+      // Their city no longer has an open circle (e.g. it filled up between start
+      // and now) — nothing to tell them, so skip rather than send an empty email.
+      await db.run(`UPDATE crm_campaign_recipients SET status = 'Skipped' WHERE id = $1`, [contact.recipient_id]);
+      continue;
+    }
+
     try {
       await sendCrmCampaignEmail(
         { id: contact.id, full_name: contact.full_name, email: contact.email, city: contact.city },
         hubs,
-        { subject: campaign.subject, introHtml: campaign.intro_html, targetCities }
+        { subject: campaign.subject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : targetCities }
       );
       await db.run(
         `UPDATE crm_campaign_recipients SET status = 'Sent', sent_at = $1 WHERE id = $2`,

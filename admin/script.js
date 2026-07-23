@@ -2655,10 +2655,13 @@ function renderCrmCampaignsTable() {
         } else {
             actions.push(`<button class="act-btn act-reject" onclick="deleteCrmCampaign('${escHtml(c.id)}')">Delete</button>`);
         }
+        const citiesLabel = c.targetMode === 'auto'
+            ? 'All (each person&#39;s own city)'
+            : escHtml((c.targetCities || []).join(', '));
         return `
         <tr>
             <td>${escHtml(c.name)}</td>
-            <td>${escHtml((c.targetCities || []).join(', '))}</td>
+            <td>${citiesLabel}</td>
             <td>${crmCampaignStatusBadge(c.status)}</td>
             <td>${progress}</td>
             <td>${formatDate(c.createdAt)}</td>
@@ -2796,25 +2799,35 @@ function deleteCrmCampaign(id) {
 }
 
 // ═══════════════════ CAMPAIGN PREVIEW ═══════════════════
-async function previewCrmCampaign(id) {
+async function previewCrmCampaign(id, sampleCity) {
     const titleEl = document.getElementById('detailsTitle');
     if (titleEl) titleEl.textContent = 'Campaign Preview';
     const content = document.getElementById('detailsContent');
     content.innerHTML = `<p style="color:var(--muted)">Loading preview…</p>`;
     document.getElementById('detailsOverlay').classList.add('visible');
     try {
-        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/preview`);
+        const qs = sampleCity ? `?sampleCity=${encodeURIComponent(sampleCity)}` : '';
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/preview${qs}`);
         const data = await res.json();
         if (!res.ok) {
             content.innerHTML = `<p style="color:var(--danger)">${escHtml(data.error || 'Could not load preview.')}</p>`;
             return;
         }
         const c = allCrmCampaigns.find(x => x.id === id);
+        const isAuto = data.targetMode === 'auto';
         content.innerHTML = `
             <p style="color:var(--muted);font-size:13px;margin-bottom:12px">
-                Showing exactly what <strong>${escHtml(data.sampleContactEmail)}</strong> would receive
-                — ${data.hubCount} circle${data.hubCount === 1 ? '' : 's'} featured, ${data.totalRecipients} total recipient${data.totalRecipients === 1 ? '' : 's'}.
+                Showing exactly what <strong>${escHtml(data.sampleContactEmail)}</strong>
+                (${escHtml(data.sampleContactCity || 'unknown city')}) would receive
+                — ${data.hubCount} circle${data.hubCount === 1 ? '' : 's'} featured, ${data.totalRecipients} total recipient${data.totalRecipients === 1 ? '' : 's'}
+                ${isAuto ? ' across all cities' : ''}.
             </p>
+            ${isAuto ? `
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+                <input type="text" id="crmPreviewCityInput" class="form-input" style="max-width:240px" placeholder="Spot-check a city, e.g. Mumbai" value="${escHtml(sampleCity || '')}">
+                <button class="btn-outline" style="width:auto;padding:8px 16px" onclick="previewCrmCampaign('${escHtml(id)}', document.getElementById('crmPreviewCityInput').value.trim())">Preview This City</button>
+            </div>
+            ` : ''}
             <iframe id="crmPreviewFrame" style="width:100%;height:520px;border:1px solid var(--border);border-radius:8px"></iframe>
             <div class="modal-btns">
                 <button class="btn-outline" onclick="closeDetailsModal()">Close</button>
@@ -2853,24 +2866,41 @@ async function openCrmCampaignModal() {
             </div>
             <div class="detail-item">
                 <label>Email Subject</label>
-                <input type="text" id="crmCSubject" class="form-input" placeholder="e.g. NFP Circles are open in Mumbai!">
+                <input type="text" id="crmCSubject" class="form-input" placeholder="e.g. NFP Circles are open near you!">
             </div>
         </div>
         <div class="detail-item" style="margin-top:14px">
-            <label>Target Cities</label>
-            <div id="crmCCities" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
-                ${cities.length === 0 ? '<p style="color:var(--muted);font-size:13px">No CRM contacts imported yet.</p>' : cities.map(c => `
-                    <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;cursor:pointer">
-                        <input type="checkbox" class="crm-city-check" value="${escHtml(c.city)}" onchange="updateCrmCampaignHubSuggestions()">
-                        ${escHtml(c.city)} <span style="color:var(--muted);font-size:12px">(${c.count})</span>
-                    </label>
-                `).join('')}
-            </div>
+            <label>Target</label>
+            <select id="crmCTargetMode" class="form-input" onchange="toggleCrmCampaignTargetMode()">
+                <option value="auto">Every contact — each person only sees the open circle(s) in THEIR OWN city</option>
+                <option value="manual">Specific cities I pick (same circle list shown to everyone selected)</option>
+            </select>
         </div>
-        <div class="detail-item" style="margin-top:14px">
-            <label>Circles to Feature <span style="text-transform:none;font-weight:400;color:var(--muted)">(auto-suggested from the cities checked above — untick any you don't want mentioned)</span></label>
-            <div id="crmCHubs" style="max-height:220px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
-                <p style="color:var(--muted);font-size:13px">Check a city above to see its open circles.</p>
+        <div id="crmCAutoNote" class="detail-item" style="margin-top:14px">
+            <p style="color:var(--muted);font-size:13px;margin:0">
+                No city selection needed — every CRM contact whose own city currently has at least one open (not full)
+                Circle will get an email listing only that city's circle(s). A Mumbai contact sees only Mumbai circles,
+                a Delhi contact sees only Delhi circles, and so on. Contacts in a city with no open circle yet are
+                skipped (nothing to tell them). Recipient count is shown after you save.
+            </p>
+        </div>
+        <div id="crmCManualSection" class="hidden">
+            <div class="detail-item" style="margin-top:14px">
+                <label>Target Cities</label>
+                <div id="crmCCities" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
+                    ${cities.length === 0 ? '<p style="color:var(--muted);font-size:13px">No CRM contacts imported yet.</p>' : cities.map(c => `
+                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;cursor:pointer">
+                            <input type="checkbox" class="crm-city-check" value="${escHtml(c.city)}" onchange="updateCrmCampaignHubSuggestions()">
+                            ${escHtml(c.city)} <span style="color:var(--muted);font-size:12px">(${c.count})</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="detail-item" style="margin-top:14px">
+                <label>Circles to Feature <span style="text-transform:none;font-weight:400;color:var(--muted)">(auto-suggested from the cities checked above — untick any you don't want mentioned)</span></label>
+                <div id="crmCHubs" style="max-height:220px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
+                    <p style="color:var(--muted);font-size:13px">Check a city above to see its open circles.</p>
+                </div>
             </div>
         </div>
         <div class="detail-item" style="margin-top:14px">
@@ -2893,6 +2923,15 @@ async function openCrmCampaignModal() {
             <button class="btn-primary" onclick="submitCrmCampaign()">Save &amp; Preview</button>
         </div>
     `;
+}
+
+function toggleCrmCampaignTargetMode() {
+    const mode = document.getElementById('crmCTargetMode')?.value || 'auto';
+    document.getElementById('crmCManualSection')?.classList.toggle('hidden', mode !== 'manual');
+    document.getElementById('crmCAutoNote')?.classList.toggle('hidden', mode !== 'auto');
+    const hint = document.getElementById('crmCRecipientHint');
+    if (hint && mode === 'manual') updateCrmCampaignRecipientHint();
+    else if (hint) hint.textContent = '';
 }
 
 function getCheckedCrmCities() {
@@ -2944,15 +2983,21 @@ async function updateCrmCampaignHubSuggestions() {
 async function submitCrmCampaign() {
     const name = document.getElementById('crmCName')?.value.trim();
     const subject = document.getElementById('crmCSubject')?.value.trim();
-    const targetCities = getCheckedCrmCities();
-    const hubIds = Array.from(document.querySelectorAll('.crm-hub-check:checked')).map(el => el.value);
+    const targetMode = document.getElementById('crmCTargetMode')?.value || 'auto';
     const introHtmlRaw = document.getElementById('crmCIntro')?.value.trim();
     const batchSize = parseInt(document.getElementById('crmCBatchSize')?.value, 10) || 25;
     const intervalMinutes = parseInt(document.getElementById('crmCInterval')?.value, 10) || 15;
 
     if (!name || !subject) { showToast('Please fill in a campaign name and subject.', 'error'); return; }
-    if (targetCities.length === 0) { showToast('Please select at least one target city.', 'error'); return; }
-    if (hubIds.length === 0) { showToast('Please select at least one circle to feature.', 'error'); return; }
+
+    let targetCities = [];
+    let hubIds = [];
+    if (targetMode === 'manual') {
+        targetCities = getCheckedCrmCities();
+        hubIds = Array.from(document.querySelectorAll('.crm-hub-check:checked')).map(el => el.value);
+        if (targetCities.length === 0) { showToast('Please select at least one target city.', 'error'); return; }
+        if (hubIds.length === 0) { showToast('Please select at least one circle to feature.', 'error'); return; }
+    }
 
     const introHtml = introHtmlRaw ? introHtmlRaw.split('\n\n').map(p => `<p>${escHtml(p)}</p>`).join('') : null;
 
@@ -2960,11 +3005,11 @@ async function submitCrmCampaign() {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, subject, targetCities, hubIds, introHtml, batchSize, intervalMinutes }),
+            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, introHtml, batchSize, intervalMinutes }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Could not create campaign.', 'error'); return; }
-        showToast('Campaign saved as draft.', 'success');
+        showToast(`Campaign saved as draft — ${data.totalRecipients} recipient${data.totalRecipients === 1 ? '' : 's'}.`, 'success');
         await loadCrmCampaigns();
         await previewCrmCampaign(data.id);
     } catch (e) {
