@@ -294,8 +294,13 @@ async function runCampaignBatchInner(campaignId) {
   }
 
   const now = new Date().toISOString();
+  // Must also count 'Claimed' here, not just 'Pending' — otherwise a campaign
+  // can get marked Completed while rows from an interrupted/still-hung run sit
+  // claimed-but-unresolved: this run only just claimed ITS OWN batch, but if a
+  // separate stuck run's claimed rows haven't been reset back to Pending yet,
+  // "0 Pending remaining" is true without every recipient actually being done.
   const remainingRow = await db.get(
-    `SELECT COUNT(*)::int AS count FROM crm_campaign_recipients WHERE campaign_id = $1 AND status = 'Pending'`,
+    `SELECT COUNT(*)::int AS count FROM crm_campaign_recipients WHERE campaign_id = $1 AND status IN ('Pending', 'Claimed')`,
     [campaignId]
   );
   let status = campaign.status;
@@ -769,6 +774,36 @@ router.post('/campaigns/:id/resume', asyncHandler(async (req, res) => {
   scheduleCampaignTimer(campaign.id, campaign.interval_minutes);
   runCampaignBatch(campaign.id).catch((e) => console.error(`[crm] resume batch error for ${campaign.id}:`, e.message));
   res.json(campaignRowToJson(await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id])));
+}));
+
+// POST /api/admin/crm/campaigns/:id/retry-failed — resets every Failed recipient
+// on this campaign back to Pending (clearing their stored error) so the next
+// batch tries them again — useful after a transient issue (e.g. the SMTP
+// timeouts/rate-limit failures earlier) rather than writing those contacts off.
+// Works regardless of the campaign's current status: reopens it if it had
+// already gone Completed/Paused, or just tops up the queue if it's still
+// actively Sending.
+router.post('/campaigns/:id/retry-failed', asyncHandler(async (req, res) => {
+  const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
+  if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+  const result = await db.run(
+    `UPDATE crm_campaign_recipients SET status = 'Pending', error = NULL WHERE campaign_id = $1 AND status = 'Failed'`,
+    [campaign.id]
+  );
+  const retriedCount = result.rowCount;
+
+  if (retriedCount > 0) {
+    await db.run(
+      `UPDATE crm_campaigns SET status = 'Sending', completed_at = NULL, failed_count = GREATEST(failed_count - $1, 0) WHERE id = $2`,
+      [retriedCount, campaign.id]
+    );
+    scheduleCampaignTimer(campaign.id, campaign.interval_minutes);
+    runCampaignBatch(campaign.id).catch((e) => console.error(`[crm] retry-failed batch error for ${campaign.id}:`, e.message));
+  }
+
+  const updated = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id]);
+  res.json({ retriedCount, campaign: campaignRowToJson(updated) });
 }));
 
 // POST /api/admin/crm/campaigns/:id/process-batch — manual "Send Batch Now".

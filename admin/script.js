@@ -2655,6 +2655,9 @@ function renderCrmCampaignsTable() {
         } else {
             actions.push(`<button class="act-btn act-reject" onclick="deleteCrmCampaign('${escHtml(c.id)}')">Delete</button>`);
         }
+        if (c.status !== 'Draft' && c.failedCount > 0) {
+            actions.push(`<button class="act-btn act-reset" onclick="retryCrmFailedRecipients('${escHtml(c.id)}')">Retry Failed (${c.failedCount})</button>`);
+        }
         const citiesLabel = c.targetMode === 'auto'
             ? 'All (each person&#39;s own city)'
             : escHtml((c.targetCities || []).join(', '));
@@ -2787,6 +2790,32 @@ function deleteCrmCampaign(id) {
         },
         'Delete',
         true
+    );
+}
+
+function retryCrmFailedRecipients(id) {
+    const c = allCrmCampaigns.find(x => x.id === id);
+    if (!c) return;
+    openConfirmModal(
+        'Retry Failed Sends',
+        `Retry sending to the ${c.failedCount} contact${c.failedCount === 1 ? '' : 's'} who previously failed in <strong>${escHtml(c.name)}</strong>? They'll go back into the queue and send again on the usual pacing — useful if the failures were from a temporary issue (e.g. a rate limit) rather than a bad address.`,
+        '🔁',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/retry-failed`, { method: 'POST' });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    showToast(`Retrying ${data.retriedCount} contact${data.retriedCount === 1 ? '' : 's'}.`, 'success');
+                    await loadCrmCampaigns();
+                } else {
+                    showToast(data.error || 'Could not retry failed sends.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Retry Failed'
     );
 }
 
