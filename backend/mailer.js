@@ -49,6 +49,16 @@ const transporter = (SMTP_HOST && SMTP_USER && SMTP_PASS)
       pool: true,
       maxConnections: 1,
       maxMessages: Infinity,
+      // Without explicit timeouts, a single connection that hangs (no error, no
+      // response, just silence) blocks forever — and with maxConnections:1 that
+      // means the ENTIRE campaign stalls on one stuck send, with nothing thrown
+      // for the batch loop's try/catch to even catch. This is what happened to
+      // the first real CRM campaign after a resume: 17 sent, then silently stuck
+      // for 26+ minutes. These bound every phase of a send so a hang surfaces as
+      // a normal caught error (recipient marked Failed, loop moves on) instead.
+      connectionTimeout: 10000, // time to establish the TCP connection
+      greetingTimeout: 10000,   // time to wait for the SMTP greeting after connecting
+      socketTimeout: 20000,     // time of socket inactivity before killing an in-flight send
     })
   : null;
 
