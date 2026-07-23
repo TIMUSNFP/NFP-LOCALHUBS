@@ -82,6 +82,14 @@
                 <a class="sb-link sb-action" onclick="syncToSheets('participants')">
                     <span class="sb-icon">&#9729;</span><span>Sync to Sheets</span>
                 </a>
+
+                <div class="sb-section-label">NFP Circle CRM</div>
+                <a class="sb-link" id="navCrmContacts" onclick="showAdminTab('crmContacts', this)">
+                    <span class="sb-icon">&#128100;</span><span>Contacts</span>
+                </a>
+                <a class="sb-link" id="navCrmCampaigns" onclick="showAdminTab('crmCampaigns', this)">
+                    <span class="sb-icon">&#128231;</span><span>Campaigns</span>
+                </a>
             </nav>
             <div class="sb-footer">
                 <div class="sb-user">
@@ -411,6 +419,85 @@
                         <div class="te-icon">&#128100;</div>
                         <h3>No participant registrations yet</h3>
                         <p>Once participants register through the public portal, they will appear here.</p>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- NFP Circle CRM — Contacts Tab -->
+            <div id="tabCrmContacts" class="admin-tab hidden">
+                <div class="stats-grid">
+                    <div class="stat-card sc-total">
+                        <div class="sc-body"><span class="sc-val" id="crmStatTotal">0</span><span class="sc-lbl">Total Contacts</span></div>
+                        <div class="sc-trend">Members &amp; QPFP Certificants</div>
+                    </div>
+                    <div class="stat-card sc-approved">
+                        <div class="sc-body"><span class="sc-val" id="crmStatMembers">0</span><span class="sc-lbl">NFP Members</span></div>
+                        <div class="sc-trend">Membership Only</div>
+                    </div>
+                    <div class="stat-card sc-pending">
+                        <div class="sc-body"><span class="sc-val" id="crmStatQpfp">0</span><span class="sc-lbl">QPFP Certificants</span></div>
+                        <div class="sc-trend">QPFP or Both</div>
+                    </div>
+                    <div class="stat-card sc-rejected">
+                        <div class="sc-body"><span class="sc-val" id="crmStatUnsubscribed">0</span><span class="sc-lbl">Unsubscribed</span></div>
+                        <div class="sc-trend">Opted Out</div>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <span class="search-icon">&#128269;</span>
+                        <input type="text" id="crmSearchInput" class="search-input" placeholder="Search by name, email, or city..." oninput="applyCrmContactFilters()">
+                        <button class="search-clear" id="crmSearchClear" onclick="clearCrmContactSearch()" title="Clear">&#10005;</button>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                        <button class="btn-export btn-sheets" onclick="openCrmImportModal()">&#11014; Import Contacts</button>
+                    </div>
+                </div>
+                <div class="table-wrap-outer" id="crmContactsTableOuter">
+                <div class="table-wrap" id="crmContactsTableWrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Full Name</th><th>Email</th><th>Mobile</th><th>City</th>
+                                <th>Membership</th><th>Batch</th><th>Imported</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crmContactsTableBody"></tbody>
+                    </table>
+                    <div class="table-empty" id="crmContactsTableEmpty">
+                        <div class="te-icon">&#128100;</div>
+                        <h3>No CRM contacts yet</h3>
+                        <p>Import a spreadsheet of NFP Members / QPFP Certificants to get started.</p>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- NFP Circle CRM — Campaigns Tab -->
+            <div id="tabCrmCampaigns" class="admin-tab hidden">
+                <div class="filter-bar">
+                    <div style="font-size:14px;color:var(--muted)">
+                        City-targeted outreach emails to CRM contacts about open Circles near them.
+                    </div>
+                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                        <button class="btn-primary" style="width:auto;padding:10px 20px" onclick="openCrmCampaignModal()">+ New Campaign</button>
+                    </div>
+                </div>
+                <div class="table-wrap-outer" id="crmCampaignsTableOuter">
+                <div class="table-wrap" id="crmCampaignsTableWrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th><th>Cities</th><th>Status</th><th>Progress</th><th>Created</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crmCampaignsTableBody"></tbody>
+                    </table>
+                    <div class="table-empty" id="crmCampaignsTableEmpty">
+                        <div class="te-icon">&#128231;</div>
+                        <h3>No campaigns yet</h3>
+                        <p>Create a campaign to email CRM contacts about open Circles in their city.</p>
                     </div>
                 </div>
                 </div>

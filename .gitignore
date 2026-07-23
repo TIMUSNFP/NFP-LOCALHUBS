@@ -8,5 +8,9 @@
 backend/.env
 backend/node_modules/
 
+# Raw contact PII (names/emails/phones) for NFP Circle CRM imports — the data
+# lives in Supabase once imported; git never needs a permanent copy of the sheet.
+NFP Members data/
+
 # Node dependencies (Vercel installs these from package.json — never commit)
 node_modules/

@@ -18,6 +18,8 @@ const participantsRouter = require('./routes/participants');
 const geoRouter = require('./routes/geo');
 const adminRouter = require('./routes/admin');
 const settingsRouter = require('./routes/settings');
+const crmRouter = require('./routes/crm');
+const crmPublicRouter = require('./routes/crmPublic');
 
 const app = express();
 
@@ -44,8 +46,10 @@ app.get('/api/health', (req, res) => {
 app.use('/api/hubs', hubsRouter);
 app.use('/api/participants', participantsRouter);
 app.use('/api/geo', geoRouter);
+app.use('/api/admin/crm', crmRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/crm', crmPublicRouter);
 
 // 404 fallback for unknown API routes.
 app.use('/api', (req, res) => {

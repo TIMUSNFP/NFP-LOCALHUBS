@@ -70,6 +70,58 @@ insert into settings (key, value) values
   ('participant_form_open', 'true')
 on conflict (key) do nothing;
 
+-- ── NFP Circle CRM ─────────────────────────────────────────────────────────────
+-- Cold-outreach contact list (NFP Members / QPFP Certificants) and the campaigns
+-- used to email them, city by city, about open Circles. Deliberately separate from
+-- hubs/participants — these are people who have not registered for anything yet.
+
+create table if not exists crm_contacts (
+  id text primary key,                 -- NFP-CRM-YYYYMMDD-NNNN
+  full_name text not null,
+  email text not null,
+  mobile text,
+  city text,
+  city_key text,                       -- normalized key, used for campaign matching
+  membership text,                     -- 'Member' | 'QPFP' | 'Member + QPFP'
+  batch text,                          -- "Their Batch" (QPFP batch), nullable
+  source text,                         -- e.g. filename of the import
+  imported_at text not null,
+  unsubscribed_at text,
+  created_at text not null,
+  updated_at text not null
+);
+create unique index if not exists crm_contacts_email_idx on crm_contacts (lower(email));
+create index if not exists crm_contacts_city_key_idx on crm_contacts (city_key);
+
+create table if not exists crm_campaigns (
+  id text primary key,                 -- NFP-CRMC-YYYYMMDD-NNNN
+  name text not null,
+  status text not null default 'Draft',   -- Draft | Sending | Paused | Completed | Cancelled
+  target_cities jsonb not null,        -- raw city strings selected from crm_contacts
+  hub_ids jsonb not null,              -- hubs featured in the email
+  subject text not null,
+  intro_html text,                     -- optional override of the default "what/why" blurb
+  batch_size integer not null default 25,
+  interval_minutes integer not null default 15,
+  total_recipients integer not null default 0,
+  sent_count integer not null default 0,
+  failed_count integer not null default 0,
+  created_at text not null,
+  started_at text,
+  completed_at text,
+  last_batch_at text
+);
+
+create table if not exists crm_campaign_recipients (
+  id bigserial primary key,
+  campaign_id text not null references crm_campaigns(id) on delete cascade,
+  contact_id text not null references crm_contacts(id) on delete cascade,
+  status text not null default 'Pending',  -- Pending | Sent | Failed | Skipped
+  sent_at text,
+  error text,
+  unique (campaign_id, contact_id)
+);
+
 -- ── Row Level Security ────────────────────────────────────────────────────────
 -- All tables must have RLS enabled because Supabase exposes the public schema
 -- via PostgREST. With RLS on and no policies defined, PostgREST's anon/
@@ -81,3 +133,6 @@ alter table public.hubs            enable row level security;
 alter table public.participants     enable row level security;
 alter table public.pincode_cache    enable row level security;
 alter table public.settings         enable row level security;
+alter table public.crm_contacts             enable row level security;
+alter table public.crm_campaigns            enable row level security;
+alter table public.crm_campaign_recipients  enable row level security;

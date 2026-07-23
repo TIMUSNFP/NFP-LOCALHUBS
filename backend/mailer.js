@@ -3,6 +3,7 @@
 // authenticated through the SMTP account in SMTP_USER / SMTP_PASS.
 // If SMTP is not configured, every send is a no-op (safe for local dev).
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 
 // Build the SMTP transport from environment variables. Common providers:
 //   Google Workspace / Gmail : host smtp.gmail.com,   port 465 (secure)
@@ -21,6 +22,7 @@ const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>`
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
 const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/L2G7DQQgWDcCiqV85giWtA?s=sh&p=i&ilr=1&amv=2';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
+const CRM_UNSUBSCRIBE_BASE_URL = 'https://nfp-circles.vercel.app/api/crm/unsubscribe';
 
 // Full mailing address for a hub — "Street, Area, City - PIN Code", skipping any
 // pieces the leader didn't provide.
@@ -345,6 +347,66 @@ async function sendHubDetailsUpdated(participant, hub, changes) {
   });
 }
 
+// ─── NFP Circle CRM — city outreach campaign ──────────────────────────────────
+// Sent to cold-outreach contacts (NFP Members / QPFP Certificants) who are not
+// registered anywhere yet. Tells them which open Circles exist in their city and
+// why to join, with a link to register and a one-click unsubscribe.
+
+function crmUnsubscribeUrl(contactId) {
+  const token = jwt.sign({ cid: contactId }, process.env.JWT_SECRET);
+  return `${CRM_UNSUBSCRIBE_BASE_URL}?cid=${encodeURIComponent(contactId)}&token=${encodeURIComponent(token)}`;
+}
+
+const DEFAULT_CRM_INTRO = `
+  <p>NFP Circles are small, in-person peer-learning meetups for financial advisors and wealth
+  professionals — a few hours to connect with peers in your city, discuss real challenges, and
+  walk away with practical ideas you can use right away.</p>
+  <p>They're free to attend, run by fellow NFP Members and QPFP Certificants, and built purely
+  for peer learning — no sales pitches, no solicitation.</p>
+`;
+
+// hubs: array of hub rows (city/area/venue_type/capacity) to feature in the email.
+function buildCircleCrmEmailHtml(contact, hubs, campaign) {
+  const cityLabel = campaign.targetCities && campaign.targetCities.length ? campaign.targetCities.join(' / ') : (contact.city || 'your city');
+
+  const hubsHtml = hubs.map((hub) => `
+    <div class="info-box">
+      <p><strong>Area:</strong> ${hub.area || '—'}</p>
+      <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
+      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+    </div>
+  `).join('');
+
+  const html = wrap(`
+    <div class="badge">📍 NFP Circles open in ${cityLabel}</div>
+    <h2>Hi ${contact.full_name}, there ${hubs.length === 1 ? 'is' : 'are'} ${hubs.length} NFP Circle${hubs.length === 1 ? '' : 's'} open near you!</h2>
+    ${campaign.introHtml || DEFAULT_CRM_INTRO}
+    <p class="section-heading">Open Circles in ${cityLabel}</p>
+    ${hubsHtml}
+    <p>Spots are limited and filling up — register now to lock in your place.</p>
+    <div class="btn-wrap">
+      <a class="btn" href="${PARTICIPANT_URL}">Register for an NFP Circle</a>
+    </div>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p style="font-size:12px;color:#6A7D8B;text-align:center;margin-top:24px">
+      Don't want these emails? <a href="${crmUnsubscribeUrl(contact.id)}">Unsubscribe</a>
+    </p>
+  `);
+
+  return html;
+}
+
+// Unlike send() above, this does NOT swallow errors — a campaign batch needs to
+// know exactly which contacts genuinely failed (vs. sent) so it can record it on
+// the recipient row and never silently claim "sent" for an email that wasn't.
+async function sendCrmCampaignEmail(contact, hubs, campaign) {
+  if (!transporter) {
+    throw new Error('SMTP not configured — set SMTP_HOST/SMTP_USER/SMTP_PASS to send campaigns.');
+  }
+  const html = buildCircleCrmEmailHtml(contact, hubs, campaign);
+  await transporter.sendMail({ from: FROM, to: contact.email, subject: campaign.subject, html });
+}
+
 module.exports = {
   sendHubApproved,
   sendHubRejected,
@@ -352,4 +414,7 @@ module.exports = {
   sendParticipantCancelled,
   sendHubRosterUpdate,
   sendHubDetailsUpdated,
+  buildCircleCrmEmailHtml,
+  sendCrmCampaignEmail,
+  crmUnsubscribeUrl,
 };

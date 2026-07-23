@@ -330,7 +330,10 @@ async function showAdminTab(tab, linkEl) {
     if (targetTab) targetTab.classList.remove('hidden');
     if (linkEl) linkEl.classList.add('active');
     const title = document.getElementById('adminPageTitle');
-    const titleMap = { applications: 'Applications', analytics: 'Analytics', participants: 'Participant Registrations' };
+    const titleMap = {
+        applications: 'Applications', analytics: 'Analytics', participants: 'Participant Registrations',
+        crmContacts: 'NFP Circle CRM — Contacts', crmCampaigns: 'NFP Circle CRM — Campaigns',
+    };
     if (title) title.textContent = titleMap[tab] || (tab.charAt(0).toUpperCase() + tab.slice(1));
     // Refetch fresh data every time a tab is opened — data can change from another
     // browser/site (hub approvals, new participant signups) while this tab sits idle.
@@ -347,6 +350,14 @@ async function showAdminTab(tab, linkEl) {
         await loadParticipants();
         updateParticipantStats();
         applyParticipantFilters();
+    }
+    if (tab === 'crmContacts') {
+        await loadCrmContacts();
+        updateCrmContactStats();
+        applyCrmContactFilters();
+    }
+    if (tab === 'crmCampaigns') {
+        await loadCrmCampaigns();
     }
     closeSidebar();
 }
@@ -2409,4 +2420,554 @@ function refreshScrollFade() {
         const atEnd = el.scrollWidth <= el.clientWidth + 4;
         outer.classList.toggle('at-end', atEnd);
     });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NFP CIRCLE CRM — CONTACTS
+// ═══════════════════════════════════════════════════════════════
+let allCrmContacts = [];
+
+async function loadCrmContacts() {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/contacts?pageSize=5000`);
+        const data = await res.json();
+        allCrmContacts = data.contacts || [];
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not load CRM contacts.', 'error');
+    }
+}
+
+async function updateCrmContactStats() {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/contacts/summary`);
+        const s = await res.json();
+        const byMembership = {};
+        (s.byMembership || []).forEach(m => { byMembership[m.membership] = m.count; });
+        animateCount('crmStatTotal', s.total || 0);
+        animateCount('crmStatMembers', byMembership['Member'] || 0);
+        animateCount('crmStatQpfp', (byMembership['QPFP'] || 0) + (byMembership['Member + QPFP'] || 0));
+        animateCount('crmStatUnsubscribed', s.unsubscribed || 0);
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not load CRM stats.', 'error');
+    }
+}
+
+function applyCrmContactFilters() {
+    const search = (document.getElementById('crmSearchInput')?.value || '').toLowerCase().trim();
+    const clear = document.getElementById('crmSearchClear');
+    if (clear) clear.classList.toggle('visible', search.length > 0);
+    let contacts = [...allCrmContacts];
+    if (search) {
+        contacts = contacts.filter(c =>
+            (c.fullName || '').toLowerCase().includes(search) ||
+            (c.email || '').toLowerCase().includes(search) ||
+            (c.city || '').toLowerCase().includes(search)
+        );
+    }
+    renderCrmContactsTable(contacts);
+}
+
+function clearCrmContactSearch() {
+    const el = document.getElementById('crmSearchInput');
+    if (el) { el.value = ''; el.focus(); }
+    const clear = document.getElementById('crmSearchClear');
+    if (clear) clear.classList.remove('visible');
+    applyCrmContactFilters();
+}
+
+function renderCrmContactsTable(contacts) {
+    const tbody = document.getElementById('crmContactsTableBody');
+    const emptyEl = document.getElementById('crmContactsTableEmpty');
+    if (!tbody) return;
+    if (!contacts || contacts.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.classList.add('visible');
+        return;
+    }
+    if (emptyEl) emptyEl.classList.remove('visible');
+    // Large lists (2000+) are common here — cap the rendered rows so the table
+    // stays responsive; the search box narrows it down to a manageable set.
+    const RENDER_CAP = 500;
+    const shown = contacts.slice(0, RENDER_CAP);
+    tbody.innerHTML = shown.map(c => `
+        <tr>
+            <td>${escHtml(c.fullName)}</td>
+            <td>${escHtml(c.email)}</td>
+            <td>${escHtml(c.mobile || '—')}</td>
+            <td>${escHtml(c.city || '—')}${c.unsubscribedAt ? ' <span class="badge badge-rejected" title="Unsubscribed">Unsubscribed</span>' : ''}</td>
+            <td>${escHtml(c.membership || '—')}</td>
+            <td>${escHtml(c.batch || '—')}</td>
+            <td>${formatDate(c.importedAt)}</td>
+            <td>
+                <div class="action-btns">
+                    <button class="act-btn act-reject" onclick="deleteCrmContact('${escHtml(c.id)}')">Delete</button>
+                </div>
+            </td>
+        </tr>
+    `).join('') + (contacts.length > RENDER_CAP
+        ? `<tr><td colspan="8" style="text-align:center;color:var(--muted);font-size:13px;padding:14px">Showing first ${RENDER_CAP} of ${contacts.length} matching contacts — narrow your search to see more.</td></tr>`
+        : '');
+}
+
+function deleteCrmContact(id) {
+    const contact = allCrmContacts.find(c => c.id === id);
+    if (!contact) return;
+    openConfirmModal(
+        'Delete Contact',
+        `Remove <strong>${escHtml(contact.fullName)}</strong> (${escHtml(contact.email)}) from the CRM contact list? This cannot be undone.`,
+        '🗑️',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/crm/contacts/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Contact deleted.', 'success');
+                    await loadCrmContacts();
+                    updateCrmContactStats();
+                    applyCrmContactFilters();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    showToast(err.error || 'Could not delete contact.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Delete',
+        true
+    );
+}
+
+// ═══════════════════ IMPORT CONTACTS ═══════════════════
+function openCrmImportModal() {
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = 'Import CRM Contacts';
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+            Upload a .xlsx or .csv spreadsheet of NFP Members / QPFP Certificants. Expected columns:
+            <strong>Name</strong>, <strong>Email ID</strong>, <strong>City</strong>, <strong>Phone Number</strong>,
+            <strong>Membership Type</strong>, <strong>Their Batch</strong> (column order/wording can vary slightly).
+            Re-importing an updated sheet is safe — existing contacts are matched and updated by email, not duplicated.
+        </p>
+        <div class="detail-item">
+            <label>Spreadsheet File</label>
+            <input type="file" id="crmImportFile" class="form-input" accept=".xlsx,.xls,.csv">
+        </div>
+        <div id="crmImportResult" style="margin-top:16px"></div>
+        <div class="modal-btns">
+            <button class="btn-outline" onclick="closeDetailsModal()">Cancel</button>
+            <button class="btn-primary" id="crmImportSubmitBtn" onclick="submitCrmImport()">Import</button>
+        </div>
+    `;
+    document.getElementById('detailsOverlay').classList.add('visible');
+}
+
+async function submitCrmImport() {
+    const fileInput = document.getElementById('crmImportFile');
+    const resultEl = document.getElementById('crmImportResult');
+    const btn = document.getElementById('crmImportSubmitBtn');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (resultEl) resultEl.innerHTML = `<p style="color:var(--danger);font-size:13px">Please choose a file first.</p>`;
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    if (btn) { btn.disabled = true; btn.textContent = 'Importing…'; }
+    if (resultEl) resultEl.innerHTML = `<p style="color:var(--muted);font-size:13px">Uploading and importing — this can take a little while for large files…</p>`;
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/import`, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) {
+            if (resultEl) resultEl.innerHTML = `<p style="color:var(--danger);font-size:13px">${escHtml(data.error || 'Import failed.')}</p>`;
+        } else {
+            if (resultEl) resultEl.innerHTML = `
+                <p style="color:var(--success);font-size:13px;font-weight:600">
+                    Imported ${data.total} rows — ${data.inserted} new, ${data.updated} updated, ${data.skipped} skipped.
+                </p>
+                ${data.skippedReasons && data.skippedReasons.length ? `
+                    <details style="margin-top:8px;font-size:12px;color:var(--muted)">
+                        <summary style="cursor:pointer">Show skipped rows</summary>
+                        <ul>${data.skippedReasons.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
+                    </details>
+                ` : ''}
+            `;
+            showToast(`Imported ${data.inserted + data.updated} contacts.`, 'success');
+            await loadCrmContacts();
+            updateCrmContactStats();
+            applyCrmContactFilters();
+        }
+    } catch (e) {
+        if (e.message !== 'Unauthorized' && resultEl) {
+            resultEl.innerHTML = `<p style="color:var(--danger);font-size:13px">Could not reach the server.</p>`;
+        }
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NFP CIRCLE CRM — CAMPAIGNS
+// ═══════════════════════════════════════════════════════════════
+let allCrmCampaigns = [];
+const crmBatchTimers = {}; // campaignId -> setInterval id, kept alive as long as this page stays open
+
+async function loadCrmCampaigns() {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`);
+        allCrmCampaigns = await res.json();
+        renderCrmCampaignsTable();
+        ensureCrmBatchTimers();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not load campaigns.', 'error');
+    }
+}
+
+function crmCampaignStatusBadge(status) {
+    const map = { Draft: 'badge-pending', Sending: 'badge-approved', Paused: 'badge-pending', Completed: 'badge-approved', Cancelled: 'badge-rejected' };
+    return `<span class="badge ${map[status] || 'badge-pending'}">${escHtml(status)}</span>`;
+}
+
+function renderCrmCampaignsTable() {
+    const tbody = document.getElementById('crmCampaignsTableBody');
+    const emptyEl = document.getElementById('crmCampaignsTableEmpty');
+    if (!tbody) return;
+    if (!allCrmCampaigns || allCrmCampaigns.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.classList.add('visible');
+        return;
+    }
+    if (emptyEl) emptyEl.classList.remove('visible');
+    tbody.innerHTML = allCrmCampaigns.map(c => {
+        const progress = c.status === 'Draft'
+            ? `${c.totalRecipients} recipients`
+            : `${c.sentCount}/${c.totalRecipients} sent${c.failedCount ? `, ${c.failedCount} failed` : ''}`;
+        const actions = [];
+        actions.push(`<button class="act-btn act-view" onclick="previewCrmCampaign('${escHtml(c.id)}')">Preview</button>`);
+        if (c.status === 'Draft') {
+            actions.push(`<button class="act-btn act-approve" onclick="startCrmCampaign('${escHtml(c.id)}')">Start Sending</button>`);
+            actions.push(`<button class="act-btn act-reject" onclick="deleteCrmCampaign('${escHtml(c.id)}')">Delete</button>`);
+        } else if (c.status === 'Sending') {
+            actions.push(`<button class="act-btn act-view" onclick="processCrmBatch('${escHtml(c.id)}', true)">Send Batch Now</button>`);
+            actions.push(`<button class="act-btn act-reset" onclick="pauseCrmCampaign('${escHtml(c.id)}')">Pause</button>`);
+        } else if (c.status === 'Paused') {
+            actions.push(`<button class="act-btn act-approve" onclick="resumeCrmCampaign('${escHtml(c.id)}')">Resume</button>`);
+            actions.push(`<button class="act-btn act-reject" onclick="deleteCrmCampaign('${escHtml(c.id)}')">Delete</button>`);
+        } else {
+            actions.push(`<button class="act-btn act-reject" onclick="deleteCrmCampaign('${escHtml(c.id)}')">Delete</button>`);
+        }
+        return `
+        <tr>
+            <td>${escHtml(c.name)}</td>
+            <td>${escHtml((c.targetCities || []).join(', '))}</td>
+            <td>${crmCampaignStatusBadge(c.status)}</td>
+            <td>${progress}</td>
+            <td>${formatDate(c.createdAt)}</td>
+            <td><div class="action-btns">${actions.join('')}</div></td>
+        </tr>`;
+    }).join('');
+}
+
+// Keeps a setInterval alive per Sending campaign so batches keep going out while
+// this admin tab stays open, at that campaign's own interval_minutes pacing.
+// Cleared automatically once a campaign leaves Sending (paused/completed/deleted).
+function ensureCrmBatchTimers() {
+    const sendingIds = new Set(allCrmCampaigns.filter(c => c.status === 'Sending').map(c => c.id));
+    Object.keys(crmBatchTimers).forEach(id => {
+        if (!sendingIds.has(id)) {
+            clearInterval(crmBatchTimers[id]);
+            delete crmBatchTimers[id];
+        }
+    });
+    allCrmCampaigns.filter(c => c.status === 'Sending').forEach(c => {
+        if (crmBatchTimers[c.id]) return;
+        const ms = Math.max(1, c.intervalMinutes || 15) * 60 * 1000;
+        crmBatchTimers[c.id] = setInterval(() => processCrmBatch(c.id, false), ms);
+    });
+}
+
+async function processCrmBatch(id, manual) {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/process-batch`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            if (manual) showToast(data.error || 'Could not send batch.', 'error');
+            return;
+        }
+        if (manual) {
+            showToast(`Sent ${data.sentThisBatch}${data.failedThisBatch ? ` (${data.failedThisBatch} failed)` : ''} — ${data.remaining} remaining.`, 'success');
+        } else if (data.sentThisBatch || data.failedThisBatch) {
+            showToast(`${allCrmCampaignName(id)}: sent ${data.sentThisBatch} more (${data.remaining} remaining).`, 'info');
+        }
+        if (data.status === 'Completed') {
+            clearInterval(crmBatchTimers[id]);
+            delete crmBatchTimers[id];
+            showToast(`Campaign "${allCrmCampaignName(id)}" finished sending.`, 'success');
+        }
+        // Refresh silently if the Campaigns tab is currently visible, so progress
+        // numbers update without disturbing whatever else the admin is doing.
+        if (!document.getElementById('tabCrmCampaigns')?.classList.contains('hidden')) {
+            await loadCrmCampaigns();
+        }
+    } catch (e) {
+        // Unauthorized already redirects to login via adminFetch; a plain network
+        // hiccup here just waits for the next interval tick rather than spamming toasts.
+    }
+}
+
+function allCrmCampaignName(id) {
+    const c = allCrmCampaigns.find(x => x.id === id);
+    return c ? c.name : 'Campaign';
+}
+
+function startCrmCampaign(id) {
+    const c = allCrmCampaigns.find(x => x.id === id);
+    if (!c) return;
+    openConfirmModal(
+        'Start Sending Campaign',
+        `Start sending <strong>${escHtml(c.name)}</strong> to ${c.totalRecipients} contact${c.totalRecipients === 1 ? '' : 's'}? Emails will go out in batches of ${c.batchSize} every ${c.intervalMinutes} minute${c.intervalMinutes === 1 ? '' : 's'} while this admin tab stays open.`,
+        '📤',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/start`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('Campaign started.', 'success');
+                    closeDetailsModal();
+                    await loadCrmCampaigns();
+                    await processCrmBatch(id, false); // send the first batch immediately instead of waiting a full interval
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    showToast(err.error || 'Could not start campaign.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Start Sending'
+    );
+}
+
+async function pauseCrmCampaign(id) {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/pause`, { method: 'POST' });
+        if (res.ok) { showToast('Campaign paused.', 'success'); await loadCrmCampaigns(); }
+        else { const err = await res.json().catch(() => ({})); showToast(err.error || 'Could not pause campaign.', 'error'); }
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+}
+
+async function resumeCrmCampaign(id) {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/resume`, { method: 'POST' });
+        if (res.ok) { showToast('Campaign resumed.', 'success'); await loadCrmCampaigns(); }
+        else { const err = await res.json().catch(() => ({})); showToast(err.error || 'Could not resume campaign.', 'error'); }
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+}
+
+function deleteCrmCampaign(id) {
+    const c = allCrmCampaigns.find(x => x.id === id);
+    if (!c) return;
+    openConfirmModal(
+        'Delete Campaign',
+        `Delete <strong>${escHtml(c.name)}</strong>? This cannot be undone.`,
+        '🗑️',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Campaign deleted.', 'success');
+                    if (crmBatchTimers[id]) { clearInterval(crmBatchTimers[id]); delete crmBatchTimers[id]; }
+                    await loadCrmCampaigns();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    showToast(err.error || 'Could not delete campaign.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Delete',
+        true
+    );
+}
+
+// ═══════════════════ CAMPAIGN PREVIEW ═══════════════════
+async function previewCrmCampaign(id) {
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = 'Campaign Preview';
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `<p style="color:var(--muted)">Loading preview…</p>`;
+    document.getElementById('detailsOverlay').classList.add('visible');
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/preview`);
+        const data = await res.json();
+        if (!res.ok) {
+            content.innerHTML = `<p style="color:var(--danger)">${escHtml(data.error || 'Could not load preview.')}</p>`;
+            return;
+        }
+        const c = allCrmCampaigns.find(x => x.id === id);
+        content.innerHTML = `
+            <p style="color:var(--muted);font-size:13px;margin-bottom:12px">
+                Showing exactly what <strong>${escHtml(data.sampleContactEmail)}</strong> would receive
+                — ${data.hubCount} circle${data.hubCount === 1 ? '' : 's'} featured, ${data.totalRecipients} total recipient${data.totalRecipients === 1 ? '' : 's'}.
+            </p>
+            <iframe id="crmPreviewFrame" style="width:100%;height:520px;border:1px solid var(--border);border-radius:8px"></iframe>
+            <div class="modal-btns">
+                <button class="btn-outline" onclick="closeDetailsModal()">Close</button>
+                ${c && c.status === 'Draft' ? `<button class="btn-primary" onclick="startCrmCampaign('${escHtml(id)}')">Start Sending</button>` : ''}
+            </div>
+        `;
+        const frame = document.getElementById('crmPreviewFrame');
+        if (frame) frame.srcdoc = data.html;
+    } catch (e) {
+        if (e.message !== 'Unauthorized') content.innerHTML = `<p style="color:var(--danger)">Could not reach the server.</p>`;
+    }
+}
+
+// ═══════════════════ NEW CAMPAIGN BUILDER ═══════════════════
+async function openCrmCampaignModal() {
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = 'New Campaign';
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `<p style="color:var(--muted)">Loading cities…</p>`;
+    document.getElementById('detailsOverlay').classList.add('visible');
+
+    let cities = [];
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/cities`);
+        cities = await res.json();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') content.innerHTML = `<p style="color:var(--danger)">Could not load cities.</p>`;
+        return;
+    }
+
+    content.innerHTML = `
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label>Campaign Name (internal)</label>
+                <input type="text" id="crmCName" class="form-input" placeholder="e.g. Mumbai — Aug circles">
+            </div>
+            <div class="detail-item">
+                <label>Email Subject</label>
+                <input type="text" id="crmCSubject" class="form-input" placeholder="e.g. NFP Circles are open in Mumbai!">
+            </div>
+        </div>
+        <div class="detail-item" style="margin-top:14px">
+            <label>Target Cities</label>
+            <div id="crmCCities" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
+                ${cities.length === 0 ? '<p style="color:var(--muted);font-size:13px">No CRM contacts imported yet.</p>' : cities.map(c => `
+                    <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;cursor:pointer">
+                        <input type="checkbox" class="crm-city-check" value="${escHtml(c.city)}" onchange="updateCrmCampaignHubSuggestions()">
+                        ${escHtml(c.city)} <span style="color:var(--muted);font-size:12px">(${c.count})</span>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+        <div class="detail-item" style="margin-top:14px">
+            <label>Circles to Feature <span style="text-transform:none;font-weight:400;color:var(--muted)">(auto-suggested from the cities checked above — untick any you don't want mentioned)</span></label>
+            <div id="crmCHubs" style="max-height:220px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
+                <p style="color:var(--muted);font-size:13px">Check a city above to see its open circles.</p>
+            </div>
+        </div>
+        <div class="detail-item" style="margin-top:14px">
+            <label>Intro Text <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional — leave blank to use the default "what is an NFP Circle / why join" copy)</span></label>
+            <textarea id="crmCIntro" class="form-input" rows="4" placeholder="Leave blank for the default explainer..."></textarea>
+        </div>
+        <div class="detail-grid" style="margin-top:14px">
+            <div class="detail-item">
+                <label>Batch Size <span style="text-transform:none;font-weight:400;color:var(--muted)">(emails per batch)</span></label>
+                <input type="number" id="crmCBatchSize" class="form-input" value="25" min="1" max="500">
+            </div>
+            <div class="detail-item">
+                <label>Interval <span style="text-transform:none;font-weight:400;color:var(--muted)">(minutes between batches)</span></label>
+                <input type="number" id="crmCInterval" class="form-input" value="15" min="1" max="1440">
+            </div>
+        </div>
+        <p id="crmCRecipientHint" style="color:var(--muted);font-size:13px;margin-top:10px"></p>
+        <div class="modal-btns">
+            <button class="btn-outline" onclick="closeDetailsModal()">Cancel</button>
+            <button class="btn-primary" onclick="submitCrmCampaign()">Save &amp; Preview</button>
+        </div>
+    `;
+}
+
+function getCheckedCrmCities() {
+    return Array.from(document.querySelectorAll('.crm-city-check:checked')).map(el => el.value);
+}
+
+function updateCrmCampaignRecipientHint() {
+    const hint = document.getElementById('crmCRecipientHint');
+    if (!hint) return;
+    const checked = document.querySelectorAll('.crm-city-check:checked');
+    const total = Array.from(checked).reduce((sum, el) => {
+        const label = el.closest('label');
+        const match = label ? label.textContent.match(/\((\d+)\)/) : null;
+        return sum + (match ? parseInt(match[1], 10) : 0);
+    }, 0);
+    hint.textContent = total > 0
+        ? `${total} contact${total === 1 ? '' : 's'} will receive this campaign${total > 450 ? ' — note: most SMTP providers cap outbound mail around ~500/day, so this may take more than one day to fully send' : ''}.`
+        : '';
+}
+
+async function updateCrmCampaignHubSuggestions() {
+    updateCrmCampaignRecipientHint();
+    const container = document.getElementById('crmCHubs');
+    if (!container) return;
+    const cities = getCheckedCrmCities();
+    if (cities.length === 0) {
+        container.innerHTML = `<p style="color:var(--muted);font-size:13px">Check a city above to see its open circles.</p>`;
+        return;
+    }
+    container.innerHTML = `<p style="color:var(--muted);font-size:13px">Loading circles…</p>`;
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/hubs-for-cities?cities=${encodeURIComponent(cities.join(','))}`);
+        const hubs = await res.json();
+        if (hubs.length === 0) {
+            container.innerHTML = `<p style="color:var(--muted);font-size:13px">No approved circles found in the selected cities.</p>`;
+            return;
+        }
+        container.innerHTML = hubs.map(h => `
+            <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;cursor:pointer">
+                <input type="checkbox" class="crm-hub-check" value="${escHtml(h.id)}" ${h.isFull ? '' : 'checked'}>
+                ${escHtml(h.city)} — ${escHtml(h.area)} <span style="color:var(--muted);font-size:12px">(${h.participantCount}/${escHtml(h.capacity)}${h.isFull ? ', FULL' : ''})</span>
+            </label>
+        `).join('');
+    } catch (e) {
+        if (e.message !== 'Unauthorized') container.innerHTML = `<p style="color:var(--danger);font-size:13px">Could not load circles.</p>`;
+    }
+}
+
+async function submitCrmCampaign() {
+    const name = document.getElementById('crmCName')?.value.trim();
+    const subject = document.getElementById('crmCSubject')?.value.trim();
+    const targetCities = getCheckedCrmCities();
+    const hubIds = Array.from(document.querySelectorAll('.crm-hub-check:checked')).map(el => el.value);
+    const introHtmlRaw = document.getElementById('crmCIntro')?.value.trim();
+    const batchSize = parseInt(document.getElementById('crmCBatchSize')?.value, 10) || 25;
+    const intervalMinutes = parseInt(document.getElementById('crmCInterval')?.value, 10) || 15;
+
+    if (!name || !subject) { showToast('Please fill in a campaign name and subject.', 'error'); return; }
+    if (targetCities.length === 0) { showToast('Please select at least one target city.', 'error'); return; }
+    if (hubIds.length === 0) { showToast('Please select at least one circle to feature.', 'error'); return; }
+
+    const introHtml = introHtmlRaw ? introHtmlRaw.split('\n\n').map(p => `<p>${escHtml(p)}</p>`).join('') : null;
+
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, subject, targetCities, hubIds, introHtml, batchSize, intervalMinutes }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Could not create campaign.', 'error'); return; }
+        showToast('Campaign saved as draft.', 'success');
+        await loadCrmCampaigns();
+        await previewCrmCampaign(data.id);
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
 }

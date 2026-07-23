@@ -26,6 +26,21 @@ function generateParticipantId() {
   return `NFP-PART-${todayStamp()}-${randomDigits4()}`;
 }
 
+// Unlike generateHubId/generateParticipantId (one-off, interactive form submits,
+// where a same-day 4-digit collision is exceedingly unlikely), contacts get
+// generated hundreds-to-thousands at a time in a single bulk import — a 9,000-value
+// random suffix collides almost immediately at that volume (birthday paradox).
+// crypto.randomUUID() gives each id a 122-bit random space instead.
+const { randomUUID } = require('crypto');
+
+function generateCrmContactId() {
+  return `NFP-CRM-${randomUUID()}`;
+}
+
+function generateCrmCampaignId() {
+  return `NFP-CRMC-${randomUUID()}`;
+}
+
 // Converts a hubs DB row (snake_case) to the camelCase API shape.
 function hubRowToJson(row) {
   if (!row) return null;
@@ -171,6 +186,20 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Canonical key for matching a free-text city name against hubs/CRM contacts
+// across differing spellings (Bangalore/Bengaluru, Delhi/New Delhi, Gurgaon/
+// Gurugram, Mysore/Mysuru, ...). Reuses CITY_COORDS above rather than a second
+// alias table: any two names that resolve to the same coordinates are treated
+// as the same city. Names missing from CITY_COORDS just normalize to their own
+// trimmed/lowercased text, so smaller towns still match on exact spelling.
+function normalizeCityKey(city) {
+  if (!city) return '';
+  const trimmed = city.trim().toLowerCase();
+  if (!trimmed) return '';
+  const coords = getCityCoords(city);
+  return coords ? `${coords[0]},${coords[1]}` : trimmed;
+}
+
 // Runs one Nominatim lookup — either a structured query (params object, e.g.
 // { street, postalcode, city }) or a freeform { q: '...' } query — and returns
 // [lat, lng] or null. Hard timeout so a slow geocoder can never hang the request.
@@ -302,6 +331,8 @@ async function geocodeHub({ address, area, city, pincode }) {
 module.exports = {
   generateHubId,
   generateParticipantId,
+  generateCrmContactId,
+  generateCrmCampaignId,
   hubRowToJson,
   participantRowToJson,
   haversineKm,
@@ -309,5 +340,6 @@ module.exports = {
   geocodeHub,
   getCityCoords,
   isPlausibleGeocode,
+  normalizeCityKey,
   sleep,
 };
