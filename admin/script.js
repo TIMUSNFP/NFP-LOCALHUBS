@@ -2609,14 +2609,14 @@ async function submitCrmImport() {
 //  NFP CIRCLE CRM — CAMPAIGNS
 // ═══════════════════════════════════════════════════════════════
 let allCrmCampaigns = [];
-const crmBatchTimers = {}; // campaignId -> setInterval id, kept alive as long as this page stays open
+let crmDisplayPollTimer = null; // read-only refresh while watching a Sending campaign — does NOT trigger sends
 
 async function loadCrmCampaigns() {
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`);
         allCrmCampaigns = await res.json();
         renderCrmCampaignsTable();
-        ensureCrmBatchTimers();
+        ensureCrmDisplayPolling();
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not load campaigns.', 'error');
     }
@@ -2670,24 +2670,27 @@ function renderCrmCampaignsTable() {
     }).join('');
 }
 
-// Keeps a setInterval alive per Sending campaign so batches keep going out while
-// this admin tab stays open, at that campaign's own interval_minutes pacing.
-// Cleared automatically once a campaign leaves Sending (paused/completed/deleted).
-function ensureCrmBatchTimers() {
-    const sendingIds = new Set(allCrmCampaigns.filter(c => c.status === 'Sending').map(c => c.id));
-    Object.keys(crmBatchTimers).forEach(id => {
-        if (!sendingIds.has(id)) {
-            clearInterval(crmBatchTimers[id]);
-            delete crmBatchTimers[id];
-        }
-    });
-    allCrmCampaigns.filter(c => c.status === 'Sending').forEach(c => {
-        if (crmBatchTimers[c.id]) return;
-        const ms = Math.max(1, c.intervalMinutes || 15) * 60 * 1000;
-        crmBatchTimers[c.id] = setInterval(() => processCrmBatch(c.id, false), ms);
-    });
+// Sending itself now runs entirely on the backend (a server-side interval per
+// campaign, independent of any browser tab — see runCampaignBatch/
+// scheduleCampaignTimer in backend/routes/crm.js). This client-side timer does
+// nothing but re-fetch and re-render the campaigns list every few seconds so
+// the Sent/Total numbers keep moving while you're watching this tab — it never
+// calls process-batch itself, so it can't affect sending one way or the other.
+// Runs only while the Campaigns tab is visible and something is Sending.
+function ensureCrmDisplayPolling() {
+    const anySending = allCrmCampaigns.some(c => c.status === 'Sending');
+    const tabVisible = !document.getElementById('tabCrmCampaigns')?.classList.contains('hidden');
+    if (anySending && tabVisible) {
+        if (crmDisplayPollTimer) return;
+        crmDisplayPollTimer = setInterval(loadCrmCampaigns, 8000);
+    } else if (crmDisplayPollTimer) {
+        clearInterval(crmDisplayPollTimer);
+        crmDisplayPollTimer = null;
+    }
 }
 
+// Manual "Send Batch Now" — the automatic pacing already runs server-side, this
+// just asks for an extra batch right now instead of waiting for the next tick.
 async function processCrmBatch(id, manual) {
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/process-batch`, { method: 'POST' });
@@ -2698,22 +2701,13 @@ async function processCrmBatch(id, manual) {
         }
         if (manual) {
             showToast(`Sent ${data.sentThisBatch}${data.failedThisBatch ? ` (${data.failedThisBatch} failed)` : ''} — ${data.remaining} remaining.`, 'success');
-        } else if (data.sentThisBatch || data.failedThisBatch) {
-            showToast(`${allCrmCampaignName(id)}: sent ${data.sentThisBatch} more (${data.remaining} remaining).`, 'info');
         }
         if (data.status === 'Completed') {
-            clearInterval(crmBatchTimers[id]);
-            delete crmBatchTimers[id];
             showToast(`Campaign "${allCrmCampaignName(id)}" finished sending.`, 'success');
         }
-        // Refresh silently if the Campaigns tab is currently visible, so progress
-        // numbers update without disturbing whatever else the admin is doing.
-        if (!document.getElementById('tabCrmCampaigns')?.classList.contains('hidden')) {
-            await loadCrmCampaigns();
-        }
+        await loadCrmCampaigns();
     } catch (e) {
-        // Unauthorized already redirects to login via adminFetch; a plain network
-        // hiccup here just waits for the next interval tick rather than spamming toasts.
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }
 }
 
@@ -2727,16 +2721,15 @@ function startCrmCampaign(id) {
     if (!c) return;
     openConfirmModal(
         'Start Sending Campaign',
-        `Start sending <strong>${escHtml(c.name)}</strong> to ${c.totalRecipients} contact${c.totalRecipients === 1 ? '' : 's'}? Emails will go out in batches of ${c.batchSize} every ${c.intervalMinutes} minute${c.intervalMinutes === 1 ? '' : 's'} while this admin tab stays open.`,
+        `Start sending <strong>${escHtml(c.name)}</strong> to ${c.totalRecipients} contact${c.totalRecipients === 1 ? '' : 's'}? Emails go out in batches of ${c.batchSize} every ${c.intervalMinutes} minute${c.intervalMinutes === 1 ? '' : 's'}, handled by the server — you don't need to keep this admin page open for it to keep going.`,
         '📤',
         async () => {
             try {
                 const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/start`, { method: 'POST' });
                 if (res.ok) {
-                    showToast('Campaign started.', 'success');
+                    showToast('Campaign started — sending now, no need to keep this page open.', 'success');
                     closeDetailsModal();
                     await loadCrmCampaigns();
-                    await processCrmBatch(id, false); // send the first batch immediately instead of waiting a full interval
                 } else {
                     const err = await res.json().catch(() => ({}));
                     showToast(err.error || 'Could not start campaign.', 'error');
@@ -2782,7 +2775,6 @@ function deleteCrmCampaign(id) {
                 const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}`, { method: 'DELETE' });
                 if (res.ok) {
                     showToast('Campaign deleted.', 'success');
-                    if (crmBatchTimers[id]) { clearInterval(crmBatchTimers[id]); delete crmBatchTimers[id]; }
                     await loadCrmCampaigns();
                 } else {
                     const err = await res.json().catch(() => ({}));

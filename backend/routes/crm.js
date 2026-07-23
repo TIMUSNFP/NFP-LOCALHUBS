@@ -151,6 +151,166 @@ function appendOptionalFilters(conditions, params, targetBatches, targetMembersh
   }
 }
 
+// ─── Campaign batch processing — server-side scheduler ─────────────────────────
+// Runs entirely inside this Node process: once a campaign starts Sending, a
+// setInterval here (not the browser) drives it forward at its own
+// interval_minutes pacing until Completed or Paused. The admin panel no longer
+// needs to stay open for a campaign to keep sending — only the backend process
+// itself (npm run dev / the deployed server) needs to keep running.
+const campaignTimers = new Map(); // campaignId -> Timeout handle
+
+function scheduleCampaignTimer(campaignId, intervalMinutes) {
+  if (campaignTimers.has(campaignId)) return;
+  const ms = Math.max(1, intervalMinutes || 15) * 60 * 1000;
+  const timer = setInterval(() => {
+    runCampaignBatch(campaignId).catch((e) => console.error(`[crm] batch error for ${campaignId}:`, e.message));
+  }, ms);
+  campaignTimers.set(campaignId, timer);
+}
+
+function unscheduleCampaignTimer(campaignId) {
+  const timer = campaignTimers.get(campaignId);
+  if (timer) {
+    clearInterval(timer);
+    campaignTimers.delete(campaignId);
+  }
+}
+
+// The actual batch-send worker — atomically claims up to batch_size Pending
+// recipients (FOR UPDATE SKIP LOCKED means two overlapping calls for the same
+// campaign, e.g. the scheduled timer firing at the same moment as an admin's
+// manual "Send Batch Now" click, can never claim the same row twice), sends
+// each with a short stagger, and marks the campaign Completed once nothing
+// Pending is left. Used by both the HTTP route (manual trigger) and the
+// server-side interval (automatic pacing) — same function, same guarantees.
+async function runCampaignBatch(campaignId) {
+  const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaignId]);
+  if (!campaign) return { sentThisBatch: 0, failedThisBatch: 0, remaining: 0, status: 'NotFound' };
+  if (campaign.status !== 'Sending') {
+    unscheduleCampaignTimer(campaignId);
+    return { sentThisBatch: 0, failedThisBatch: 0, remaining: 0, status: campaign.status };
+  }
+
+  const claimed = await db.all(
+    `WITH claimed AS (
+       UPDATE crm_campaign_recipients
+       SET status = 'Claimed'
+       WHERE id IN (
+         SELECT id FROM crm_campaign_recipients
+         WHERE campaign_id = $1 AND status = 'Pending'
+         ORDER BY id ASC
+         LIMIT $2
+         FOR UPDATE SKIP LOCKED
+       )
+       RETURNING id, contact_id
+     )
+     SELECT claimed.id AS recipient_id, c.id, c.full_name, c.email, c.city, c.city_key, c.unsubscribed_at
+     FROM claimed JOIN crm_contacts c ON c.id = claimed.contact_id`,
+    [campaignId, campaign.batch_size]
+  );
+
+  const mode = campaign.target_mode || 'manual';
+  const targetCities = campaign.target_cities || [];
+
+  // Manual mode: one fixed hub list for everyone in this batch. Auto mode: a
+  // cityKey -> hubs map, looked up per contact below so each person only ever
+  // sees circles in their own city — this is the whole point of "auto" mode.
+  let manualHubs = [];
+  let openMap = null;
+  if (mode === 'auto') {
+    openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+  } else {
+    const hubIds = campaign.hub_ids || [];
+    manualHubs = hubIds.length ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [hubIds]) : [];
+  }
+
+  let sentThisBatch = 0;
+  let failedThisBatch = 0;
+
+  for (const contact of claimed) {
+    if (contact.unsubscribed_at) {
+      await db.run(`UPDATE crm_campaign_recipients SET status = 'Skipped' WHERE id = $1`, [contact.recipient_id]);
+      continue;
+    }
+
+    const hubs = mode === 'auto' ? (openMap.get(contact.city_key) || []) : manualHubs;
+    if (mode === 'auto' && hubs.length === 0) {
+      // Their city no longer has an open circle (e.g. it filled up between start
+      // and now) — nothing to tell them, so skip rather than send an empty email.
+      await db.run(`UPDATE crm_campaign_recipients SET status = 'Skipped' WHERE id = $1`, [contact.recipient_id]);
+      continue;
+    }
+
+    try {
+      await sendCrmCampaignEmail(
+        { id: contact.id, full_name: contact.full_name, email: contact.email, city: contact.city },
+        hubs,
+        {
+          subject: renderCrmSubject(campaign.subject, contact.city),
+          introHtml: campaign.intro_html,
+          targetCities: mode === 'auto' ? [] : targetCities,
+        }
+      );
+      await db.run(
+        `UPDATE crm_campaign_recipients SET status = 'Sent', sent_at = $1 WHERE id = $2`,
+        [new Date().toISOString(), contact.recipient_id]
+      );
+      sentThisBatch++;
+    } catch (err) {
+      await db.run(
+        `UPDATE crm_campaign_recipients SET status = 'Failed', error = $1 WHERE id = $2`,
+        [String((err && err.message) || err).slice(0, 500), contact.recipient_id]
+      );
+      failedThisBatch++;
+    }
+    await sleep(400);
+  }
+
+  const now = new Date().toISOString();
+  await db.run(
+    `UPDATE crm_campaigns SET sent_count = sent_count + $1, failed_count = failed_count + $2, last_batch_at = $3 WHERE id = $4`,
+    [sentThisBatch, failedThisBatch, now, campaignId]
+  );
+
+  const remainingRow = await db.get(
+    `SELECT COUNT(*)::int AS count FROM crm_campaign_recipients WHERE campaign_id = $1 AND status = 'Pending'`,
+    [campaignId]
+  );
+  let status = campaign.status;
+  if (remainingRow.count === 0) {
+    status = 'Completed';
+    await db.run(`UPDATE crm_campaigns SET status = 'Completed', completed_at = $1 WHERE id = $2`, [now, campaignId]);
+    unscheduleCampaignTimer(campaignId);
+  }
+
+  return { sentThisBatch, failedThisBatch, remaining: remainingRow.count, status };
+}
+
+// On process boot: any recipient row still 'Claimed' means a previous process
+// died mid-batch (this is exactly the incident that motivated this refactor —
+// killing the dev server while a batch was running left rows claimed but never
+// resolved, and the campaign's aggregate counters permanently out of sync with
+// what had actually sent) — reset those back to Pending so they're picked up
+// again instead of silently stuck forever. Then re-arm the interval timer for
+// every campaign still marked Sending, and run one batch immediately so a
+// restart doesn't leave people waiting a full interval before anything resumes.
+async function resumeCrmCampaignsOnBoot() {
+  try {
+    await db.run(`UPDATE crm_campaign_recipients SET status = 'Pending' WHERE status = 'Claimed'`);
+    const sending = await db.all(`SELECT id, interval_minutes FROM crm_campaigns WHERE status = 'Sending'`);
+    for (const c of sending) {
+      scheduleCampaignTimer(c.id, c.interval_minutes);
+      runCampaignBatch(c.id).catch((e) => console.error(`[crm] resume-on-boot batch error for ${c.id}:`, e.message));
+    }
+    if (sending.length > 0) {
+      console.log(`[crm] resumed ${sending.length} in-progress campaign(s) on boot.`);
+    }
+  } catch (e) {
+    console.error('[crm] failed to resume campaigns on boot:', e.message);
+  }
+}
+resumeCrmCampaignsOnBoot();
+
 // ─── Contacts ──────────────────────────────────────────────────────────────────
 
 // GET /api/admin/crm/contacts?city=&membership=&search=&page=&pageSize=
@@ -563,6 +723,8 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
   );
 
   const updated = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id]);
+  scheduleCampaignTimer(campaign.id, updated.interval_minutes);
+  runCampaignBatch(campaign.id).catch((e) => console.error(`[crm] initial batch error for ${campaign.id}:`, e.message));
   res.json(campaignRowToJson(updated));
 }));
 
@@ -571,6 +733,7 @@ router.post('/campaigns/:id/pause', asyncHandler(async (req, res) => {
   const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
   if (campaign.status !== 'Sending') return res.status(400).json({ error: 'Only a sending campaign can be paused.' });
+  unscheduleCampaignTimer(campaign.id);
   await db.run(`UPDATE crm_campaigns SET status = 'Paused' WHERE id = $1`, [campaign.id]);
   res.json(campaignRowToJson(await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id])));
 }));
@@ -581,105 +744,21 @@ router.post('/campaigns/:id/resume', asyncHandler(async (req, res) => {
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
   if (campaign.status !== 'Paused') return res.status(400).json({ error: 'Only a paused campaign can be resumed.' });
   await db.run(`UPDATE crm_campaigns SET status = 'Sending' WHERE id = $1`, [campaign.id]);
+  scheduleCampaignTimer(campaign.id, campaign.interval_minutes);
+  runCampaignBatch(campaign.id).catch((e) => console.error(`[crm] resume batch error for ${campaign.id}:`, e.message));
   res.json(campaignRowToJson(await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id])));
 }));
 
-// POST /api/admin/crm/campaigns/:id/process-batch — sends the next batch_size
-// Pending recipients, staggered ~400ms apart. Idempotent: only advances
-// Pending -> Sent/Failed/Skipped rows, so calling it repeatedly (the admin panel's
-// interval timer) never double-sends. Marks the campaign Completed once nothing
-// Pending remains.
+// POST /api/admin/crm/campaigns/:id/process-batch — manual "Send Batch Now".
+// Automatic pacing is handled server-side (see scheduleCampaignTimer above); this
+// route is for an admin who wants a batch to go out immediately rather than wait
+// for the next interval tick. Safe to call even while the automatic timer is
+// also running — runCampaignBatch's atomic claim means they can never grab the
+// same recipient twice.
 router.post('/campaigns/:id/process-batch', asyncHandler(async (req, res) => {
-  const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
-  if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-  if (campaign.status !== 'Sending') {
-    return res.json({ sentThisBatch: 0, failedThisBatch: 0, remaining: 0, status: campaign.status });
-  }
-
-  const pending = await db.all(
-    `SELECT r.id AS recipient_id, c.id, c.full_name, c.email, c.city, c.city_key, c.unsubscribed_at
-     FROM crm_campaign_recipients r
-     JOIN crm_contacts c ON c.id = r.contact_id
-     WHERE r.campaign_id = $1 AND r.status = 'Pending'
-     ORDER BY r.id ASC
-     LIMIT $2`,
-    [campaign.id, campaign.batch_size]
-  );
-
-  const mode = campaign.target_mode || 'manual';
-  const targetCities = campaign.target_cities || [];
-
-  // Manual mode: one fixed hub list for everyone in this batch. Auto mode: a
-  // cityKey -> hubs map, looked up per contact below so each person only ever
-  // sees circles in their own city — this is the whole point of "auto" mode.
-  let manualHubs = [];
-  let openMap = null;
-  if (mode === 'auto') {
-    openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
-  } else {
-    const hubIds = campaign.hub_ids || [];
-    manualHubs = hubIds.length ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [hubIds]) : [];
-  }
-
-  let sentThisBatch = 0;
-  let failedThisBatch = 0;
-
-  for (const contact of pending) {
-    if (contact.unsubscribed_at) {
-      await db.run(`UPDATE crm_campaign_recipients SET status = 'Skipped' WHERE id = $1`, [contact.recipient_id]);
-      continue;
-    }
-
-    const hubs = mode === 'auto' ? (openMap.get(contact.city_key) || []) : manualHubs;
-    if (mode === 'auto' && hubs.length === 0) {
-      // Their city no longer has an open circle (e.g. it filled up between start
-      // and now) — nothing to tell them, so skip rather than send an empty email.
-      await db.run(`UPDATE crm_campaign_recipients SET status = 'Skipped' WHERE id = $1`, [contact.recipient_id]);
-      continue;
-    }
-
-    try {
-      await sendCrmCampaignEmail(
-        { id: contact.id, full_name: contact.full_name, email: contact.email, city: contact.city },
-        hubs,
-        {
-          subject: renderCrmSubject(campaign.subject, contact.city),
-          introHtml: campaign.intro_html,
-          targetCities: mode === 'auto' ? [] : targetCities,
-        }
-      );
-      await db.run(
-        `UPDATE crm_campaign_recipients SET status = 'Sent', sent_at = $1 WHERE id = $2`,
-        [new Date().toISOString(), contact.recipient_id]
-      );
-      sentThisBatch++;
-    } catch (err) {
-      await db.run(
-        `UPDATE crm_campaign_recipients SET status = 'Failed', error = $1 WHERE id = $2`,
-        [String((err && err.message) || err).slice(0, 500), contact.recipient_id]
-      );
-      failedThisBatch++;
-    }
-    await sleep(400);
-  }
-
-  const now = new Date().toISOString();
-  await db.run(
-    `UPDATE crm_campaigns SET sent_count = sent_count + $1, failed_count = failed_count + $2, last_batch_at = $3 WHERE id = $4`,
-    [sentThisBatch, failedThisBatch, now, campaign.id]
-  );
-
-  const remainingRow = await db.get(
-    `SELECT COUNT(*)::int AS count FROM crm_campaign_recipients WHERE campaign_id = $1 AND status = 'Pending'`,
-    [campaign.id]
-  );
-  let status = campaign.status;
-  if (remainingRow.count === 0) {
-    status = 'Completed';
-    await db.run(`UPDATE crm_campaigns SET status = 'Completed', completed_at = $1 WHERE id = $2`, [now, campaign.id]);
-  }
-
-  res.json({ sentThisBatch, failedThisBatch, remaining: remainingRow.count, status });
+  const result = await runCampaignBatch(req.params.id);
+  if (result.status === 'NotFound') return res.status(404).json({ error: 'Campaign not found' });
+  res.json(result);
 }));
 
 // DELETE /api/admin/crm/campaigns/:id — blocked while actively sending.
@@ -689,6 +768,7 @@ router.delete('/campaigns/:id', asyncHandler(async (req, res) => {
   if (campaign.status === 'Sending') {
     return res.status(409).json({ error: 'Pause the campaign before deleting it.' });
   }
+  unscheduleCampaignTimer(campaign.id);
   await db.run('DELETE FROM crm_campaigns WHERE id = $1', [req.params.id]);
   res.json({ ok: true });
 }));

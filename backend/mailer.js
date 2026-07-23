@@ -31,12 +31,24 @@ function formatHubAddress(hub) {
   return hub.pincode ? `${line} - ${hub.pincode}` : line;
 }
 
+// pool:true is what actually matters for CRM campaign sends: without it, nodemailer
+// opens a brand-new connection AND re-authenticates (a fresh AUTH LOGIN) for every
+// single sendMail() call. Sending a few hundred emails back-to-back this way looks
+// to Gmail like a burst of repeated logins, not a burst of mail, and it starts
+// rejecting with "454-4.7.0 Too many login attempts" partway through — this is what
+// happened to the first real CRM campaign. With pooling, nodemailer authenticates
+// once and reuses that single connection for every send. maxConnections stays at 1
+// (rather than nodemailer's default of 5) so we never open several connections in
+// parallel, which is its own way to look like abuse to a mail provider.
 const transporter = (SMTP_HOST && SMTP_USER && SMTP_PASS)
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465, // true for 465, false for 587/25 (STARTTLS)
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      pool: true,
+      maxConnections: 1,
+      maxMessages: Infinity,
     })
   : null;
 
