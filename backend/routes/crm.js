@@ -176,14 +176,39 @@ function unscheduleCampaignTimer(campaignId) {
   }
 }
 
+// Guards against two overlapping runs of the SAME campaign — e.g. the 5-minute
+// timer ticking again before a large batch has finished sending. The atomic
+// claim already makes overlap safe against duplicate sends, but letting it
+// happen anyway was its own bug: each overlapping run claims its own chunk of
+// Pending rows, so "how many are claimed right now" balloons well past
+// batch_size, and — combined with the old end-of-loop-only counter update —
+// made the admin panel's Sent/Total look completely frozen for many minutes
+// while real sends were happening underneath it. One run per campaign at a
+// time keeps batch_size meaningful and keeps progress visible.
+const campaignsCurrentlyRunning = new Set();
+
 // The actual batch-send worker — atomically claims up to batch_size Pending
-// recipients (FOR UPDATE SKIP LOCKED means two overlapping calls for the same
-// campaign, e.g. the scheduled timer firing at the same moment as an admin's
-// manual "Send Batch Now" click, can never claim the same row twice), sends
-// each with a short stagger, and marks the campaign Completed once nothing
-// Pending is left. Used by both the HTTP route (manual trigger) and the
-// server-side interval (automatic pacing) — same function, same guarantees.
+// recipients (FOR UPDATE SKIP LOCKED means a manual "Send Batch Now" click
+// arriving mid-run can never claim the same row a running batch already has),
+// sends each with a short stagger, and marks the campaign Completed once
+// nothing Pending is left. Used by both the HTTP route (manual trigger) and
+// the server-side interval (automatic pacing) — same function, same
+// guarantees. sent_count/failed_count update after EVERY send (not once at
+// the end) so progress is visible in near-real-time no matter how large or
+// slow the batch is.
 async function runCampaignBatch(campaignId) {
+  if (campaignsCurrentlyRunning.has(campaignId)) {
+    return { sentThisBatch: 0, failedThisBatch: 0, remaining: 0, status: 'AlreadyRunning' };
+  }
+  campaignsCurrentlyRunning.add(campaignId);
+  try {
+    return await runCampaignBatchInner(campaignId);
+  } finally {
+    campaignsCurrentlyRunning.delete(campaignId);
+  }
+}
+
+async function runCampaignBatchInner(campaignId) {
   const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaignId]);
   if (!campaign) return { sentThisBatch: 0, failedThisBatch: 0, remaining: 0, status: 'NotFound' };
   if (campaign.status !== 'Sending') {
@@ -256,22 +281,19 @@ async function runCampaignBatch(campaignId) {
         [new Date().toISOString(), contact.recipient_id]
       );
       sentThisBatch++;
+      await db.run(`UPDATE crm_campaigns SET sent_count = sent_count + 1, last_batch_at = $1 WHERE id = $2`, [new Date().toISOString(), campaignId]);
     } catch (err) {
       await db.run(
         `UPDATE crm_campaign_recipients SET status = 'Failed', error = $1 WHERE id = $2`,
         [String((err && err.message) || err).slice(0, 500), contact.recipient_id]
       );
       failedThisBatch++;
+      await db.run(`UPDATE crm_campaigns SET failed_count = failed_count + 1, last_batch_at = $1 WHERE id = $2`, [new Date().toISOString(), campaignId]);
     }
     await sleep(400);
   }
 
   const now = new Date().toISOString();
-  await db.run(
-    `UPDATE crm_campaigns SET sent_count = sent_count + $1, failed_count = failed_count + $2, last_batch_at = $3 WHERE id = $4`,
-    [sentThisBatch, failedThisBatch, now, campaignId]
-  );
-
   const remainingRow = await db.get(
     `SELECT COUNT(*)::int AS count FROM crm_campaign_recipients WHERE campaign_id = $1 AND status = 'Pending'`,
     [campaignId]
