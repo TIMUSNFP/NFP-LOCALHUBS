@@ -38,6 +38,15 @@ function renderCrmSubject(template, city) {
   return String(template || '').replace(/\{city\}/gi, safeCity);
 }
 
+// A standalone "QPFP" membership value is folded into "Member + QPFP" — every
+// QPFP Certificant is treated as part of that combined group rather than a
+// separate bucket, so campaign targeting only ever needs to distinguish
+// "Member" vs "Member + QPFP", not a third category. Applied at import time so
+// re-importing the same source sheet later doesn't undo the merge.
+function normalizeCrmMembership(raw) {
+  return raw === 'QPFP' ? 'Member + QPFP' : raw;
+}
+
 // Column-header aliases so a re-export with slightly different wording/column
 // order still imports correctly — matched case-insensitively against the
 // uploaded sheet's actual header row.
@@ -302,7 +311,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
       mobile: mobileKey ? String(row[mobileKey] || '').trim() || null : null,
       city: city || null,
       cityKey: city ? normalizeCityKey(city) : null,
-      membership: membershipKey ? String(row[membershipKey] || '').trim() || null : null,
+      membership: membershipKey ? normalizeCrmMembership(String(row[membershipKey] || '').trim()) || null : null,
       batch: batchKey ? String(row[batchKey] || '').trim() || null : null,
       source: req.file.originalname,
     });
