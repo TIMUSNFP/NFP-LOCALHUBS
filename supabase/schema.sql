@@ -100,6 +100,8 @@ create table if not exists crm_campaigns (
   target_mode text not null default 'manual', -- manual (fixed target_cities/hub_ids for everyone) | auto (each recipient gets their own city's open circles)
   target_cities jsonb not null,        -- manual mode only: raw city strings selected from crm_contacts
   hub_ids jsonb not null,              -- manual mode only: hubs featured in the email
+  target_batches jsonb not null default '[]'::jsonb,      -- optional narrowing filter, e.g. ["Batch 11","Batch 12"] — applies in both manual and auto mode; empty = no batch restriction
+  target_memberships jsonb not null default '[]'::jsonb,  -- optional narrowing filter, e.g. ["QPFP"] — empty = no membership restriction
   subject text not null,
   intro_html text,                     -- optional override of the default "what/why" blurb
   batch_size integer not null default 25,
@@ -113,6 +115,8 @@ create table if not exists crm_campaigns (
   last_batch_at text
 );
 alter table crm_campaigns add column if not exists target_mode text not null default 'manual';
+alter table crm_campaigns add column if not exists target_batches jsonb not null default '[]'::jsonb;
+alter table crm_campaigns add column if not exists target_memberships jsonb not null default '[]'::jsonb;
 
 create table if not exists crm_campaign_recipients (
   id bigserial primary key,
