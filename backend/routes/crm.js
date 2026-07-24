@@ -314,26 +314,31 @@ async function runCampaignBatchInner(campaignId) {
 }
 
 // On process boot: any recipient row still 'Claimed' means a previous process
-// died mid-batch (this is exactly the incident that motivated this refactor —
-// killing the dev server while a batch was running left rows claimed but never
-// resolved, and the campaign's aggregate counters permanently out of sync with
-// what had actually sent) — reset those back to Pending so they're picked up
-// again instead of silently stuck forever. Then re-arm the interval timer for
-// every campaign still marked Sending, and run one batch immediately so a
-// restart doesn't leave people waiting a full interval before anything resumes.
+// died mid-batch, leaving it claimed but never resolved — reset those back to
+// Pending so they aren't silently stuck forever. That part is just data
+// hygiene and never sends anything on its own.
+//
+// Campaigns are NOT auto-resumed here. An earlier version of this function did
+// exactly that (re-armed the timer and fired an immediate batch for every
+// still-Sending campaign) — which meant every server restart silently kept a
+// campaign sending for hours with no admin action involved, which is the
+// opposite of what was asked for: campaigns must only ever send on an explicit
+// click. Any campaign still marked Sending at boot is moved to Paused instead
+// — the data is safe and exactly where it left off, but it now needs a
+// deliberate "Resume" click to continue, every time, no exceptions.
 async function resumeCrmCampaignsOnBoot() {
   try {
     await db.run(`UPDATE crm_campaign_recipients SET status = 'Pending' WHERE status = 'Claimed'`);
-    const sending = await db.all(`SELECT id, interval_minutes FROM crm_campaigns WHERE status = 'Sending'`);
-    for (const c of sending) {
-      scheduleCampaignTimer(c.id, c.interval_minutes);
-      runCampaignBatch(c.id).catch((e) => console.error(`[crm] resume-on-boot batch error for ${c.id}:`, e.message));
-    }
-    if (sending.length > 0) {
-      console.log(`[crm] resumed ${sending.length} in-progress campaign(s) on boot.`);
+    const wasSending = await db.all(`SELECT id, name FROM crm_campaigns WHERE status = 'Sending'`);
+    if (wasSending.length > 0) {
+      await db.run(`UPDATE crm_campaigns SET status = 'Paused' WHERE status = 'Sending'`);
+      console.log(
+        `[crm] ${wasSending.length} campaign(s) were still marked Sending at boot — paused, not resumed ` +
+        `(requires an explicit Resume click): ${wasSending.map((c) => c.name).join(', ')}`
+      );
     }
   } catch (e) {
-    console.error('[crm] failed to resume campaigns on boot:', e.message);
+    console.error('[crm] boot cleanup failed:', e.message);
   }
 }
 resumeCrmCampaignsOnBoot();
