@@ -2039,6 +2039,7 @@ function renderParticipantTable(parts) {
                         ? `<button class="act-btn act-reset" onclick="resetParticipant('${escHtml(p.id)}')">Reset to Pending</button>`
                         : ''}
                     <button class="act-btn act-view" onclick="viewParticipantDetails('${escHtml(p.id)}')">View</button>
+                    <button class="act-btn act-view" onclick="openTransferParticipantsModal(['${escHtml(p.id)}'])">Transfer</button>
                     <button class="act-btn act-delete" onclick="deleteParticipant('${escHtml(p.id)}')">Delete</button>
                 </div>
             </td>
@@ -2336,6 +2337,97 @@ function viewParticipantDetails(id) {
         ${p.note ? `<div class="detail-section"><h4>Note from Participant</h4><p style="font-size:14px;color:var(--text);line-height:1.65">"${escHtml(p.note)}"</p></div>` : ''}
     `;
     document.getElementById('detailsOverlay').classList.add('visible');
+}
+
+// ═══════════════════ TRANSFER PARTICIPANT(S) TO ANOTHER CIRCLE ═══════════════════
+let pendingTransferParticipantIds = [];
+
+async function openTransferParticipantsModal(participantIds) {
+    if (!participantIds || participantIds.length === 0) return;
+    pendingTransferParticipantIds = participantIds;
+
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = `Transfer Participant${participantIds.length > 1 ? 's' : ''}`;
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `<p style="color:var(--muted)">Loading circles…</p>`;
+    document.getElementById('detailsOverlay').classList.add('visible');
+
+    await loadHubs(); // refresh allHubs so capacity/counts are current
+    const approved = allHubs.filter(h => h.status === 'Approved');
+    const countByHub = {};
+    allParticipants.forEach(p => { countByHub[p.hubId] = (countByHub[p.hubId] || 0) + 1; });
+
+    const names = participantIds
+        .map(id => allParticipants.find(p => p.id === id))
+        .filter(Boolean)
+        .map(p => p.fullName);
+
+    content.innerHTML = `
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+            Moving <strong>${participantIds.length}</strong> participant${participantIds.length > 1 ? 's' : ''}
+            ${names.length ? `(${names.map(n => escHtml(n)).join(', ')})` : ''} to a different circle.
+            Each one gets an email showing their old and new Circle Leader/venue — no action needed from them.
+        </p>
+        <div class="detail-item">
+            <label>Destination Circle</label>
+            <input type="text" id="transferHubSearch" class="form-input" placeholder="Search by leader, city, or area..." oninput="filterTransferHubList()">
+        </div>
+        <div id="transferHubList" style="max-height:320px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-top:10px">
+            ${approved.length === 0 ? '<p style="color:var(--muted);font-size:13px">No approved circles found.</p>' : approved.map(h => {
+                const count = countByHub[h.id] || 0;
+                const capNum = parseInt(h.capacity, 10);
+                const full = !isNaN(capNum) && capNum > 0 && count >= capNum;
+                return `
+                <label class="transfer-hub-option" data-search="${escHtml((h.fullName + ' ' + h.city + ' ' + h.area).toLowerCase())}" style="display:flex;align-items:center;gap:10px;padding:8px 4px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border)">
+                    <input type="radio" name="transferHub" value="${escHtml(h.id)}">
+                    <span>
+                        <strong>${escHtml(h.fullName)}</strong> — ${escHtml(h.city)}, ${escHtml(h.area)}
+                        <span style="color:var(--muted);font-size:12px"> (${count}/${escHtml(h.capacity)}${full ? ', FULL' : ''})</span>
+                    </span>
+                </label>`;
+            }).join('')}
+        </div>
+        <div class="modal-btns">
+            <button class="btn-outline" onclick="closeDetailsModal()">Cancel</button>
+            <button class="btn-primary" onclick="submitTransferParticipants()">Transfer</button>
+        </div>
+    `;
+}
+
+function filterTransferHubList() {
+    const q = (document.getElementById('transferHubSearch')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('.transfer-hub-option').forEach(el => {
+        el.style.display = (!q || el.dataset.search.includes(q)) ? 'flex' : 'none';
+    });
+}
+
+async function submitTransferParticipants() {
+    const selected = document.querySelector('input[name="transferHub"]:checked');
+    if (!selected) { showToast('Please select a destination circle.', 'error'); return; }
+    const newHubId = selected.value;
+
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/participants/transfer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ participantIds: pendingTransferParticipantIds, newHubId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(data.error || 'Could not transfer participants.', 'error'); return; }
+        showToast(
+            `Transferred ${data.transferred} participant${data.transferred === 1 ? '' : 's'}` +
+            (data.skipped ? ` (${data.skipped} skipped — already in that circle).` : '.'),
+            'success'
+        );
+        closeDetailsModal();
+        pendingTransferParticipantIds = [];
+        clearParticipantSelection();
+        await loadParticipants();
+        updateParticipantStats();
+        applyParticipantFilters();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
 }
 
 function exportParticipantsCSV() {

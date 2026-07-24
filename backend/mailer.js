@@ -369,6 +369,40 @@ async function sendHubDetailsUpdated(participant, hub, changes) {
   });
 }
 
+// ─── Participant Transferred ──────────────────────────────────────────────────
+// Sent on-demand by an admin when moving a participant from one Circle to
+// another (e.g. their original circle is full, dissolved, or a better-located
+// one opened up). Shows both the old and new Circle Leader/venue so it's clear
+// exactly what changed, not just that something did.
+
+async function sendParticipantTransferred(participant, oldHub, newHub) {
+  const html = wrap(`
+    <div class="badge">🔄 You've Been Moved to a New Circle</div>
+    <h2>Hi ${participant.full_name}, your NFP Circle has changed</h2>
+    <p>We've moved your registration to a different NFP Circle. Here's where you were, and where you are now:</p>
+    <div class="info-box">
+      <p><strong>Previous Circle Leader:</strong> ${oldHub ? oldHub.full_name : '—'}</p>
+      <p><strong>Previous Location:</strong> ${oldHub ? formatHubAddress(oldHub) : '—'}</p>
+    </div>
+    <div class="theme-block">
+      <p class="theme-title">Your New Circle</p>
+    </div>
+    <div class="info-box">
+      <p><strong>Circle Leader:</strong> ${newHub.full_name}</p>
+      <p><strong>Address:</strong> ${formatHubAddress(newHub)}</p>
+      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+    </div>
+    <p>No action is needed from you — your registration is already confirmed with your new Circle Leader.</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+  `);
+
+  await send({
+    to: participant.email,
+    subject: `You've been moved to a new NFP Circle — ${newHub.city}`,
+    html,
+  });
+}
+
 // ─── NFP Circle CRM — city outreach campaign ──────────────────────────────────
 // Sent to cold-outreach contacts (NFP Members / QPFP Certificants) who are not
 // registered anywhere yet. Tells them which open Circles exist in their city and
@@ -444,6 +478,7 @@ module.exports = {
   sendParticipantCancelled,
   sendHubRosterUpdate,
   sendHubDetailsUpdated,
+  sendParticipantTransferred,
   buildCircleCrmEmailHtml,
   sendCrmCampaignEmail,
   crmUnsubscribeUrl,

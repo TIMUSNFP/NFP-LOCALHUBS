@@ -13,6 +13,7 @@ const {
   sendParticipantCancelled,
   sendHubRosterUpdate,
   sendHubDetailsUpdated,
+  sendParticipantTransferred,
 } = require('../mailer');
 
 const router = express.Router();
@@ -348,6 +349,48 @@ router.patch('/participants/:id/status', async (req, res) => {
   }
 
   res.json(participantRowToJson(updated));
+});
+
+// POST /api/admin/participants/transfer — moves one or more participants to a
+// different Approved circle (e.g. their original circle is full, cancelled, or
+// a better-located one opened up) and emails each of them showing their old and
+// new Circle Leader/venue. Deliberately does not enforce the destination
+// circle's capacity — an admin-initiated transfer is an override, not a public
+// registration subject to the normal capacity check in routes/participants.js.
+router.post('/participants/transfer', async (req, res) => {
+  const { participantIds, newHubId } = req.body || {};
+  if (!Array.isArray(participantIds) || participantIds.length === 0) {
+    return res.status(400).json({ error: 'participantIds[] is required.' });
+  }
+  if (!newHubId) {
+    return res.status(400).json({ error: 'newHubId is required.' });
+  }
+
+  const newHub = await db.get('SELECT * FROM hubs WHERE id = $1', [newHubId]);
+  if (!newHub) return res.status(404).json({ error: 'Destination circle not found.' });
+  if (newHub.status !== 'Approved') {
+    return res.status(400).json({ error: 'Destination circle must be an Approved circle.' });
+  }
+
+  let transferred = 0;
+  let skipped = 0;
+  for (const pid of participantIds) {
+    const participant = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
+    if (!participant || participant.hub_id === newHubId) {
+      skipped++;
+      continue;
+    }
+
+    const oldHub = await db.get('SELECT * FROM hubs WHERE id = $1', [participant.hub_id]);
+    await db.run('UPDATE participants SET hub_id = $1 WHERE id = $2', [newHubId, pid]);
+    const updated = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
+    transferred++;
+
+    // Fire transfer email — non-blocking, errors are swallowed in mailer.
+    sendParticipantTransferred(updated, oldHub, newHub);
+  }
+
+  res.json({ transferred, skipped, newHub: hubRowToJson(newHub) });
 });
 
 // DELETE /api/admin/participants/:id — permanently remove a participant. This is
