@@ -1436,6 +1436,7 @@ function renderAnalytics() {
     renderSupplyVsDemand(hubsAll, partsAll);
     renderLowParticipantCircles(hubsAll, partsAll, lowParticipantThreshold);
     renderCapacityVsRegistered(hubsAll, partsAll);
+    renderCityCapacityFill(hubsAll, partsAll);
 }
 
 // ── Shared: horizontal bar set ──
@@ -1916,6 +1917,45 @@ function renderCapacityVsRegistered(hubs, parts) {
                 <div class="kpi-pill" style="background:#f0fdf4;color:#16A34A">${totalReg} Filled</div>
             </div>
         </div>`;
+}
+
+// Per-city version of "Total Capacity vs Registered" — that KPI is a single
+// global number, this breaks it down city by city so you can see e.g. "Mumbai
+// is at 92% capacity" vs "Pune only has 40% filled" at a glance, same visual
+// language as renderCircleFillRate (which is per-circle, not per-city).
+function renderCityCapacityFill(hubs, parts) {
+    const el = document.getElementById('cityCapacityFillBars');
+    if (!el) return;
+    const approved = hubs.filter(h => h.status === 'Approved');
+    if (!approved.length) { el.innerHTML = '<div class="a-no-data">No approved circles yet</div>'; return; }
+
+    const cityMap = {};
+    approved.forEach(h => {
+        const city = h.city || 'Unknown';
+        cityMap[city] = cityMap[city] || { capacity: 0, filled: 0 };
+        cityMap[city].capacity += parseInt(h.capacity) || 0;
+    });
+    parts.filter(p => p.status === 'Confirmed').forEach(p => {
+        const city = p.hubCity || 'Unknown';
+        if (!cityMap[city]) return; // participant's circle isn't in the approved set above
+        cityMap[city].filled++;
+    });
+
+    const data = Object.entries(cityMap)
+        .map(([city, d]) => ({ city, ...d, pct: d.capacity > 0 ? Math.min(100, Math.round(d.filled / d.capacity * 100)) : 0 }))
+        .sort((a, b) => b.pct - a.pct);
+
+    el.classList.add('chart-scroll');
+    el.innerHTML = data.map(d => {
+        const col = d.pct >= 90 ? '#DC2626' : d.pct >= 60 ? '#F59E0B' : '#16A34A';
+        return `<div class="bar-row">
+            <div class="bar-label-row">
+                <span>${escHtml(d.city)}</span>
+                <strong style="color:${col}">${d.filled}/${d.capacity} (${d.pct}%)</strong>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:${d.pct}%;background:${col}"></div></div>
+        </div>`;
+    }).join('');
 }
 
 // ═══════════════════ TOAST NOTIFICATIONS ═══════════════════
