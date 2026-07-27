@@ -1702,12 +1702,15 @@ function renderParticipantUniqueCities(parts) {
     const el = document.getElementById('participantUniqueCitiesKpi');
     if (!el) return;
     const confirmed = parts.filter(p => p.status === 'Confirmed');
-    const cities = new Set(confirmed.map(p => p.hubCity || 'Unknown'));
+    const cities = [...new Set(confirmed.map(p => p.hubCity || 'Unknown'))].sort((a, b) => a.localeCompare(b));
     el.innerHTML = `
-        <div class="kpi-big" style="color:var(--primary)">${cities.size}</div>
+        <div class="kpi-big" style="color:var(--primary)">${cities.length}</div>
         <div class="kpi-sub">unique cities with confirmed participants</div>
-        <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <div style="margin-top:14px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
             <div class="kpi-pill" style="background:#eff6ff;color:#3B82F6">${confirmed.length} Total Registrations</div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-height:180px;overflow-y:auto;padding:2px">
+            ${cities.map(c => `<span class="kpi-pill" style="background:var(--bg);color:var(--dark);font-weight:500">${escHtml(c)}</span>`).join('')}
         </div>`;
 }
 
