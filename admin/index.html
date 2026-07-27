@@ -393,6 +393,8 @@
                         <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
                     </div>
                     <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                        <button class="btn-export btn-sheets" id="sendUnsentConfirmationBtn" onclick="sendUnsentParticipantConfirmations()">&#128203; Send Confirmation to Never-Sent</button>
+                        <button class="btn-export btn-sheets" id="sendAllConfirmationBtn" onclick="sendAllParticipantConfirmations()">&#128203; Send Confirmation to All Confirmed</button>
                         <button class="btn-export" onclick="exportParticipantsCSV()">Export CSV</button>
                         <button class="btn-export btn-sheets" id="syncParticipantsBtn" onclick="syncToSheets('participants')">&#128196; Sync to Sheets</button>
                         <button class="btn-export form-toggle" id="participantFormToggle" onclick="toggleParticipantForm()" style="margin-left:0;min-width:auto">Registrations</button>

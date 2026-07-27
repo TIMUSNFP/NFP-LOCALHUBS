@@ -2101,6 +2101,9 @@ function renderParticipantTable(parts) {
                         : ''}
                     <button class="act-btn act-view" onclick="viewParticipantDetails('${escHtml(p.id)}')">View</button>
                     <button class="act-btn act-view" onclick="openTransferParticipantsModal(['${escHtml(p.id)}'])">Transfer</button>
+                    ${p.status === 'Confirmed'
+                        ? `<button class="act-btn act-view" onclick="sendParticipantConfirmationEmail('${escHtml(p.id)}')" title="${p.confirmationSentAt ? 'Last sent ' + formatDate(p.confirmationSentAt) : 'Never sent'}">${p.confirmationSentAt ? 'Resend Confirmation' : 'Send Confirmation'}</button>`
+                        : ''}
                     <button class="act-btn act-delete" onclick="deleteParticipant('${escHtml(p.id)}')">Delete</button>
                 </div>
             </td>
@@ -2283,6 +2286,100 @@ async function executeBulkUpdateParticipants() {
     } else {
         showToast(`${successCount}/${ids.length} updated — some failed, please check and retry.`, 'warning');
     }
+}
+
+// ═══════════════════ CONFIRMATION EMAIL — SEND / RESEND ═══════════════════
+// Same pattern as the hub roster send (sendHubRoster / bulkSendHubRoster /
+// sendAllApprovedRosters / sendUnsentApprovedRosters): a single on-demand
+// endpoint, looped client-side for the bulk versions.
+
+function sendParticipantConfirmationEmail(id) {
+    const p = allParticipants.find(x => String(x.id) === String(id));
+    if (!p) return;
+    openConfirmModal(
+        p.confirmationSentAt ? 'Resend Confirmation Email' : 'Send Confirmation Email',
+        `Email <strong>${escHtml(p.fullName)}</strong> their registration confirmation for ${escHtml(p.hubLeader)}'s circle in ${escHtml(p.hubCity)}? This sends a real email immediately.`,
+        '📩',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-confirmation`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('Confirmation email sent.', 'success');
+                    await loadParticipants();
+                    applyParticipantFilters();
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    showToast(body.error || 'Failed to send confirmation email.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Send',
+        false
+    );
+}
+
+async function executeBulkSendParticipantConfirmations(ids) {
+    let successCount = 0;
+    for (const id of ids) {
+        try {
+            const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-confirmation`, { method: 'POST' });
+            if (res.ok) successCount++;
+        } catch (e) { /* keep going through the rest */ }
+    }
+    await loadParticipants();
+    updateParticipantStats();
+    applyParticipantFilters();
+
+    if (successCount === ids.length) {
+        showToast(`${successCount} confirmation email${successCount > 1 ? 's' : ''} sent!`, 'success');
+    } else {
+        showToast(`${successCount}/${ids.length} sent — the rest were skipped (not Confirmed) or failed.`, 'warning');
+    }
+}
+
+// Only targets Confirmed participants who've never received a confirmation
+// email (confirmationSentAt is empty) — catches up stragglers (imported data,
+// a send that failed, anyone confirmed before this feature existed) without
+// re-emailing everyone who's already gotten one.
+function sendUnsentParticipantConfirmations() {
+    const unsent = allParticipants.filter(p => p.status === 'Confirmed' && !p.confirmationSentAt);
+    if (unsent.length === 0) {
+        showToast('Every confirmed participant has already been sent a confirmation email.', 'success');
+        return;
+    }
+    const count = unsent.length;
+    const plural = count > 1 ? 's' : '';
+    openConfirmModal(
+        `Send Confirmation Email${plural} to ${count} Never-Sent Participant${plural}`,
+        `Email <strong>${count}</strong> confirmed participant${plural} who have never received a confirmation email? This sends real emails immediately.`,
+        '📩',
+        () => { closeConfirmModal(); executeBulkSendParticipantConfirmations(unsent.map(p => p.id)); },
+        'Send',
+        false
+    );
+}
+
+// One-click version — emails every currently Confirmed participant, regardless
+// of whether they've been sent one before. Useful as a blanket reminder.
+function sendAllParticipantConfirmations() {
+    const confirmed = allParticipants.filter(p => p.status === 'Confirmed');
+    if (confirmed.length === 0) {
+        showToast('No confirmed participants to send to.', 'warning');
+        return;
+    }
+    const count = confirmed.length;
+    const plural = count > 1 ? 's' : '';
+    openConfirmModal(
+        `Send Confirmation Email to All ${count} Confirmed Participant${plural}`,
+        `Email <strong>all ${count}</strong> confirmed participant${plural} their registration confirmation as a reminder? This sends real emails immediately.`,
+        '📩',
+        () => { closeConfirmModal(); executeBulkSendParticipantConfirmations(confirmed.map(p => p.id)); },
+        'Send to All',
+        false
+    );
 }
 
 // Permanently delete a participant — frees up their email/mobile so they can

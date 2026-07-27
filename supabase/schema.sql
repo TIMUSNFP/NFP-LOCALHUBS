@@ -48,8 +48,10 @@ create table if not exists participants (
   mobile text not null,
   membership text not null,
   note text,
-  hub_id text not null references hubs(id)
+  hub_id text not null references hubs(id),
+  confirmation_sent_at text
 );
+alter table participants add column if not exists confirmation_sent_at text;
 
 -- Geocoding cache: pincode -> lat/lng, so we don't re-call the geocoder
 create table if not exists pincode_cache (

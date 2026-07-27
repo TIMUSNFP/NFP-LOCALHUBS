@@ -336,7 +336,19 @@ router.patch('/participants/:id/status', async (req, res) => {
   const participant = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
   if (!participant) return res.status(404).json({ error: 'Participant not found' });
 
-  await db.run('UPDATE participants SET status = $1 WHERE id = $2', [status, req.params.id]);
+  if (status === 'Confirmed') {
+    // Marked sent at the same moment the email is fired below — this is what
+    // lets "Send Confirmation to Never-Sent" tell a normal confirm apart from
+    // a participant who's Confirmed but never actually got the email (e.g.
+    // imported/bulk-transferred data, or an earlier send that predates this
+    // column existing).
+    await db.run(
+      'UPDATE participants SET status = $1, confirmation_sent_at = $2 WHERE id = $3',
+      [status, new Date().toISOString(), req.params.id]
+    );
+  } else {
+    await db.run('UPDATE participants SET status = $1 WHERE id = $2', [status, req.params.id]);
+  }
 
   const updated = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
 
@@ -349,6 +361,27 @@ router.patch('/participants/:id/status', async (req, res) => {
   }
 
   res.json(participantRowToJson(updated));
+});
+
+// POST /api/admin/participants/:id/send-confirmation — (re)send the "Registration
+// Confirmed" email to a single Confirmed participant, on demand. Not tied to a
+// status change, so it doubles as a reminder/resend — e.g. for someone who
+// never actually got the original email (bounced, wrong inbox, imported data),
+// or who just wants it back in their inbox.
+router.post('/participants/:id/send-confirmation', async (req, res) => {
+  const participant = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
+  if (!participant) return res.status(404).json({ error: 'Participant not found' });
+  if (participant.status !== 'Confirmed') {
+    return res.status(400).json({ error: 'Only Confirmed participants can receive a confirmation email.' });
+  }
+
+  const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [participant.hub_id]);
+  await sendParticipantConfirmed(participant, hub);
+
+  const confirmationSentAt = new Date().toISOString();
+  await db.run('UPDATE participants SET confirmation_sent_at = $1 WHERE id = $2', [confirmationSentAt, req.params.id]);
+
+  res.json({ ok: true, confirmationSentAt });
 });
 
 // POST /api/admin/participants/transfer — moves one or more participants to a

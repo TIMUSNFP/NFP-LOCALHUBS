@@ -83,6 +83,7 @@ function participantRowToJson(row) {
     membership: row.membership,
     note: row.note,
     hubId: row.hub_id,
+    confirmationSentAt: row.confirmation_sent_at,
   };
 }
 
