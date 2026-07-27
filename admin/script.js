@@ -1426,6 +1426,7 @@ function renderAnalytics() {
     // Participant Insights
     renderRegistrationTrend(parts);
     renderParticipantsByCity(parts);
+    renderParticipantUniqueCities(parts);
     renderTopCirclesByParticipants(parts);
     renderParticipantMembership(parts);
     renderCircleFillRate(hubsAll, partsAll);
@@ -1691,6 +1692,23 @@ function renderParticipantsByCity(parts) {
         const c = p.hubCity || 'Unknown'; counts[c] = (counts[c]||0)+1;
     });
     renderBarSet('partCityBars', counts, '#0EA5E9');
+}
+
+// Complements the "Participants by City" breakdown with a single at-a-glance
+// number: how many distinct cities actually have a confirmed participant in
+// them (not the same as the number of circles/cities with hubs — a city can
+// have an approved circle with zero registrations yet).
+function renderParticipantUniqueCities(parts) {
+    const el = document.getElementById('participantUniqueCitiesKpi');
+    if (!el) return;
+    const confirmed = parts.filter(p => p.status === 'Confirmed');
+    const cities = new Set(confirmed.map(p => p.hubCity || 'Unknown'));
+    el.innerHTML = `
+        <div class="kpi-big" style="color:var(--primary)">${cities.size}</div>
+        <div class="kpi-sub">unique cities with confirmed participants</div>
+        <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <div class="kpi-pill" style="background:#eff6ff;color:#3B82F6">${confirmed.length} Total Registrations</div>
+        </div>`;
 }
 
 function renderTopCirclesByParticipants(parts) {
