@@ -2340,3 +2340,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     from { transform: scale(0.94); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
 }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE FIX — RE-ASSERT RESPONSIVE OVERRIDE
+   The 640px ".container" padding override earlier in this file is
+   followed by a later unconditional ".container" rule (Local Hubs
+   Redesign section), which wins the cascade and cancels the mobile
+   padding on phones. Re-declaring it here restores it.
+══════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+    .container { padding: 0 16px; }
+}
