@@ -321,28 +321,29 @@ async function runCampaignBatchInner(campaignId) {
 }
 
 // On process boot: any recipient row still 'Claimed' means a previous process
-// died mid-batch, leaving it claimed but never resolved — reset those back to
-// Pending so they aren't silently stuck forever. That part is just data
-// hygiene and never sends anything on its own.
+// died mid-batch (e.g. hit maxDuration, or the serverless instance was
+// recycled), leaving it claimed but never resolved — reset those back to
+// Pending so they aren't silently stuck forever. This is just data hygiene
+// and never sends anything on its own.
 //
-// Campaigns are NOT auto-resumed here. An earlier version of this function did
-// exactly that (re-armed the timer and fired an immediate batch for every
-// still-Sending campaign) — which meant every server restart silently kept a
-// campaign sending for hours with no admin action involved, which is the
-// opposite of what was asked for: campaigns must only ever send on an explicit
-// click. Any campaign still marked Sending at boot is moved to Paused instead
-// — the data is safe and exactly where it left off, but it now needs a
-// deliberate "Resume" click to continue, every time, no exceptions.
+// IMPORTANT: this deliberately does NOT touch campaign status anymore. An
+// earlier version force-set every still-Sending campaign to Paused here, on
+// the assumption that "boot" meant a rare, alarming crash/restart — true for
+// a traditional always-on server, but false on Vercel: this module reloads
+// (a fresh "boot") every time the serverless function cold-starts, which
+// happens routinely after just a couple of idle minutes, not only on a real
+// crash. That mismatch meant a campaign could silently flip to Paused between
+// two ordinary manual "Send Batch Now" clicks with nothing actually wrong —
+// the exact "gets stuck / auto-pauses" symptom this was rewritten to fix.
+// A campaign now simply stays whatever status it already was: Sending stays
+// Sending (idle until the next explicit click or cron tick — never
+// auto-resumed/auto-sent from here, so the original safety goal — no silent
+// unattended sending — still holds), Paused stays Paused.
 async function resumeCrmCampaignsOnBoot() {
   try {
-    await db.run(`UPDATE crm_campaign_recipients SET status = 'Pending' WHERE status = 'Claimed'`);
-    const wasSending = await db.all(`SELECT id, name FROM crm_campaigns WHERE status = 'Sending'`);
-    if (wasSending.length > 0) {
-      await db.run(`UPDATE crm_campaigns SET status = 'Paused' WHERE status = 'Sending'`);
-      console.log(
-        `[crm] ${wasSending.length} campaign(s) were still marked Sending at boot — paused, not resumed ` +
-        `(requires an explicit Resume click): ${wasSending.map((c) => c.name).join(', ')}`
-      );
+    const reset = await db.run(`UPDATE crm_campaign_recipients SET status = 'Pending' WHERE status = 'Claimed'`);
+    if (reset.rowCount > 0) {
+      console.log(`[crm] boot cleanup: reset ${reset.rowCount} stuck 'Claimed' recipient(s) back to Pending.`);
     }
   } catch (e) {
     console.error('[crm] boot cleanup failed:', e.message);
