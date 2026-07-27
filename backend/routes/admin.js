@@ -127,9 +127,17 @@ router.patch('/hubs/:id/status', async (req, res) => {
   // Geocode on approval (only if coords are missing). This is the moment the hub
   // becomes visible on the map and in the PIN-code nearby search, so it's the right
   // time to resolve a precise pin — and it keeps public submission fast.
+  // geocodeHub can chain up to ~8 fallback attempts (each with its own 4s
+  // timeout), so a run of misses can otherwise hold this response open for
+  // 20-30s+. Cap the whole chain at 5s here — an admin click must never wait
+  // on a third-party geocoder; a miss just leaves lat/lng null for now (the
+  // frontend already falls back to city-centre coords in that case).
   if (status === 'Approved' && (hub.lat == null || hub.lng == null)) {
     try {
-      const coords = await geocodeHub({ address: hub.address, area: hub.area, city: hub.city, pincode: hub.pincode });
+      const coords = await Promise.race([
+        geocodeHub({ address: hub.address, area: hub.area, city: hub.city, pincode: hub.pincode }),
+        new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
       if (coords) {
         const [lat, lng] = coords;
         await db.run('UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3', [lat, lng, req.params.id]);

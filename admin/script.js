@@ -769,6 +769,10 @@ function confirmReset(id) {
     );
 }
 
+// Returns the updated hub (already reflects the new status) on success, or
+// null on failure — callers patch it straight into allHubs instead of
+// re-fetching the whole table, so a single click doesn't pay for a full
+// hubs+participants reload plus a full re-render.
 async function updateHubStatus(id, status) {
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/status`, {
@@ -776,19 +780,37 @@ async function updateHubStatus(id, status) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
         });
-        return res.ok;
+        if (!res.ok) return null;
+        return await res.json();
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
-        return false;
+        return null;
+    }
+}
+
+// Splices an updated hub row into allHubs in place. The PATCH .../status
+// response is shaped identically to the GET /hubs list entries (both go
+// through hubRowToJson off a plain `hubs` row), so a straight replace is safe.
+function patchHubLocally(updatedHub) {
+    const idx = allHubs.findIndex(h => String(h.id) === String(updatedHub.id));
+    if (idx !== -1) allHubs[idx] = updatedHub;
+}
+
+function refreshHubViews() {
+    updateStats();
+    applyFilters();
+    if (document.getElementById('tabAnalytics') && !document.getElementById('tabAnalytics').classList.contains('hidden')) {
+        renderAnalytics();
     }
 }
 
 async function executeApprove() {
     if (!pendingRegId) return;
-    const ok = await updateHubStatus(pendingRegId, 'Approved');
-    if (ok) {
+    const updated = await updateHubStatus(pendingRegId, 'Approved');
+    if (updated) {
         showToast('Application approved successfully!', 'success');
-        await updateDashboard();
+        patchHubLocally(updated);
+        refreshHubViews();
     } else {
         showToast('Failed to approve application.', 'error');
     }
@@ -798,10 +820,11 @@ async function executeApprove() {
 
 async function executeReject() {
     if (!pendingRegId) return;
-    const ok = await updateHubStatus(pendingRegId, 'Rejected');
-    if (ok) {
+    const updated = await updateHubStatus(pendingRegId, 'Rejected');
+    if (updated) {
         showToast('Application has been rejected.', 'warning');
-        await updateDashboard();
+        patchHubLocally(updated);
+        refreshHubViews();
     } else {
         showToast('Failed to reject application.', 'error');
     }
@@ -811,10 +834,11 @@ async function executeReject() {
 
 async function executeReset() {
     if (!pendingRegId) return;
-    const ok = await updateHubStatus(pendingRegId, 'Pending');
-    if (ok) {
+    const updated = await updateHubStatus(pendingRegId, 'Pending');
+    if (updated) {
         showToast('Application reset to Pending.', 'success');
-        await updateDashboard();
+        patchHubLocally(updated);
+        refreshHubViews();
     } else {
         showToast('Failed to reset application.', 'error');
     }
@@ -1039,11 +1063,11 @@ async function executeBulkUpdate() {
 
     let successCount = 0;
     for (const id of ids) {
-        const ok = await updateHubStatus(id, status);
-        if (ok) successCount++;
+        const updated = await updateHubStatus(id, status);
+        if (updated) { patchHubLocally(updated); successCount++; }
     }
     clearHubSelection();
-    await updateDashboard();
+    refreshHubViews();
 
     if (successCount === ids.length) {
         showToast(`${successCount} application${successCount > 1 ? 's' : ''} updated successfully!`, 'success');
@@ -2118,6 +2142,8 @@ function participantStatusBadge(status) {
     return `<span class="badge ${m[status] || 'badge-pending'}">${status}</span>`;
 }
 
+// Returns the updated participant on success (or null on failure) — callers
+// patch it into allParticipants instead of re-fetching the whole table.
 async function updateParticipantStatus(id, status) {
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/status`, {
@@ -2125,11 +2151,26 @@ async function updateParticipantStatus(id, status) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
         });
-        return res.ok;
+        if (!res.ok) return null;
+        return await res.json();
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
-        return false;
+        return null;
     }
+}
+
+// Unlike hubs, the participants list is a JOIN (hubLeader/hubCity/hubArea/
+// hubVenue come from the hubs table) but the status PATCH response is a plain
+// participants row without those fields — so this merges onto the existing
+// entry rather than replacing it outright, to avoid blanking those columns.
+function patchParticipantLocally(updatedParticipant) {
+    const idx = allParticipants.findIndex(p => String(p.id) === String(updatedParticipant.id));
+    if (idx !== -1) Object.assign(allParticipants[idx], updatedParticipant);
+}
+
+function refreshParticipantViews() {
+    updateParticipantStats();
+    applyParticipantFilters();
 }
 
 function confirmParticipant(id) {
@@ -2140,12 +2181,11 @@ function confirmParticipant(id) {
         `Confirm <strong>${escHtml(p.fullName)}</strong>'s registration? This will send them a confirmation email.`,
         '✅',
         async () => {
-            const ok = await updateParticipantStatus(id, 'Confirmed');
-            if (ok) {
+            const updated = await updateParticipantStatus(id, 'Confirmed');
+            if (updated) {
                 showToast('Registration confirmed.', 'success');
-                await loadParticipants();
-                updateParticipantStats();
-                applyParticipantFilters();
+                patchParticipantLocally(updated);
+                refreshParticipantViews();
             } else {
                 showToast('Failed to confirm registration.', 'error');
             }
@@ -2161,12 +2201,11 @@ function cancelParticipant(id) {
         'Are you sure you want to cancel this participant registration? This will send them a cancellation email.',
         '❌',
         async () => {
-            const ok = await updateParticipantStatus(id, 'Cancelled');
-            if (ok) {
+            const updated = await updateParticipantStatus(id, 'Cancelled');
+            if (updated) {
                 showToast('Registration cancelled.', 'warning');
-                await loadParticipants();
-                updateParticipantStats();
-                applyParticipantFilters();
+                patchParticipantLocally(updated);
+                refreshParticipantViews();
             } else {
                 showToast('Failed to cancel registration.', 'error');
             }
@@ -2185,12 +2224,11 @@ function resetParticipant(id) {
         `Reset <strong>${escHtml(p.fullName)}</strong>'s registration back to Pending? No email is sent for this — you can then Confirm or Cancel again to trigger a fresh notification.`,
         '↩️',
         async () => {
-            const ok = await updateParticipantStatus(id, 'Pending');
-            if (ok) {
+            const updated = await updateParticipantStatus(id, 'Pending');
+            if (updated) {
                 showToast('Registration reset to Pending.', 'success');
-                await loadParticipants();
-                updateParticipantStats();
-                applyParticipantFilters();
+                patchParticipantLocally(updated);
+                refreshParticipantViews();
             } else {
                 showToast('Failed to reset registration.', 'error');
             }
@@ -2273,13 +2311,11 @@ async function executeBulkUpdateParticipants() {
 
     let successCount = 0;
     for (const id of ids) {
-        const ok = await updateParticipantStatus(id, status);
-        if (ok) successCount++;
+        const updated = await updateParticipantStatus(id, status);
+        if (updated) { patchParticipantLocally(updated); successCount++; }
     }
     clearParticipantSelection();
-    await loadParticipants();
-    updateParticipantStats();
-    applyParticipantFilters();
+    refreshParticipantViews();
 
     if (successCount === ids.length) {
         showToast(`${successCount} registration${successCount > 1 ? 's' : ''} updated successfully!`, 'success');
