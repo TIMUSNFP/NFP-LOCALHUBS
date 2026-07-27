@@ -2893,6 +2893,9 @@ function renderCrmCampaignsTable() {
             : `${c.sentCount}/${c.totalRecipients} sent${c.failedCount ? `, ${c.failedCount} failed` : ''}`;
         const actions = [];
         actions.push(`<button class="act-btn act-view" onclick="previewCrmCampaign('${escHtml(c.id)}')">Preview</button>`);
+        if (c.status === 'Draft' || c.status === 'Sending' || c.status === 'Paused') {
+            actions.push(`<button class="act-btn act-reset" onclick="openCrmCampaignSettingsModal('${escHtml(c.id)}')">Edit Settings</button>`);
+        }
         if (c.status === 'Draft') {
             actions.push(`<button class="act-btn act-approve" onclick="startCrmCampaign('${escHtml(c.id)}')">Start Sending</button>`);
             actions.push(`<button class="act-btn act-reject" onclick="deleteCrmCampaign('${escHtml(c.id)}')">Delete</button>`);
@@ -2967,6 +2970,70 @@ async function processCrmBatch(id, manual) {
 function allCrmCampaignName(id) {
     const c = allCrmCampaigns.find(x => x.id === id);
     return c ? c.name : 'Campaign';
+}
+
+// Edit Settings modal — batch size (emails per "Send Batch Now" click / automatic
+// tick) and interval (minutes between automatic ticks). Reuses the generic
+// details modal rather than a dedicated one since it's just two number fields.
+function openCrmCampaignSettingsModal(id) {
+    const c = allCrmCampaigns.find(x => x.id === id);
+    if (!c) return;
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = `Edit Settings — ${c.name}`;
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label>Batch Size <span style="text-transform:none;font-weight:400;color:var(--muted)">(emails per batch/click)</span></label>
+                <input type="number" id="crmEditBatchSize" class="form-input" value="${c.batchSize}" min="1" max="500">
+            </div>
+            <div class="detail-item">
+                <label>Interval <span style="text-transform:none;font-weight:400;color:var(--muted)">(minutes between automatic batches)</span></label>
+                <input type="number" id="crmEditInterval" class="form-input" value="${c.intervalMinutes}" min="1" max="1440">
+            </div>
+        </div>
+        <p style="color:var(--muted);font-size:13px;margin-top:10px">
+            To send everyone in one go, set Batch Size to (or above) the total recipient count —
+            currently <strong>${c.totalRecipients}</strong> — then click "Send Batch Now". A very large
+            batch can take a few minutes and may need a second click if the server times out partway
+            through; nothing is ever sent twice or lost either way.
+        </p>
+        <div class="modal-btns">
+            <button class="btn-outline" onclick="closeDetailsModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveCrmCampaignSettings('${escHtml(id)}')">Save Settings</button>
+        </div>
+    `;
+    document.getElementById('detailsOverlay').classList.add('visible');
+}
+
+async function saveCrmCampaignSettings(id) {
+    const batchSize = parseInt(document.getElementById('crmEditBatchSize')?.value, 10);
+    const intervalMinutes = parseInt(document.getElementById('crmEditInterval')?.value, 10);
+    if (!Number.isFinite(batchSize) || batchSize < 1) {
+        showToast('Batch size must be at least 1.', 'warning');
+        return;
+    }
+    if (!Number.isFinite(intervalMinutes) || intervalMinutes < 1) {
+        showToast('Interval must be at least 1 minute.', 'warning');
+        return;
+    }
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ batchSize, intervalMinutes }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Could not save settings.', 'error');
+            return;
+        }
+        showToast('Campaign settings updated.', 'success');
+        closeDetailsModal();
+        await loadCrmCampaigns();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
 }
 
 function startCrmCampaign(id) {

@@ -616,6 +616,48 @@ router.get('/campaigns/:id', asyncHandler(async (req, res) => {
   res.json(campaignRowToJson(campaign));
 }));
 
+// PATCH /api/admin/crm/campaigns/:id — edit pacing settings (batch size, interval).
+// Body: { batchSize?, intervalMinutes? }. Safe at any status: batch_size is read
+// fresh from the DB on every batch run, so a change applies to the very next
+// claim — including the one this request may itself trigger below. If the
+// campaign is currently Sending, the in-process timer is re-armed with the new
+// interval immediately rather than waiting for the next pause/resume, since
+// scheduleCampaignTimer() is normally a no-op while a timer already exists.
+router.patch('/campaigns/:id', asyncHandler(async (req, res) => {
+  const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
+  if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+  const { batchSize, intervalMinutes } = req.body || {};
+  const setClauses = [];
+  const values = [];
+
+  if (batchSize !== undefined) {
+    const n = Number(batchSize);
+    if (!Number.isFinite(n) || n < 1) return res.status(400).json({ error: 'batchSize must be a positive number.' });
+    values.push(Math.floor(n));
+    setClauses.push(`batch_size = $${values.length}`);
+  }
+  if (intervalMinutes !== undefined) {
+    const n = Number(intervalMinutes);
+    if (!Number.isFinite(n) || n < 1) return res.status(400).json({ error: 'intervalMinutes must be a positive number.' });
+    values.push(Math.floor(n));
+    setClauses.push(`interval_minutes = $${values.length}`);
+  }
+
+  if (setClauses.length > 0) {
+    values.push(campaign.id);
+    await db.run(`UPDATE crm_campaigns SET ${setClauses.join(', ')} WHERE id = $${values.length}`, values);
+  }
+
+  const updated = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id]);
+  if (intervalMinutes !== undefined && updated.status === 'Sending') {
+    unscheduleCampaignTimer(updated.id);
+    scheduleCampaignTimer(updated.id, updated.interval_minutes);
+  }
+
+  res.json(campaignRowToJson(updated));
+}));
+
 // POST /api/admin/crm/campaigns — create a Draft.
 // Body: { name, subject, targetMode?, targetCities[], hubIds[], targetBatches[]?,
 //         targetMemberships[]?, targetBatchStatuses[]?, introHtml?, batchSize?,
