@@ -86,6 +86,7 @@ create table if not exists crm_contacts (
   city_key text,                       -- normalized key, used for campaign matching
   membership text,                     -- 'Member' | 'QPFP' | 'Member + QPFP'
   batch text,                          -- "Their Batch" (QPFP batch), nullable
+  batch_status text,                   -- "Batch Status" from the sheet — 'Running' | 'Closed', nullable
   source text,                         -- e.g. filename of the import
   imported_at text not null,
   unsubscribed_at text,
@@ -94,6 +95,7 @@ create table if not exists crm_contacts (
 );
 create unique index if not exists crm_contacts_email_idx on crm_contacts (lower(email));
 create index if not exists crm_contacts_city_key_idx on crm_contacts (city_key);
+alter table crm_contacts add column if not exists batch_status text;
 
 create table if not exists crm_campaigns (
   id text primary key,                 -- NFP-CRMC-YYYYMMDD-NNNN
@@ -104,6 +106,7 @@ create table if not exists crm_campaigns (
   hub_ids jsonb not null,              -- manual mode only: hubs featured in the email
   target_batches jsonb not null default '[]'::jsonb,      -- optional narrowing filter, e.g. ["Batch 11","Batch 12"] — applies in both manual and auto mode; empty = no batch restriction
   target_memberships jsonb not null default '[]'::jsonb,  -- optional narrowing filter, e.g. ["QPFP"] — empty = no membership restriction
+  target_batch_statuses jsonb not null default '[]'::jsonb, -- optional narrowing filter, e.g. ["Running"] — empty = no batch-status restriction
   subject text not null,
   intro_html text,                     -- optional override of the default "what/why" blurb
   batch_size integer not null default 25,
@@ -119,6 +122,7 @@ create table if not exists crm_campaigns (
 alter table crm_campaigns add column if not exists target_mode text not null default 'manual';
 alter table crm_campaigns add column if not exists target_batches jsonb not null default '[]'::jsonb;
 alter table crm_campaigns add column if not exists target_memberships jsonb not null default '[]'::jsonb;
+alter table crm_campaigns add column if not exists target_batch_statuses jsonb not null default '[]'::jsonb;
 
 create table if not exists crm_campaign_recipients (
   id bigserial primary key,

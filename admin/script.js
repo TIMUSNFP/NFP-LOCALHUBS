@@ -3121,16 +3121,18 @@ async function openCrmCampaignModal() {
     content.innerHTML = `<p style="color:var(--muted)">Loading cities…</p>`;
     document.getElementById('detailsOverlay').classList.add('visible');
 
-    let cities = [], batches = [], memberships = [];
+    let cities = [], batches = [], memberships = [], batchStatuses = [];
     try {
-        const [citiesRes, batchesRes, membershipsRes] = await Promise.all([
+        const [citiesRes, batchesRes, membershipsRes, batchStatusesRes] = await Promise.all([
             adminFetch(`${API_BASE}/api/admin/crm/cities`),
             adminFetch(`${API_BASE}/api/admin/crm/batches`),
             adminFetch(`${API_BASE}/api/admin/crm/memberships`),
+            adminFetch(`${API_BASE}/api/admin/crm/batch-statuses`),
         ]);
         cities = await citiesRes.json();
         batches = await batchesRes.json();
         memberships = await membershipsRes.json();
+        batchStatuses = await batchStatusesRes.json();
     } catch (e) {
         if (e.message !== 'Unauthorized') content.innerHTML = `<p style="color:var(--danger)">Could not load cities.</p>`;
         return;
@@ -3208,10 +3210,21 @@ async function openCrmCampaignModal() {
                     `).join('')}
                 </div>
             </div>
+            <div class="detail-item">
+                <label>Narrow by Batch Status <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional)</span></label>
+                <div id="crmCBatchStatuses" style="max-height:140px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
+                    ${batchStatuses.length === 0 ? '<p style="color:var(--muted);font-size:13px">No batch status data imported yet.</p>' : batchStatuses.map(s => `
+                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;cursor:pointer">
+                            <input type="checkbox" class="crm-batch-status-check" value="${escHtml(s.batch_status)}" onchange="updateCrmCampaignRecipientHint()">
+                            ${escHtml(s.batch_status)} <span style="color:var(--muted);font-size:12px">(${s.count})</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
         </div>
         <p style="color:var(--muted);font-size:12px;margin:-8px 0 0">
-            Leave both blank to include everyone matching the target above. Check any boxes to further restrict to
-            just those membership types and/or batches — works with either targeting mode.
+            Leave all blank to include everyone matching the target above. Check any boxes to further restrict to
+            just those membership types, batches, and/or batch statuses — works with either targeting mode.
         </p>
         <div class="detail-item" style="margin-top:14px">
             <label>Intro Text <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional — leave blank to use the default "what is an NFP Circle / why join" copy)</span></label>
@@ -3254,6 +3267,10 @@ function getCheckedCrmMemberships() {
     return Array.from(document.querySelectorAll('.crm-membership-check:checked')).map(el => el.value);
 }
 
+function getCheckedCrmBatchStatuses() {
+    return Array.from(document.querySelectorAll('.crm-batch-status-check:checked')).map(el => el.value);
+}
+
 // Manual mode can estimate a recipient count client-side (city checkboxes carry
 // their own contact counts). Auto mode can't — "every city with an open circle"
 // isn't known until save — so it just flags whether a narrowing filter is on;
@@ -3262,11 +3279,11 @@ function updateCrmCampaignRecipientHint() {
     const hint = document.getElementById('crmCRecipientHint');
     if (!hint) return;
     const mode = document.getElementById('crmCTargetMode')?.value || 'auto';
-    const narrowingActive = getCheckedCrmBatches().length > 0 || getCheckedCrmMemberships().length > 0;
+    const narrowingActive = getCheckedCrmBatches().length > 0 || getCheckedCrmMemberships().length > 0 || getCheckedCrmBatchStatuses().length > 0;
 
     if (mode === 'auto') {
         hint.textContent = narrowingActive
-            ? 'Narrowed by the membership/batch filters below — exact recipient count is shown after you save.'
+            ? 'Narrowed by the membership/batch/batch-status filters below — exact recipient count is shown after you save.'
             : '';
         return;
     }
@@ -3278,7 +3295,7 @@ function updateCrmCampaignRecipientHint() {
         return sum + (match ? parseInt(match[1], 10) : 0);
     }, 0);
     if (total === 0) { hint.textContent = ''; return; }
-    const narrowNote = narrowingActive ? ' — narrowed further by the membership/batch filters below, exact count shown after saving' : '';
+    const narrowNote = narrowingActive ? ' — narrowed further by the membership/batch/batch-status filters below, exact count shown after saving' : '';
     const capNote = (total > 450 && !narrowingActive) ? ' — note: most SMTP providers cap outbound mail around ~500/day, so this may take more than one day to fully send' : '';
     hint.textContent = `Up to ${total} contact${total === 1 ? '' : 's'} in the selected cities${narrowNote}${capNote}.`;
 }
@@ -3333,12 +3350,13 @@ async function submitCrmCampaign() {
     const introHtml = introHtmlRaw ? introHtmlRaw.split('\n\n').map(p => `<p>${escHtml(p)}</p>`).join('') : null;
     const targetBatches = getCheckedCrmBatches();
     const targetMemberships = getCheckedCrmMemberships();
+    const targetBatchStatuses = getCheckedCrmBatchStatuses();
 
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, targetBatches, targetMemberships, introHtml, batchSize, intervalMinutes }),
+            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, introHtml, batchSize, intervalMinutes }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Could not create campaign.', 'error'); return; }

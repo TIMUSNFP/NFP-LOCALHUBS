@@ -53,9 +53,10 @@ function normalizeCrmMembership(raw) {
 const HEADER_ALIASES = {
   name: ['name', 'full name'],
   email: ['email id', 'email', 'e-mail'],
-  mobile: ['phone number', 'mobile no.', 'mobile number', 'mobile', 'phone'],
+  mobile: ['phone number', 'mobile no.', 'mobile number', 'mobile', 'phone', 'contact no', 'contact no.', 'contact number'],
   city: ['city'],
   batch: ['their batch', 'batch', 'qpfp batch'],
+  batchStatus: ['batch status'],
   membership: ['membership type', 'membership'],
 };
 
@@ -69,6 +70,7 @@ function contactRowToJson(row) {
     cityKey: row.city_key,
     membership: row.membership,
     batch: row.batch,
+    batchStatus: row.batch_status,
     source: row.source,
     importedAt: row.imported_at,
     unsubscribedAt: row.unsubscribed_at,
@@ -87,6 +89,7 @@ function campaignRowToJson(row) {
     hubIds: row.hub_ids || [],
     targetBatches: row.target_batches || [],
     targetMemberships: row.target_memberships || [],
+    targetBatchStatuses: row.target_batch_statuses || [],
     subject: row.subject,
     introHtml: row.intro_html,
     batchSize: row.batch_size,
@@ -140,7 +143,7 @@ function groupOpenHubsByCityKey(hubsWithCounts) {
 // recipient count, the preview sample, and the /start snapshot, in both manual
 // and auto mode — these are optional narrowing filters on top of city
 // targeting, e.g. "auto-personalize by city, but only Batch 11/12, QPFP only".
-function appendOptionalFilters(conditions, params, targetBatches, targetMemberships) {
+function appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses) {
   if (Array.isArray(targetBatches) && targetBatches.length > 0) {
     params.push(targetBatches);
     conditions.push(`batch = ANY($${params.length}::text[])`);
@@ -148,6 +151,10 @@ function appendOptionalFilters(conditions, params, targetBatches, targetMembersh
   if (Array.isArray(targetMemberships) && targetMemberships.length > 0) {
     params.push(targetMemberships);
     conditions.push(`membership = ANY($${params.length}::text[])`);
+  }
+  if (Array.isArray(targetBatchStatuses) && targetBatchStatuses.length > 0) {
+    params.push(targetBatchStatuses);
+    conditions.push(`batch_status = ANY($${params.length}::text[])`);
   }
 }
 
@@ -420,6 +427,19 @@ router.get('/batches', asyncHandler(async (req, res) => {
   res.json(rows);
 }));
 
+// GET /api/admin/crm/batch-statuses — distinct batch statuses (e.g. Running /
+// Closed) for the campaign builder's optional "narrow by batch status" filter.
+router.get('/batch-statuses', asyncHandler(async (req, res) => {
+  const rows = await db.all(
+    `SELECT batch_status, COUNT(*)::int AS count
+     FROM crm_contacts
+     WHERE batch_status IS NOT NULL AND batch_status <> '' AND unsubscribed_at IS NULL
+     GROUP BY batch_status
+     ORDER BY count DESC, batch_status ASC`
+  );
+  res.json(rows);
+}));
+
 // GET /api/admin/crm/memberships — distinct membership types for the campaign
 // builder's optional "narrow by membership" filter.
 router.get('/memberships', asyncHandler(async (req, res) => {
@@ -474,11 +494,20 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   const mobileKey = resolveKey(HEADER_ALIASES.mobile);
   const cityKey = resolveKey(HEADER_ALIASES.city);
   const batchKey = resolveKey(HEADER_ALIASES.batch);
+  const batchStatusKey = resolveKey(HEADER_ALIASES.batchStatus);
   const membershipKey = resolveKey(HEADER_ALIASES.membership);
 
   if (!nameKey || !emailKey) {
     return res.status(400).json({ error: 'Could not find a Name and Email ID column in the uploaded file.' });
   }
+
+  // Different exports carry different columns (e.g. a batch-list export has no
+  // Membership Type column at all). On a re-import matching an existing
+  // contact by email, only fields this file actually has get overwritten —
+  // otherwise upserting a column-light file would blank out real data (e.g.
+  // wipe someone's known membership just because this particular sheet never
+  // mentioned it).
+  const hasField = { mobile: !!mobileKey, city: !!cityKey, membership: !!membershipKey, batch: !!batchKey, batchStatus: !!batchStatusKey };
 
   const now = new Date().toISOString();
   const skippedReasons = [];
@@ -505,6 +534,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
       cityKey: city ? normalizeCityKey(city) : null,
       membership: membershipKey ? normalizeCrmMembership(String(row[membershipKey] || '').trim()) || null : null,
       batch: batchKey ? String(row[batchKey] || '').trim() || null : null,
+      batchStatus: batchStatusKey ? String(row[batchStatusKey] || '').trim() || null : null,
       source: req.file.originalname,
     });
   }
@@ -513,12 +543,36 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   const CHUNK_SIZE = 200;
   let inserted = 0, updated = 0;
 
+  // Column list is built from what THIS file actually has (see hasField above)
+  // — id/full_name/email/source/timestamps are always present; the rest are
+  // conditional, and only conditional columns get an ON CONFLICT overwrite.
+  const cols = ['id', 'full_name', 'email'];
+  if (hasField.mobile) cols.push('mobile');
+  if (hasField.city) cols.push('city', 'city_key');
+  if (hasField.membership) cols.push('membership');
+  if (hasField.batch) cols.push('batch');
+  if (hasField.batchStatus) cols.push('batch_status');
+  cols.push('source', 'imported_at', 'created_at', 'updated_at');
+
+  const setClauses = ['full_name = EXCLUDED.full_name'];
+  if (hasField.mobile) setClauses.push('mobile = EXCLUDED.mobile');
+  if (hasField.city) setClauses.push('city = EXCLUDED.city', 'city_key = EXCLUDED.city_key');
+  if (hasField.membership) setClauses.push('membership = EXCLUDED.membership');
+  if (hasField.batch) setClauses.push('batch = EXCLUDED.batch');
+  if (hasField.batchStatus) setClauses.push('batch_status = EXCLUDED.batch_status');
+  setClauses.push('source = EXCLUDED.source', 'updated_at = EXCLUDED.updated_at');
+
   for (let i = 0; i < contacts.length; i += CHUNK_SIZE) {
     const chunk = contacts.slice(i, i + CHUNK_SIZE);
-    const cols = ['id', 'full_name', 'email', 'mobile', 'city', 'city_key', 'membership', 'batch', 'source', 'imported_at', 'created_at', 'updated_at'];
     const values = [];
     const placeholders = chunk.map((c) => {
-      const row = [c.id, c.fullName, c.email, c.mobile, c.city, c.cityKey, c.membership, c.batch, c.source, now, now, now];
+      const row = [c.id, c.fullName, c.email];
+      if (hasField.mobile) row.push(c.mobile);
+      if (hasField.city) row.push(c.city, c.cityKey);
+      if (hasField.membership) row.push(c.membership);
+      if (hasField.batch) row.push(c.batch);
+      if (hasField.batchStatus) row.push(c.batchStatus);
+      row.push(c.source, now, now, now);
       const base = values.length;
       values.push(...row);
       return `(${row.map((_, j) => `$${base + j + 1}`).join(',')})`;
@@ -527,15 +581,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
     const result = await db.query(
       `INSERT INTO crm_contacts (${cols.join(',')})
        VALUES ${placeholders}
-       ON CONFLICT (lower(email)) DO UPDATE SET
-         full_name = EXCLUDED.full_name,
-         mobile = EXCLUDED.mobile,
-         city = EXCLUDED.city,
-         city_key = EXCLUDED.city_key,
-         membership = EXCLUDED.membership,
-         batch = EXCLUDED.batch,
-         source = EXCLUDED.source,
-         updated_at = EXCLUDED.updated_at
+       ON CONFLICT (lower(email)) DO UPDATE SET ${setClauses.join(', ')}
        RETURNING (xmax = 0) AS inserted`,
       values
     );
@@ -572,19 +618,22 @@ router.get('/campaigns/:id', asyncHandler(async (req, res) => {
 
 // POST /api/admin/crm/campaigns — create a Draft.
 // Body: { name, subject, targetMode?, targetCities[], hubIds[], targetBatches[]?,
-//         targetMemberships[]?, introHtml?, batchSize?, intervalMinutes? }
+//         targetMemberships[]?, targetBatchStatuses[]?, introHtml?, batchSize?,
+//         intervalMinutes? }
 // targetMode 'manual' (default): every recipient in targetCities gets the same
 // hubIds list. targetMode 'auto': every contact whose own city currently has at
 // least one open (non-full) Approved circle is a recipient, and each one only
 // ever sees THEIR city's circles — targetCities/hubIds are ignored/unused.
-// targetBatches/targetMemberships are optional narrowing filters that apply on
-// top of city targeting in EITHER mode (e.g. auto-personalize by city, but only
-// for QPFP Batch 11/12) — omit/empty means no restriction.
+// targetBatches/targetMemberships/targetBatchStatuses are optional narrowing
+// filters that apply on top of city targeting in EITHER mode (e.g.
+// auto-personalize by city, but only for QPFP Batch 11/12, or only batches
+// still Running) — omit/empty means no restriction.
 router.post('/campaigns', asyncHandler(async (req, res) => {
-  const { name, targetMode, targetCities, hubIds, targetBatches, targetMemberships, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
+  const { name, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
   const mode = targetMode === 'auto' ? 'auto' : 'manual';
   const batches = Array.isArray(targetBatches) ? targetBatches : [];
   const memberships = Array.isArray(targetMemberships) ? targetMemberships : [];
+  const batchStatuses = Array.isArray(targetBatchStatuses) ? targetBatchStatuses : [];
   if (!name || !subject) {
     return res.status(400).json({ error: 'name and subject are required.' });
   }
@@ -605,18 +654,18 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
     params.push(targetCities);
     conditions.push(`city = ANY($${params.length}::text[])`);
   }
-  appendOptionalFilters(conditions, params, batches, memberships);
+  appendOptionalFilters(conditions, params, batches, memberships, batchStatuses);
   const totalRow = await db.get(`SELECT COUNT(*)::int AS count FROM crm_contacts WHERE ${conditions.join(' AND ')}`, params);
 
   await db.run(
     `INSERT INTO crm_campaigns
-       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at)
-     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at)
+     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
     [
       id, name, mode,
       JSON.stringify(mode === 'manual' ? targetCities : []),
       JSON.stringify(mode === 'manual' && Array.isArray(hubIds) ? hubIds : []),
-      JSON.stringify(batches), JSON.stringify(memberships),
+      JSON.stringify(batches), JSON.stringify(memberships), JSON.stringify(batchStatuses),
       subject, introHtml || null,
       Number.isFinite(Number(batchSize)) && Number(batchSize) > 0 ? Number(batchSize) : 25,
       Number.isFinite(Number(intervalMinutes)) && Number(intervalMinutes) > 0 ? Number(intervalMinutes) : 15,
@@ -645,6 +694,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
 
   const targetBatches = campaign.target_batches || [];
   const targetMemberships = campaign.target_memberships || [];
+  const targetBatchStatuses = campaign.target_batch_statuses || [];
 
   if (mode === 'auto') {
     const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
@@ -657,7 +707,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
     }
     params.push(openCityKeys);
     conditions.push(`city_key = ANY($${params.length}::text[])`);
-    appendOptionalFilters(conditions, params, targetBatches, targetMemberships);
+    appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
     sampleContact = await db.get(
       `SELECT * FROM crm_contacts WHERE ${conditions.join(' AND ')} ORDER BY full_name ASC LIMIT 1`,
       params
@@ -676,7 +726,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
       const conditions = ['unsubscribed_at IS NULL'];
       const params = [targetCities];
       conditions.push(`city = ANY($${params.length}::text[])`);
-      appendOptionalFilters(conditions, params, targetBatches, targetMemberships);
+      appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
       sampleContact = await db.get(
         `SELECT * FROM crm_contacts WHERE ${conditions.join(' AND ')} ORDER BY full_name ASC LIMIT 1`,
         params
@@ -723,6 +773,7 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
   const mode = campaign.target_mode || 'manual';
   const targetBatches = campaign.target_batches || [];
   const targetMemberships = campaign.target_memberships || [];
+  const targetBatchStatuses = campaign.target_batch_statuses || [];
   const conditions = ['unsubscribed_at IS NULL'];
   const params = [];
   if (mode === 'auto') {
@@ -736,7 +787,7 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
     params.push(campaign.target_cities || []);
     conditions.push(`city = ANY($${params.length}::text[])`);
   }
-  appendOptionalFilters(conditions, params, targetBatches, targetMemberships);
+  appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
   await db.run(
     `INSERT INTO crm_campaign_recipients (campaign_id, contact_id)
      SELECT $${params.length + 1}, id FROM crm_contacts WHERE ${conditions.join(' AND ')}
