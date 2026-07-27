@@ -2860,6 +2860,8 @@ async function submitCrmImport() {
 // ═══════════════════════════════════════════════════════════════
 let allCrmCampaigns = [];
 let crmDisplayPollTimer = null; // read-only refresh while watching a Sending campaign — does NOT trigger sends
+let crmAutoBatchTimer = null;   // actively drives Sending campaigns forward while this tab is open — DOES trigger real sends
+const crmAutoBatchInFlight = new Set(); // campaign ids with a tick already in progress, to avoid overlapping calls
 
 async function loadCrmCampaigns() {
     try {
@@ -2867,6 +2869,7 @@ async function loadCrmCampaigns() {
         allCrmCampaigns = await res.json();
         renderCrmCampaignsTable();
         ensureCrmDisplayPolling();
+        ensureCrmAutoBatchDriver();
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not load campaigns.', 'error');
     }
@@ -2942,6 +2945,34 @@ function ensureCrmDisplayPolling() {
     } else if (crmDisplayPollTimer) {
         clearInterval(crmDisplayPollTimer);
         crmDisplayPollTimer = null;
+    }
+}
+
+// Hobby-tier Vercel has no way to keep a campaign advancing server-side: there's
+// no in-process timer that survives a cold start (see runCampaignBatch in
+// backend/routes/crm.js) and Vercel Cron on Hobby is capped at once/day, far too
+// coarse for an active send. So the browser itself becomes the driver: while
+// this tab is open and a campaign is Sending, this fires a real "Send Batch Now"
+// every few seconds — no repeated manual clicking needed, just leave the tab
+// open until it reaches Completed. crmAutoBatchInFlight stops a slow tick (e.g.
+// a large batch_size) from overlapping with the next timer firing before it's
+// done. Stops itself automatically once nothing is Sending or the tab is hidden.
+function ensureCrmAutoBatchDriver() {
+    const anySending = allCrmCampaigns.some(c => c.status === 'Sending');
+    const tabVisible = !document.getElementById('tabCrmCampaigns')?.classList.contains('hidden');
+    if (anySending && tabVisible) {
+        if (crmAutoBatchTimer) return;
+        crmAutoBatchTimer = setInterval(() => {
+            allCrmCampaigns
+                .filter(c => c.status === 'Sending' && !crmAutoBatchInFlight.has(c.id))
+                .forEach(c => {
+                    crmAutoBatchInFlight.add(c.id);
+                    processCrmBatch(c.id, false).finally(() => crmAutoBatchInFlight.delete(c.id));
+                });
+        }, 7000);
+    } else if (crmAutoBatchTimer) {
+        clearInterval(crmAutoBatchTimer);
+        crmAutoBatchTimer = null;
     }
 }
 
