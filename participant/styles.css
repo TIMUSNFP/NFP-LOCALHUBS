@@ -746,7 +746,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .ppage-sub { font-size: 16px; color: rgba(255,255,255,.65); line-height: 1.65; max-width: 540px; }
 .ppage-sub a { color: var(--primary-light); text-decoration: none; font-weight: 600; }
 .ppage-sub a:hover { text-decoration: underline; }
-#participantsList .ppage-sub { max-width: 900px; }
+#participantsList .ppage-sub { max-width: none; margin-bottom: 6px; }
+#participantsList .ppage-sub:last-of-type { margin-bottom: 0; }
 
 /* Hub Search Bar */
 .hub-search-bar {
@@ -1023,8 +1024,29 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ═══════════════════ NFP CIRCLE PARTICIPANTS TABLE ═══════════════════ */
-.circle-meet-banner {
+.participants-note {
     margin: 24px 0 0;
+    padding: 12px 20px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--muted);
+}
+.participants-note strong {
+    display: block;
+    color: var(--dark);
+    font-size: 12.5px;
+    margin-bottom: 3px;
+}
+.participants-note ol { margin: 0; padding-left: 16px; }
+.participants-note li { margin-bottom: 1px; }
+.participants-note li:last-child { margin-bottom: 0; }
+.participants-note a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.participants-note a:hover { text-decoration: underline; }
+.circle-meet-banner {
+    margin: 16px 0 0;
     padding: 14px 18px;
     background: var(--brand-ultra);
     border: 1px solid var(--brand);
@@ -2225,6 +2247,56 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     from { transform: scale(0.94); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
 }
+
+.schedule-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 3100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease;
+}
+.schedule-overlay.visible { opacity: 1; visibility: visible; }
+.schedule-modal {
+    position: relative;
+    max-width: 720px;
+    width: 100%;
+    max-height: 90vh;
+    animation: successModalPop 0.3s ease;
+}
+.schedule-img {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xl);
+    display: block;
+}
+.schedule-close {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--white);
+    border: none;
+    color: var(--dark);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.schedule-close:hover { background: var(--secondary); }
 
 /* ══════════════════════════════════════════════════════
    MOBILE FIX — RE-ASSERT RESPONSIVE OVERRIDES

@@ -68,7 +68,23 @@ document.addEventListener('DOMContentLoaded', () => {
     initGallery();
     renderHeroMapPins();
     loadParticipantFormState();
+
+    if (!sessionStorage.getItem('scheduleShown')) {
+        openScheduleModal();
+        sessionStorage.setItem('scheduleShown', '1');
+    }
 });
+
+// ═══════════════════ SCHEDULE POPUP ═══════════════════
+function openScheduleModal() {
+    const overlay = document.getElementById('scheduleOverlay');
+    if (overlay) overlay.classList.add('visible');
+}
+
+function closeScheduleModal() {
+    const overlay = document.getElementById('scheduleOverlay');
+    if (overlay) overlay.classList.remove('visible');
+}
 
 function handleNavbarScroll() {
     const navbar = document.getElementById('navbar');
@@ -219,7 +235,6 @@ function fillSelectOptions(selectId, values, allLabel, labelFormatter) {
 
 function populateParticipantFilterOptions(rows) {
     fillSelectOptions('filter-city', uniqueSorted(rows.map(r => r.city)), 'All Cities');
-    fillSelectOptions('filter-circleName', uniqueSorted(rows.map(r => r.circleName)), 'All Circles');
     fillSelectOptions('filter-membership', uniqueSorted(rows.map(r => r.membership)), 'All Types', formatMembershipType);
 }
 
@@ -246,14 +261,14 @@ function updateParticipantSortArrows() {
 function applyParticipantsFilter() {
     const nameQuery = (document.getElementById('filter-fullName')?.value || '').trim().toLowerCase();
     const cityFilter = document.getElementById('filter-city')?.value || '';
-    const circleFilter = document.getElementById('filter-circleName')?.value || '';
+    const circleQuery = (document.getElementById('filter-circleName')?.value || '').trim().toLowerCase();
     const membershipFilter = document.getElementById('filter-membership')?.value || '';
     const statusFilter = document.getElementById('filter-status')?.value || '';
 
     let filtered = allParticipants.filter(r => {
         if (nameQuery && !String(r.fullName || '').toLowerCase().includes(nameQuery)) return false;
         if (cityFilter && r.city !== cityFilter) return false;
-        if (circleFilter && r.circleName !== circleFilter) return false;
+        if (circleQuery && !String(r.circleName || '').toLowerCase().includes(circleQuery)) return false;
         if (membershipFilter && r.membership !== membershipFilter) return false;
         if (statusFilter && r.status !== statusFilter) return false;
         return true;
