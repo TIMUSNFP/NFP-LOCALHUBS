@@ -3361,6 +3361,16 @@ async function openCrmCampaignModal() {
             just those membership types, batches, and/or batch statuses — works with either targeting mode.
         </p>
         <div class="detail-item" style="margin-top:14px">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:600;cursor:pointer">
+                <input type="checkbox" id="crmCExcludeLeaders" checked>
+                Exclude Circle Leaders from this send
+            </label>
+            <p style="color:var(--muted);font-size:12px;margin:4px 0 0">
+                Recommended — a contact who is already an Approved Circle Leader won't be emailed "a circle is open
+                near you, register as a participant!" (matched by email against approved circle-leader applications).
+            </p>
+        </div>
+        <div class="detail-item" style="margin-top:14px">
             <label>Intro Text <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional — leave blank to use the default "what is an NFP Circle / why join" copy)</span></label>
             <textarea id="crmCIntro" class="form-input" rows="4" placeholder="Leave blank for the default explainer..."></textarea>
         </div>
@@ -3485,12 +3495,13 @@ async function submitCrmCampaign() {
     const targetBatches = getCheckedCrmBatches();
     const targetMemberships = getCheckedCrmMemberships();
     const targetBatchStatuses = getCheckedCrmBatchStatuses();
+    const excludeHubLeaders = document.getElementById('crmCExcludeLeaders')?.checked !== false;
 
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, introHtml, batchSize, intervalMinutes }),
+            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, introHtml, batchSize, intervalMinutes }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Could not create campaign.', 'error'); return; }
