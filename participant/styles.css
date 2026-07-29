@@ -986,6 +986,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     gap: 10px;
 }
 .hubs-panel-hdr h3 { font-size: 16px; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 10px; }
+.hubs-panel-controls { display: flex; flex-wrap: wrap; gap: 8px; }
 .hub-count-pill {
     background: var(--primary);
     color: white;

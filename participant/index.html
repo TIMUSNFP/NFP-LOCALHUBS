@@ -415,11 +415,21 @@
             <div class="hubs-panel">
                 <div class="hubs-panel-hdr">
                     <h3>Available Circles <span class="hub-count-pill" id="hubCountPill">0</span></h3>
-                    <select class="sort-select" id="hubSortBy" onchange="sortAndRenderHubs()">
-                        <option value="city">Sort: City</option>
-                        <option value="name">Sort: Name</option>
-                        <option value="capacity">Sort: Capacity</option>
-                    </select>
+                    <div class="hubs-panel-controls">
+                        <select class="sort-select" id="hubCityFilter" onchange="filterHubs()">
+                            <option value="">All Cities</option>
+                        </select>
+                        <select class="sort-select" id="hubAvailabilityFilter" onchange="filterHubs()">
+                            <option value="">Any Availability</option>
+                            <option value="open">Open Only</option>
+                            <option value="full">Full Only</option>
+                        </select>
+                        <select class="sort-select" id="hubSortBy" onchange="sortAndRenderHubs()">
+                            <option value="city">Sort: City</option>
+                            <option value="name">Sort: Name</option>
+                            <option value="capacity">Sort: Capacity</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="hub-cards-list" id="hubCardsList">
                     <div class="hubs-loading">

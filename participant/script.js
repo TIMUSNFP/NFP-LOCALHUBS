@@ -551,6 +551,7 @@ async function refreshMapMarkers() {
     const hubs = await fetchHubs();
     allApprovedHubs = hubs.filter(r => r.status === 'Approved');
     filteredHubs    = [...allApprovedHubs];
+    populateHubCityFilter(allApprovedHubs);
 
     const badge = document.getElementById('mapCountBadge');
     if (badge) badge.textContent = `${allApprovedHubs.length} circle${allApprovedHubs.length !== 1 ? 's' : ''}`;
@@ -626,21 +627,41 @@ function buildHubPopupHTML(hub) {
     `;
 }
 
+function populateHubCityFilter(hubs) {
+    const el = document.getElementById('hubCityFilter');
+    if (!el) return;
+    const current = el.value;
+    const cities = [...new Set(hubs.map(h => h.city).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    el.innerHTML = '<option value="">All Cities</option>' +
+        cities.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+    if (cities.includes(current)) el.value = current;
+}
+
 function filterHubs() {
     const q = (document.getElementById('hubCitySearch')?.value || '').toLowerCase().trim();
-    if (!q) {
-        filteredHubs = [...allApprovedHubs];
-    } else {
-        filteredHubs = allApprovedHubs.filter(h =>
+    const cityFilter = document.getElementById('hubCityFilter')?.value || '';
+    const availabilityFilter = document.getElementById('hubAvailabilityFilter')?.value || '';
+    const hasFilter = !!(q || cityFilter || availabilityFilter);
+
+    filteredHubs = allApprovedHubs.filter(h => {
+        if (q && !(
             h.city.toLowerCase().includes(q) ||
             h.area.toLowerCase().includes(q) ||
             h.fullName.toLowerCase().includes(q)
-        );
-    }
+        )) return false;
+        if (cityFilter && h.city !== cityFilter) return false;
+        if (availabilityFilter) {
+            const { isFull } = getHubSpotsInfo(h);
+            if (availabilityFilter === 'open' && isFull) return false;
+            if (availabilityFilter === 'full' && !isFull) return false;
+        }
+        return true;
+    });
+
     // Dim non-matching markers on map
     hubMarkers.forEach(m => {
         const hub   = allApprovedHubs.find(h => h.id === m._hubId);
-        const match = !q || filteredHubs.includes(hub);
+        const match = !hasFilter || filteredHubs.includes(hub);
         if (m._icon) m._icon.style.opacity = match ? '1' : '.25';
         else m.setOpacity(match ? 1 : 0.25);
     });
@@ -648,8 +669,8 @@ function filterHubs() {
     if (badge) badge.textContent = `${filteredHubs.length} circle${filteredHubs.length !== 1 ? 's' : ''}`;
     renderHubCards(filteredHubs);
 
-    // If exactly one city matches, zoom there
-    if (filteredHubs.length > 0) {
+    // If narrowed down by city/search, zoom there
+    if (filteredHubs.length > 0 && (q || cityFilter)) {
         const coords = getHubCoords(filteredHubs[0]);
         if (coords && leafletMap) leafletMap.flyTo(coords, 11, { duration: 1.2 });
     }
@@ -681,7 +702,10 @@ function renderHubCards(hubs) {
     if (!el) return;
     if (countPill) countPill.textContent = hubs.length;
     if (!hubs.length) {
-        el.innerHTML = `<div class="no-hubs-msg"><p>No approved Circles found${document.getElementById('hubCitySearch')?.value ? ' for this search' : ' yet'}. Check back soon!</p></div>`;
+        const hasActiveFilter = document.getElementById('hubCitySearch')?.value ||
+            document.getElementById('hubCityFilter')?.value ||
+            document.getElementById('hubAvailabilityFilter')?.value;
+        el.innerHTML = `<div class="no-hubs-msg"><p>No approved Circles found${hasActiveFilter ? ' for this filter' : ' yet'}. Check back soon!</p></div>`;
         return;
     }
     el.innerHTML = hubs.map(hub => {
@@ -786,6 +810,10 @@ function resetMapView() {
     if (leafletMap) leafletMap.flyTo([20.5937, 78.9629], 5, { duration: 1.2 });
     const searchEl = document.getElementById('hubCitySearch');
     if (searchEl) searchEl.value = '';
+    const cityFilterEl = document.getElementById('hubCityFilter');
+    if (cityFilterEl) cityFilterEl.value = '';
+    const availabilityEl = document.getElementById('hubAvailabilityFilter');
+    if (availabilityEl) availabilityEl.value = '';
     const sortEl = document.getElementById('hubSortBy');
     if (sortEl) sortEl.value = 'city';
     filteredHubs = [...allApprovedHubs];
