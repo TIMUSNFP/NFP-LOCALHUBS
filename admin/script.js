@@ -3280,7 +3280,7 @@ async function openCrmCampaignModal() {
             </div>
             <div class="detail-item">
                 <label>Email Subject</label>
-                <input type="text" id="crmCSubject" class="form-input" value="NFP Circles are open in {city}!">
+                <input type="text" id="crmCSubject" class="form-input" value="Last Call: NFP Circles Open in {city} - Seats Filling Fast">
             </div>
         </div>
         <p style="color:var(--muted);font-size:12px;margin:-8px 0 0">

@@ -435,7 +435,8 @@ function buildCircleCrmEmailHtml(contact, hubs, campaign) {
   `).join('');
 
   const html = wrap(`
-    <div class="badge">📍 NFP Circles open in ${cityLabel}</div>
+    <div class="badge">📍 NFP Circles open in ${cityLabel}</div><br>
+    <div class="badge" style="background:#FEE2E2;color:#B91C1C;margin-top:8px">⏰ One Week to Go — Limited Seats Left!</div>
     <h2>Hi ${contact.full_name}, there ${hubs.length === 1 ? 'is' : 'are'} ${hubs.length} NFP Circle${hubs.length === 1 ? '' : 's'} open near you!</h2>
     ${campaign.introHtml || DEFAULT_CRM_INTRO}
     <p class="section-heading">Open Circles in ${cityLabel}</p>
