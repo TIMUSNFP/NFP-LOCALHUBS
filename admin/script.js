@@ -3371,6 +3371,16 @@ async function openCrmCampaignModal() {
             </p>
         </div>
         <div class="detail-item" style="margin-top:14px">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:600;cursor:pointer">
+                <input type="checkbox" id="crmCExcludeParticipants" checked>
+                Exclude already-registered Participants from this send
+            </label>
+            <p style="color:var(--muted);font-size:12px;margin:4px 0 0">
+                Recommended — a contact who has already registered as a Participant in some Circle (Pending or
+                Confirmed) won't be re-emailed to join one (matched by email against participant registrations).
+            </p>
+        </div>
+        <div class="detail-item" style="margin-top:14px">
             <label>Intro Text <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional — leave blank to use the default "what is an NFP Circle / why join" copy)</span></label>
             <textarea id="crmCIntro" class="form-input" rows="4" placeholder="Leave blank for the default explainer..."></textarea>
         </div>
@@ -3496,12 +3506,13 @@ async function submitCrmCampaign() {
     const targetMemberships = getCheckedCrmMemberships();
     const targetBatchStatuses = getCheckedCrmBatchStatuses();
     const excludeHubLeaders = document.getElementById('crmCExcludeLeaders')?.checked !== false;
+    const excludeRegisteredParticipants = document.getElementById('crmCExcludeParticipants')?.checked !== false;
 
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, introHtml, batchSize, intervalMinutes }),
+            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, introHtml, batchSize, intervalMinutes }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Could not create campaign.', 'error'); return; }

@@ -123,6 +123,8 @@ alter table crm_campaigns add column if not exists target_mode text not null def
 alter table crm_campaigns add column if not exists target_batches jsonb not null default '[]'::jsonb;
 alter table crm_campaigns add column if not exists target_memberships jsonb not null default '[]'::jsonb;
 alter table crm_campaigns add column if not exists target_batch_statuses jsonb not null default '[]'::jsonb;
+alter table crm_campaigns add column if not exists exclude_hub_leaders boolean not null default true;
+alter table crm_campaigns add column if not exists exclude_registered_participants boolean not null default true;
 
 create table if not exists crm_campaign_recipients (
   id bigserial primary key,

@@ -91,6 +91,7 @@ function campaignRowToJson(row) {
     targetMemberships: row.target_memberships || [],
     targetBatchStatuses: row.target_batch_statuses || [],
     excludeHubLeaders: row.exclude_hub_leaders !== false,
+    excludeRegisteredParticipants: row.exclude_registered_participants !== false,
     subject: row.subject,
     introHtml: row.intro_html,
     batchSize: row.batch_size,
@@ -167,6 +168,19 @@ function appendHubLeaderExclusion(conditions, excludeHubLeaders) {
   if (excludeHubLeaders !== false) {
     conditions.push(
       `NOT EXISTS (SELECT 1 FROM hubs h WHERE h.status = 'Approved' AND h.email = crm_contacts.email)`
+    );
+  }
+}
+
+// A CRM contact who has already registered as a Participant in some Circle
+// would otherwise get "a circle is open near you, register!" again — exclude
+// by default; each campaign can opt out via excludeRegisteredParticipants.
+// Cancelled registrations don't count as "already registered" (the person
+// never actually joined a circle), so they're left eligible.
+function appendRegisteredParticipantExclusion(conditions, excludeRegisteredParticipants) {
+  if (excludeRegisteredParticipants !== false) {
+    conditions.push(
+      `NOT EXISTS (SELECT 1 FROM participants p WHERE lower(p.email) = lower(crm_contacts.email) AND p.status != 'Cancelled')`
     );
   }
 }
@@ -675,7 +689,7 @@ router.patch('/campaigns/:id', asyncHandler(async (req, res) => {
 // POST /api/admin/crm/campaigns — create a Draft.
 // Body: { name, subject, targetMode?, targetCities[], hubIds[], targetBatches[]?,
 //         targetMemberships[]?, targetBatchStatuses[]?, excludeHubLeaders?,
-//         introHtml?, batchSize?, intervalMinutes? }
+//         excludeRegisteredParticipants?, introHtml?, batchSize?, intervalMinutes? }
 // targetMode 'manual' (default): every recipient in targetCities gets the same
 // hubIds list. targetMode 'auto': every contact whose own city currently has at
 // least one open (non-full) Approved circle is a recipient, and each one only
@@ -683,15 +697,17 @@ router.patch('/campaigns/:id', asyncHandler(async (req, res) => {
 // targetBatches/targetMemberships/targetBatchStatuses are optional narrowing
 // filters that apply on top of city targeting in EITHER mode (e.g.
 // auto-personalize by city, but only for QPFP Batch 11/12, or only batches
-// still Running) — omit/empty means no restriction. excludeHubLeaders defaults
-// to true — set it false to deliberately include Circle Leaders as recipients.
+// still Running) — omit/empty means no restriction. excludeHubLeaders and
+// excludeRegisteredParticipants both default to true — set false to
+// deliberately include Circle Leaders / already-registered Participants.
 router.post('/campaigns', asyncHandler(async (req, res) => {
-  const { name, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
+  const { name, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
   const mode = targetMode === 'auto' ? 'auto' : 'manual';
   const batches = Array.isArray(targetBatches) ? targetBatches : [];
   const memberships = Array.isArray(targetMemberships) ? targetMemberships : [];
   const batchStatuses = Array.isArray(targetBatchStatuses) ? targetBatchStatuses : [];
   const excludeLeaders = excludeHubLeaders !== false;
+  const excludeParticipants = excludeRegisteredParticipants !== false;
   if (!name || !subject) {
     return res.status(400).json({ error: 'name and subject are required.' });
   }
@@ -714,17 +730,18 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
   }
   appendOptionalFilters(conditions, params, batches, memberships, batchStatuses);
   appendHubLeaderExclusion(conditions, excludeLeaders);
+  appendRegisteredParticipantExclusion(conditions, excludeParticipants);
   const totalRow = await db.get(`SELECT COUNT(*)::int AS count FROM crm_contacts WHERE ${conditions.join(' AND ')}`, params);
 
   await db.run(
     `INSERT INTO crm_campaigns
-       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at)
-     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, exclude_registered_participants, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at)
+     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
     [
       id, name, mode,
       JSON.stringify(mode === 'manual' ? targetCities : []),
       JSON.stringify(mode === 'manual' && Array.isArray(hubIds) ? hubIds : []),
-      JSON.stringify(batches), JSON.stringify(memberships), JSON.stringify(batchStatuses), excludeLeaders,
+      JSON.stringify(batches), JSON.stringify(memberships), JSON.stringify(batchStatuses), excludeLeaders, excludeParticipants,
       subject, introHtml || null,
       Number.isFinite(Number(batchSize)) && Number(batchSize) > 0 ? Number(batchSize) : 25,
       Number.isFinite(Number(intervalMinutes)) && Number(intervalMinutes) > 0 ? Number(intervalMinutes) : 15,
@@ -768,6 +785,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
     conditions.push(`city_key = ANY($${params.length}::text[])`);
     appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
     appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
+    appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
     sampleContact = await db.get(
       `SELECT * FROM crm_contacts WHERE ${conditions.join(' AND ')} ORDER BY full_name ASC LIMIT 1`,
       params
@@ -788,6 +806,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
       conditions.push(`city = ANY($${params.length}::text[])`);
       appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
       appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
+      appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
       sampleContact = await db.get(
         `SELECT * FROM crm_contacts WHERE ${conditions.join(' AND ')} ORDER BY full_name ASC LIMIT 1`,
         params
@@ -850,6 +869,7 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
   }
   appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
   appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
+  appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
   await db.run(
     `INSERT INTO crm_campaign_recipients (campaign_id, contact_id)
      SELECT $${params.length + 1}, id FROM crm_contacts WHERE ${conditions.join(' AND ')}
