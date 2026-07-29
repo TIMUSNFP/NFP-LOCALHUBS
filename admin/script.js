@@ -2988,11 +2988,27 @@ function ensureCrmDisplayPolling() {
 // no in-process timer that survives a cold start (see runCampaignBatch in
 // backend/routes/crm.js) and Vercel Cron on Hobby is capped at once/day, far too
 // coarse for an active send. So the browser itself becomes the driver: while
-// this tab is open and a campaign is Sending, this fires a real "Send Batch Now"
-// every few seconds — no repeated manual clicking needed, just leave the tab
-// open until it reaches Completed. crmAutoBatchInFlight stops a slow tick (e.g.
-// a large batch_size) from overlapping with the next timer firing before it's
-// done. Stops itself automatically once nothing is Sending or the tab is hidden.
+// this tab is open and a campaign is Sending, this checks every few seconds
+// whether it's actually time for that campaign's NEXT batch — no repeated manual
+// clicking needed, just leave the tab open until it reaches Completed.
+// crmAutoBatchInFlight stops a slow tick (e.g. a large batch_size) from
+// overlapping with the next check firing before it's done. Stops itself
+// automatically once nothing is Sending or the tab is hidden.
+//
+// isCrmCampaignDueForBatch is what actually enforces each campaign's configured
+// intervalMinutes — earlier this loop fired a real batch every single 7-second
+// tick regardless of that setting, so a campaign's "Interval (minutes between
+// batches)" pacing control did nothing in practice: with maxConnections:1 SMTP
+// pooling, a few thousand contacts would all go out back-to-back in minutes,
+// which is exactly the kind of burst that got a prior campaign rate-limited by
+// Gmail ("too many login attempts", see mailer.js). The 7-second tick now only
+// decides WHEN to check readiness, not when to actually send.
+function isCrmCampaignDueForBatch(campaign) {
+    if (!campaign.lastBatchAt) return true; // hasn't sent a first batch yet — go now
+    const intervalMs = Math.max(1, campaign.intervalMinutes || 15) * 60 * 1000;
+    return (Date.now() - new Date(campaign.lastBatchAt).getTime()) >= intervalMs;
+}
+
 function ensureCrmAutoBatchDriver() {
     const anySending = allCrmCampaigns.some(c => c.status === 'Sending');
     const tabVisible = !document.getElementById('tabCrmCampaigns')?.classList.contains('hidden');
@@ -3000,7 +3016,7 @@ function ensureCrmAutoBatchDriver() {
         if (crmAutoBatchTimer) return;
         crmAutoBatchTimer = setInterval(() => {
             allCrmCampaigns
-                .filter(c => c.status === 'Sending' && !crmAutoBatchInFlight.has(c.id))
+                .filter(c => c.status === 'Sending' && !crmAutoBatchInFlight.has(c.id) && isCrmCampaignDueForBatch(c))
                 .forEach(c => {
                     crmAutoBatchInFlight.add(c.id);
                     processCrmBatch(c.id, false).finally(() => crmAutoBatchInFlight.delete(c.id));
