@@ -250,10 +250,28 @@ async function runCampaignBatchInner(campaignId) {
     return { sentThisBatch: 0, failedThisBatch: 0, remaining: 0, status: campaign.status };
   }
 
+  // Self-heal recipients stranded in 'Claimed' by a previous run of THIS
+  // campaign that never resolved them — e.g. Vercel's 60s function limit killed
+  // the request mid-batch (this is exactly what happened to a real campaign:
+  // batch_size 100 took long enough to get cut off, leaving dozens of contacts
+  // stuck Claimed with nothing to un-stick them until a rare cold start).
+  // resumeCrmCampaignsOnBoot() below only runs at module load, which may not
+  // happen for a long time if this endpoint keeps getting polled — so also
+  // reclaim per-campaign, every run, based on age rather than waiting on boot.
+  // 2 minutes gives 2x headroom over the 60s function limit, so this can never
+  // grab a row that's still legitimately in flight.
+  await db.run(
+    `UPDATE crm_campaign_recipients
+     SET status = 'Pending', claimed_at = NULL
+     WHERE campaign_id = $1 AND status = 'Claimed'
+       AND (claimed_at IS NULL OR claimed_at < now() - interval '2 minutes')`,
+    [campaignId]
+  );
+
   const claimed = await db.all(
     `WITH claimed AS (
        UPDATE crm_campaign_recipients
-       SET status = 'Claimed'
+       SET status = 'Claimed', claimed_at = now()
        WHERE id IN (
          SELECT id FROM crm_campaign_recipients
          WHERE campaign_id = $1 AND status = 'Pending'
@@ -368,7 +386,7 @@ async function runCampaignBatchInner(campaignId) {
 // unattended sending — still holds), Paused stays Paused.
 async function resumeCrmCampaignsOnBoot() {
   try {
-    const reset = await db.run(`UPDATE crm_campaign_recipients SET status = 'Pending' WHERE status = 'Claimed'`);
+    const reset = await db.run(`UPDATE crm_campaign_recipients SET status = 'Pending', claimed_at = NULL WHERE status = 'Claimed'`);
     if (reset.rowCount > 0) {
       console.log(`[crm] boot cleanup: reset ${reset.rowCount} stuck 'Claimed' recipient(s) back to Pending.`);
     }

@@ -130,11 +130,12 @@ create table if not exists crm_campaign_recipients (
   id bigserial primary key,
   campaign_id text not null references crm_campaigns(id) on delete cascade,
   contact_id text not null references crm_contacts(id) on delete cascade,
-  status text not null default 'Pending',  -- Pending | Sent | Failed | Skipped
+  status text not null default 'Pending',  -- Pending | Claimed | Sent | Failed | Skipped
   sent_at text,
   error text,
   unique (campaign_id, contact_id)
 );
+alter table crm_campaign_recipients add column if not exists claimed_at timestamptz;
 
 -- ── Row Level Security ────────────────────────────────────────────────────────
 -- All tables must have RLS enabled because Supabase exposes the public schema
