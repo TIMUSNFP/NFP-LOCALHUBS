@@ -421,15 +421,25 @@ const DEFAULT_CRM_INTRO = `
   for peer learning — no sales pitches, no solicitation.</p>
 `;
 
+// hub.full_name/area/venue_type come from the public Hub Leader application form
+// and contact.full_name/city come from an admin-imported spreadsheet — neither is
+// escaped anywhere else before reaching this bulk-sent email, so escape here as
+// defense in depth (same rationale as renderCrmSubject's CRLF stripping above).
+function escHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 // hubs: array of hub rows (city/area/venue_type/capacity) to feature in the email.
 function buildCircleCrmEmailHtml(contact, hubs, campaign) {
-  const cityLabel = campaign.targetCities && campaign.targetCities.length ? campaign.targetCities.join(' / ') : (contact.city || 'your city');
+  const cityLabel = escHtml(campaign.targetCities && campaign.targetCities.length ? campaign.targetCities.join(' / ') : (contact.city || 'your city'));
 
   const hubsHtml = hubs.map((hub) => `
     <div class="info-box">
-      <p><strong>Circle Leader:</strong> ${hub.full_name || hub.fullName || '—'}</p>
-      <p><strong>Area:</strong> ${hub.area || '—'}</p>
-      <p><strong>Venue Type:</strong> ${hub.venue_type || hub.venueType || '—'}</p>
+      <p><strong>Circle Leader:</strong> ${escHtml(hub.full_name || hub.fullName || '—')}</p>
+      <p><strong>Area:</strong> ${escHtml(hub.area || '—')}</p>
+      <p><strong>Venue Type:</strong> ${escHtml(hub.venue_type || hub.venueType || '—')}</p>
       <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
     </div>
   `).join('');
@@ -437,7 +447,7 @@ function buildCircleCrmEmailHtml(contact, hubs, campaign) {
   const html = wrap(`
     <div class="badge">📍 NFP Circles open in ${cityLabel}</div><br>
     <div class="badge" style="background:#FEE2E2;color:#B91C1C;margin-top:8px">⏰ One Week to Go — Limited Seats Left!</div>
-    <h2>Hi ${contact.full_name}, there ${hubs.length === 1 ? 'is' : 'are'} ${hubs.length} NFP Circle${hubs.length === 1 ? '' : 's'} open near you!</h2>
+    <h2>Hi ${escHtml(contact.full_name)}, there ${hubs.length === 1 ? 'is' : 'are'} ${hubs.length} NFP Circle${hubs.length === 1 ? '' : 's'} open near you!</h2>
     ${campaign.introHtml || DEFAULT_CRM_INTRO}
     <p class="section-heading">Open Circles in ${cityLabel}</p>
     ${hubsHtml}
