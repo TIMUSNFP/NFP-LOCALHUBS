@@ -24,6 +24,27 @@ router.get('/check', async (req, res) => {
   res.json(result);
 });
 
+// GET /api/participants/public — public roster for the participant site's
+// "Meet Our Participants" tab. Only safe fields (no email/mobile/note),
+// excludes Cancelled registrations.
+router.get('/public', async (req, res) => {
+  const rows = await db.all(`
+    SELECT p.full_name, p.membership, p.status,
+           h.full_name AS hub_leader, h.city AS hub_city
+    FROM participants p
+    JOIN hubs h ON h.id = p.hub_id
+    WHERE p.status != 'Cancelled'
+    ORDER BY p.registered_at DESC
+  `);
+  res.json(rows.map(r => ({
+    fullName: r.full_name,
+    membership: r.membership,
+    status: r.status,
+    city: r.hub_city,
+    circleName: `${r.hub_leader}'s Circle`,
+  })));
+});
+
 // POST /api/participants — register a participant against an Approved hub.
 router.post('/', async (req, res) => {
   const body = req.body || {};

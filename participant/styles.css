@@ -744,6 +744,9 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     letter-spacing: -.5px;
 }
 .ppage-sub { font-size: 16px; color: rgba(255,255,255,.65); line-height: 1.65; max-width: 540px; }
+.ppage-sub a { color: var(--primary-light); text-decoration: none; font-weight: 600; }
+.ppage-sub a:hover { text-decoration: underline; }
+#participantsList .ppage-sub { max-width: 900px; }
 
 /* Hub Search Bar */
 .hub-search-bar {
@@ -1018,6 +1021,111 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     margin: 0 auto 12px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════ NFP CIRCLE PARTICIPANTS TABLE ═══════════════════ */
+.circle-meet-banner {
+    margin: 24px 0 0;
+    padding: 14px 18px;
+    background: var(--brand-ultra);
+    border: 1px solid var(--brand);
+    color: var(--brand-dark);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
+}
+.participants-stats-bar {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 16px 0 0;
+}
+.pstat-chip {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+.pstat-chip strong { color: var(--dark); font-size: 15px; margin-right: 4px; }
+.participants-table-wrap {
+    overflow-x: hidden;
+    margin: 12px 0 60px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    background: var(--white);
+}
+.participants-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+.participants-table th:nth-child(1), .participants-table td:nth-child(1) { width: 6%; }
+.participants-table th:nth-child(2), .participants-table td:nth-child(2) { width: 18%; }
+.participants-table th:nth-child(3), .participants-table td:nth-child(3) { width: 11%; }
+.participants-table th:nth-child(4), .participants-table td:nth-child(4) { width: 22%; }
+.participants-table th:nth-child(5), .participants-table td:nth-child(5) { width: 27%; }
+.participants-table th:nth-child(6), .participants-table td:nth-child(6) { width: 16%; }
+.ptable-nowrap {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.participants-table thead th {
+    text-align: left;
+    padding: 14px 18px;
+    background: var(--secondary);
+    color: var(--dark);
+    font-weight: 700;
+    font-size: 13px;
+    overflow-wrap: break-word;
+    border-bottom: 1px solid var(--border);
+}
+.participants-table thead th.sortable { cursor: pointer; user-select: none; transition: background var(--transition); }
+.participants-table thead th.sortable:hover { background: var(--border); }
+.sort-arrow { font-size: 10px; color: var(--primary); }
+.ptable-filter-row td {
+    padding: 8px 12px;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+}
+.ptable-filter-input, .ptable-filter-select {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--dark);
+    background: var(--white);
+    font-family: inherit;
+}
+.ptable-filter-input:focus, .ptable-filter-select:focus { outline: none; border-color: var(--primary); }
+.ptable-filter-input::placeholder { color: var(--light-text); }
+.participants-table tbody td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    overflow-wrap: break-word;
+}
+.participants-table tbody tr:last-child td { border-bottom: none; }
+.participants-table tbody tr:hover { background: var(--secondary); }
+.ptable-msg { text-align: center; padding: 40px !important; color: var(--muted); }
+.status-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.status-approved { background: var(--success-bg); color: var(--success); }
+.status-pending { background: var(--warning-bg); color: var(--warning); }
+
 .hub-card-item {
     background: var(--white);
     border: 1.5px solid var(--border);

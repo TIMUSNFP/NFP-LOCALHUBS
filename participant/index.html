@@ -24,6 +24,7 @@
             <a class="nav-link" onclick="showSection('landing'); closeMenu()">Home</a>
             <a class="nav-link" onclick="scrollToSection('whatAreHubs'); closeMenu()">About Circles</a>
             <a class="nav-link" onclick="scrollToSection('powerCommunity'); closeMenu()">Community</a>
+            <a class="nav-link" onclick="showSection('participantsList'); closeMenu()">NFP Circle Participants</a>
         </div>
         <div class="nav-cta" id="navCta">
             <button class="btn-primary" id="navCtaBtn" onclick="showSection('participantReg')">Find a Circle</button>
@@ -479,6 +480,66 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════ MEET OUR PARTICIPANTS ══════════════════ -->
+<section id="participantsList" class="page">
+    <div class="page-topbar">
+        <button class="btn-back" onclick="showSection('landing')">&larr; Back to Home</button>
+        <span class="mode-chip participant-chip">NFP Circle Participants</span>
+    </div>
+
+    <div class="ppage-header">
+        <div class="container">
+            <div class="ppage-title-row">
+                <div>
+                    <span class="section-tag">Our Community</span>
+                    <h1 class="ppage-title">NFP Circle Participants</h1>
+                    <p class="ppage-sub">This is the list of everyone who has registered to join an NFP Circle. Every new registration is reviewed and confirmed by the NetworkFP Team, so please avoid registering more than once. If you have any questions or spot a duplicate entry, reach out to Sumit Sawant at <a href="mailto:Sumit@networkfp.com">Sumit@networkfp.com</a> or call <a href="tel:+917208931022">72089 31022</a>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="circle-meet-banner">1st Circle Meet &mdash; 5th Aug, Wednesday</div>
+        <div class="participants-stats-bar">
+            <div class="pstat-chip"><strong id="statParticipants">0</strong> Participants</div>
+            <div class="pstat-chip"><strong id="statCircles">0</strong> Circles</div>
+            <div class="pstat-chip"><strong id="statCities">0</strong> Cities</div>
+        </div>
+        <div class="participants-table-wrap">
+            <table class="participants-table">
+                <thead>
+                    <tr class="ptable-header-row">
+                        <th class="sortable" onclick="sortParticipantsBy('srNo')">Sr. No<span class="sort-arrow" id="arrow-srNo"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('fullName')">Participant Name<span class="sort-arrow" id="arrow-fullName"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('city')">City<span class="sort-arrow" id="arrow-city"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('circleName')">Circle Joined<span class="sort-arrow" id="arrow-circleName"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('membership')">Member Type<span class="sort-arrow" id="arrow-membership"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('status')">Status<span class="sort-arrow" id="arrow-status"></span></th>
+                    </tr>
+                    <tr class="ptable-filter-row">
+                        <td></td>
+                        <td><input type="text" id="filter-fullName" class="ptable-filter-input" placeholder="Search name..." oninput="applyParticipantsFilter()"></td>
+                        <td><select id="filter-city" class="ptable-filter-select" onchange="applyParticipantsFilter()"><option value="">All Cities</option></select></td>
+                        <td><select id="filter-circleName" class="ptable-filter-select" onchange="applyParticipantsFilter()"><option value="">All Circles</option></select></td>
+                        <td><select id="filter-membership" class="ptable-filter-select" onchange="applyParticipantsFilter()"><option value="">All Types</option></select></td>
+                        <td>
+                            <select id="filter-status" class="ptable-filter-select" onchange="applyParticipantsFilter()">
+                                <option value="">All Statuses</option>
+                                <option value="Confirmed">Approved</option>
+                                <option value="Pending">Awaiting Approval</option>
+                            </select>
+                        </td>
+                    </tr>
+                </thead>
+                <tbody id="participantsTableBody">
+                    <tr><td colspan="6" class="ptable-msg"><div class="spinner"></div><p>Loading participants...</p></td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </section>
