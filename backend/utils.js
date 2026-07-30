@@ -67,6 +67,8 @@ function hubRowToJson(row) {
     rosterSentAt: row.roster_sent_at,
     pendingChangeSummary: row.pending_change_summary || null,
     changeNotifiedAt: row.change_notified_at,
+    mergedIntoHubId: row.merged_into_hub_id || null,
+    mergedAt: row.merged_at || null,
   };
 }
 

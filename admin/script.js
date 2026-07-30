@@ -694,20 +694,23 @@ function renderTable(regs) {
             <td>${r.hostedBefore === 'Yes' ? '✅ Yes' : '❌ No'}</td>
             <td>${escHtml(r.hostingFrequency || '—')}</td>
             <td>${formatDate(r.submittedAt)}</td>
-            <td>${statusBadge(r.status)}</td>
+            <td>${statusBadge(r.status)}${mergedIntoLabel(r)}</td>
             <td>
                 <div class="action-btns">
-                    ${r.status !== 'Approved'
+                    ${r.status !== 'Approved' && r.status !== 'Merged'
                         ? `<button class="act-btn act-approve" onclick="confirmApprove('${escHtml(r.id)}')">Approve</button>`
                         : ''}
-                    ${r.status !== 'Rejected'
+                    ${r.status !== 'Rejected' && r.status !== 'Merged'
                         ? `<button class="act-btn act-reject" onclick="confirmReject('${escHtml(r.id)}')">Reject</button>`
                         : ''}
-                    ${r.status !== 'Pending'
+                    ${r.status !== 'Pending' && r.status !== 'Merged'
                         ? `<button class="act-btn act-reset" onclick="confirmReset('${escHtml(r.id)}')">Reset to Pending</button>`
                         : ''}
                     ${r.status === 'Approved'
                         ? `<button class="act-btn act-view" onclick="sendHubRoster('${escHtml(r.id)}')" title="${r.rosterSentAt ? 'Last sent ' + formatDate(r.rosterSentAt) : 'Never sent'}">${r.rosterSentAt ? 'Resend Roster' : 'Send Roster'}</button>`
+                        : ''}
+                    ${r.status === 'Approved'
+                        ? `<button class="act-btn act-view" onclick="openCombineHubModal('${escHtml(r.id)}')">Combine</button>`
                         : ''}
                     <button class="act-btn act-view" onclick="viewDetails('${escHtml(r.id)}')">View</button>
                     <button class="act-btn act-delete" onclick="deleteHub('${escHtml(r.id)}')">Delete</button>
@@ -724,8 +727,18 @@ function statusBadge(status) {
         'Pending':  'badge-pending',
         'Approved': 'badge-approved',
         'Rejected': 'badge-rejected',
+        'Merged':   'badge-merged',
     };
     return `<span class="badge ${map[status] || 'badge-pending'}">${status}</span>`;
+}
+
+// For a Merged row, resolves and shows which circle absorbed it — allHubs may
+// not have loaded the surviving hub in the same render pass in edge cases, so
+// this falls back gracefully rather than throwing.
+function mergedIntoLabel(hub) {
+    if (hub.status !== 'Merged' || !hub.mergedIntoHubId) return '';
+    const survivor = allHubs.find(h => h.id === hub.mergedIntoHubId);
+    return `<div style="font-size:11px;color:var(--muted);margin-top:2px">&rarr; merged into ${escHtml(survivor ? survivor.fullName : hub.mergedIntoHubId)}</div>`;
 }
 
 // ═══════════════════ ADMIN ACTIONS (HUBS) ═══════════════════
@@ -2619,6 +2632,94 @@ async function submitTransferParticipants() {
         await loadParticipants();
         updateParticipantStats();
         applyParticipantFilters();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+}
+
+// ═══════════════════ COMBINE CIRCLES ═══════════════════
+let pendingCombineClosingHubId = null;
+
+async function openCombineHubModal(closingHubId) {
+    const closingHub = allHubs.find(h => h.id === closingHubId);
+    if (!closingHub) return;
+    pendingCombineClosingHubId = closingHubId;
+
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = `Combine ${closingHub.fullName}'s Circle`;
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `<p style="color:var(--muted)">Loading circles…</p>`;
+    document.getElementById('detailsOverlay').classList.add('visible');
+
+    await loadHubs(); // refresh allHubs so participant counts are current
+    const candidates = allHubs.filter(h => h.status === 'Approved' && h.id !== closingHubId);
+    const countByHub = {};
+    allParticipants.forEach(p => { countByHub[p.hubId] = (countByHub[p.hubId] || 0) + 1; });
+    const closingCount = countByHub[closingHubId] || 0;
+
+    content.innerHTML = `
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+            This will move all <strong>${closingCount}</strong> active participant${closingCount === 1 ? '' : 's'} from
+            <strong>${escHtml(closingHub.fullName)}'s</strong> Circle into whichever circle you pick below, and close
+            ${escHtml(closingHub.fullName)}'s Circle. Everyone moved (and ${escHtml(closingHub.fullName)}) gets an
+            email explaining the combination and the new address.
+            <strong style="color:var(--danger)">This can't be undone automatically.</strong>
+        </p>
+        <div class="detail-item">
+            <label>Combine With</label>
+            <input type="text" id="combineHubSearch" class="form-input" placeholder="Search by leader, city, or area..." oninput="filterCombineHubList()">
+        </div>
+        <div id="combineHubList" style="max-height:320px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-top:10px">
+            ${candidates.length === 0 ? '<p style="color:var(--muted);font-size:13px">No other approved circles found.</p>' : candidates.map(h => {
+                const count = countByHub[h.id] || 0;
+                return `
+                <label class="combine-hub-option" data-search="${escHtml((h.fullName + ' ' + h.city + ' ' + h.area).toLowerCase())}" style="display:flex;align-items:center;gap:10px;padding:8px 4px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border)">
+                    <input type="radio" name="combineHub" value="${escHtml(h.id)}">
+                    <span>
+                        <strong>${escHtml(h.fullName)}</strong> — ${escHtml(h.city)}, ${escHtml(h.area)}
+                        <span style="color:var(--muted);font-size:12px"> (${count} participant${count === 1 ? '' : 's'})</span>
+                    </span>
+                </label>`;
+            }).join('')}
+        </div>
+        <div class="modal-btns">
+            <button class="btn-outline" onclick="closeDetailsModal()">Cancel</button>
+            <button class="btn-primary" onclick="submitCombineHub()">Combine Circles</button>
+        </div>
+    `;
+}
+
+function filterCombineHubList() {
+    const q = (document.getElementById('combineHubSearch')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('.combine-hub-option').forEach(el => {
+        el.style.display = (!q || el.dataset.search.includes(q)) ? 'flex' : 'none';
+    });
+}
+
+async function submitCombineHub() {
+    const selected = document.querySelector('input[name="combineHub"]:checked');
+    if (!selected) { showToast('Please select a circle to combine with.', 'error'); return; }
+    const targetHubId = selected.value;
+    const closingHubId = pendingCombineClosingHubId;
+
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/hubs/${closingHubId}/combine`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetHubId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(data.error || 'Could not combine circles.', 'error'); return; }
+        showToast(
+            `Combined — moved ${data.movedParticipants} participant${data.movedParticipants === 1 ? '' : 's'} into ${data.survivingHub.fullName}'s Circle.`,
+            'success'
+        );
+        closeDetailsModal();
+        pendingCombineClosingHubId = null;
+        await loadHubs();
+        await loadParticipants();
+        applyFilters();
+        updateStats();
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }

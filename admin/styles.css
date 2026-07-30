@@ -747,6 +747,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .badge-approved::before { background: var(--success); }
 .badge-rejected { background: var(--danger-bg); color: var(--danger); }
 .badge-rejected::before { background: var(--danger); }
+.badge-merged { background: var(--info-bg); color: var(--info); }
+.badge-merged::before { background: var(--info); }
 
 /* Action Buttons */
 .action-btns { display: flex; gap: 6px; }

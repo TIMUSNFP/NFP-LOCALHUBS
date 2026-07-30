@@ -14,6 +14,8 @@ const {
   sendHubRosterUpdate,
   sendHubDetailsUpdated,
   sendParticipantTransferred,
+  sendParticipantCircleCombined,
+  sendHubLeaderCircleMerged,
 } = require('../mailer');
 
 const router = express.Router();
@@ -432,6 +434,70 @@ router.post('/participants/transfer', async (req, res) => {
   }
 
   res.json({ transferred, skipped, newHub: hubRowToJson(newHub) });
+});
+
+// POST /api/admin/hubs/:id/combine — combine two circles into one. :id is the
+// circle being CLOSED, body { targetHubId } is the circle that SURVIVES — its
+// own details (leader, address, venue, capacity) are what's shown going forward.
+// Every non-Cancelled participant on the closing circle is moved over (same
+// mechanics as /participants/transfer above, reused directly) and emailed with
+// the combined circle's details; the closing circle's own leader gets a
+// separate note; the closing circle itself is kept (not deleted) with
+// status = 'Merged' so it stays out of every "Approved circles" surface
+// (public site, CRM targeting, dashboard widgets) while remaining visible in
+// the admin panel for history. Deliberately one-directional — no auto-undo.
+router.post('/hubs/:id/combine', async (req, res) => {
+  const { targetHubId } = req.body || {};
+  const closingHubId = req.params.id;
+
+  if (!targetHubId) {
+    return res.status(400).json({ error: 'targetHubId is required.' });
+  }
+  if (targetHubId === closingHubId) {
+    return res.status(400).json({ error: 'Cannot combine a circle with itself.' });
+  }
+
+  const closingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [closingHubId]);
+  if (!closingHub) return res.status(404).json({ error: 'Circle to close not found.' });
+  if (closingHub.status !== 'Approved') {
+    return res.status(400).json({ error: 'Only an Approved circle can be combined.' });
+  }
+
+  const survivingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [targetHubId]);
+  if (!survivingHub) return res.status(404).json({ error: 'Target circle not found.' });
+  if (survivingHub.status !== 'Approved') {
+    return res.status(400).json({ error: 'Target circle must be an Approved circle.' });
+  }
+
+  const movingParticipants = await db.all(
+    "SELECT * FROM participants WHERE hub_id = $1 AND status != 'Cancelled'",
+    [closingHubId]
+  );
+
+  let movedCount = 0;
+  for (const participant of movingParticipants) {
+    await db.run('UPDATE participants SET hub_id = $1 WHERE id = $2', [targetHubId, participant.id]);
+    const updated = await db.get('SELECT * FROM participants WHERE id = $1', [participant.id]);
+    movedCount++;
+    // Fire notification emails — non-blocking, errors are swallowed in mailer.
+    sendParticipantCircleCombined(updated, closingHub, survivingHub);
+  }
+
+  const now = new Date().toISOString();
+  await db.run(
+    `UPDATE hubs SET status = 'Merged', merged_into_hub_id = $1, merged_at = $2, last_updated = $2 WHERE id = $3`,
+    [targetHubId, now, closingHubId]
+  );
+
+  // Let the closing circle's own Leader know — non-blocking, same as above.
+  sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount);
+
+  const updatedClosingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [closingHubId]);
+  res.json({
+    movedParticipants: movedCount,
+    closingHub: hubRowToJson(updatedClosingHub),
+    survivingHub: hubRowToJson(survivingHub),
+  });
 });
 
 // DELETE /api/admin/participants/:id — permanently remove a participant. This is

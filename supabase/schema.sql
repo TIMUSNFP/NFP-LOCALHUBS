@@ -37,6 +37,10 @@ create table if not exists hubs (
 alter table hubs add column if not exists poc_role text;
 alter table hubs add column if not exists pending_change_summary jsonb;
 alter table hubs add column if not exists change_notified_at text;
+-- 'Merged' is a valid status value alongside Pending/Approved/Rejected — set when
+-- an admin combines this circle into another (see routes/admin.js's /combine route).
+alter table hubs add column if not exists merged_into_hub_id text references hubs(id);
+alter table hubs add column if not exists merged_at text;
 
 -- Participant registrations (each tied to an approved hub)
 create table if not exists participants (

@@ -403,6 +403,67 @@ async function sendParticipantTransferred(participant, oldHub, newHub) {
   });
 }
 
+// Sent when an admin combines two circles (routes/admin.js's /hubs/:id/combine) —
+// distinct wording from sendParticipantTransferred above: this is framed as two
+// circles joining together into one bigger group, not an arbitrary reassignment.
+async function sendParticipantCircleCombined(participant, oldHub, newHub) {
+  const html = wrap(`
+    <div class="badge">🤝 Your Circle Has Combined With Another</div>
+    <h2>Hi ${participant.full_name}, exciting update about your NFP Circle</h2>
+    <p>To bring together a bigger, more active group, your NFP Circle has combined with
+    ${newHub.full_name}'s Circle. Your registration has moved over automatically — no
+    action is needed from you.</p>
+    <div class="info-box">
+      <p><strong>Previous Circle Leader:</strong> ${oldHub ? oldHub.full_name : '—'}</p>
+      <p><strong>Previous Location:</strong> ${oldHub ? formatHubAddress(oldHub) : '—'}</p>
+    </div>
+    <div class="theme-block">
+      <p class="theme-title">Your Combined Circle</p>
+    </div>
+    <div class="info-box">
+      <p><strong>Circle Leader:</strong> ${newHub.full_name}</p>
+      <p><strong>Address:</strong> ${formatHubAddress(newHub)}</p>
+      <p><strong>Venue Type:</strong> ${newHub.venue_type || '—'}</p>
+      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+    </div>
+    <p>Your registration is already confirmed with your new Circle Leader — just show up at the address above.</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+  `);
+
+  await send({
+    to: participant.email,
+    subject: `Your NFP Circle has combined with ${newHub.full_name}'s Circle`,
+    html,
+  });
+}
+
+// Sent to the Circle Leader whose circle was closed in a combine (the surviving
+// leader doesn't need a separate email — nothing changes for them except a
+// bigger roster, which already shows up next time they view/receive it).
+async function sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount) {
+  const html = wrap(`
+    <div class="badge">🤝 Your Circle Has Combined With Another</div>
+    <h2>Hi ${closingHub.full_name}, your NFP Circle has combined with another</h2>
+    <p>Your NFP Circle has been combined with ${survivingHub.full_name}'s Circle to bring
+    together a bigger, more active group. ${movedCount} participant${movedCount === 1 ? '' : 's'}
+    from your Circle ${movedCount === 1 ? 'has' : 'have'} been moved over automatically.</p>
+    <div class="info-box">
+      <p><strong>Combined Circle Leader:</strong> ${survivingHub.full_name}</p>
+      <p><strong>Address:</strong> ${formatHubAddress(survivingHub)}</p>
+      <p><strong>Venue Type:</strong> ${survivingHub.venue_type || '—'}</p>
+    </div>
+    <p>Thank you for hosting with NFP Circles — if you'd like to host again in the future,
+    just reach out to us.</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+  `);
+
+  await send({
+    to: closingHub.email,
+    subject: `Your NFP Circle has combined with ${survivingHub.full_name}'s Circle`,
+    html,
+  });
+}
+
 // ─── NFP Circle CRM — city outreach campaign ──────────────────────────────────
 // Sent to cold-outreach contacts (NFP Members / QPFP Certificants) who are not
 // registered anywhere yet. Tells them which open Circles exist in their city and
@@ -490,6 +551,8 @@ module.exports = {
   sendHubRosterUpdate,
   sendHubDetailsUpdated,
   sendParticipantTransferred,
+  sendParticipantCircleCombined,
+  sendHubLeaderCircleMerged,
   buildCircleCrmEmailHtml,
   sendCrmCampaignEmail,
   crmUnsubscribeUrl,
