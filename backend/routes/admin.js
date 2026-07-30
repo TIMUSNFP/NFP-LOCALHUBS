@@ -471,14 +471,22 @@ router.post('/sync-sheets', async (req, res) => {
   try {
     let rows;
     if (type === 'hubs') {
-      const dbRows = await db.all('SELECT * FROM hubs ORDER BY submitted_at ASC');
-      rows = dbRows.map(hubRowToJson).map(r => [
-        r.id, r.fullName, r.email, r.mobile, r.membership,
-        r.city, r.area, r.address || '', r.pincode || '',
-        r.venueType, r.capacity, r.hostedBefore, r.hostingFrequency || '',
-        r.pocRole === 'assign' ? 'Will assign someone else' : 'Self',
-        fmt(r.submittedAt), r.status,
-      ]);
+      const dbRows = await db.all(
+        `SELECT h.*,
+           (SELECT COUNT(*) FROM participants p WHERE p.hub_id = h.id AND p.status != 'Cancelled') AS participant_count
+         FROM hubs h
+         ORDER BY h.submitted_at ASC`
+      );
+      rows = dbRows.map(r => {
+        const hub = hubRowToJson(r);
+        return [
+          hub.id, hub.fullName, hub.email, hub.mobile, hub.membership,
+          hub.city, hub.area, hub.address || '', hub.pincode || '',
+          hub.venueType, hub.capacity, r.participant_count ?? 0, hub.hostedBefore, hub.hostingFrequency || '',
+          hub.pocRole === 'assign' ? 'Will assign someone else' : 'Self',
+          fmt(hub.submittedAt), hub.status,
+        ];
+      });
     } else {
       const dbRows = await db.all(
         `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
