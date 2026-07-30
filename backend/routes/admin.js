@@ -3,7 +3,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-const { hubRowToJson, participantRowToJson, geocodeHub } = require('../utils');
+const { hubRowToJson, participantRowToJson, geocodeHub, generateHubMergeId } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
 const { readFormSettings } = require('./settings');
 const {
@@ -16,6 +16,8 @@ const {
   sendParticipantTransferred,
   sendParticipantCircleCombined,
   sendHubLeaderCircleMerged,
+  sendParticipantCircleMergeReverted,
+  sendHubLeaderCircleMergeReverted,
 } = require('../mailer');
 
 const router = express.Router();
@@ -445,7 +447,12 @@ router.post('/participants/transfer', async (req, res) => {
 // separate note; the closing circle itself is kept (not deleted) with
 // status = 'Merged' so it stays out of every "Approved circles" surface
 // (public site, CRM targeting, dashboard widgets) while remaining visible in
-// the admin panel for history. Deliberately one-directional — no auto-undo.
+// the admin panel for history.
+//
+// Records exactly which participants moved in hub_merges, so a later
+// /revert-merge can move back precisely those still sitting in the surviving
+// hub — not anyone who joined it independently since, or was manually
+// transferred elsewhere in the meantime.
 router.post('/hubs/:id/combine', async (req, res) => {
   const { targetHubId } = req.body || {};
   const closingHubId = req.params.id;
@@ -474,11 +481,11 @@ router.post('/hubs/:id/combine', async (req, res) => {
     [closingHubId]
   );
 
-  let movedCount = 0;
+  const movedParticipantIds = [];
   for (const participant of movingParticipants) {
     await db.run('UPDATE participants SET hub_id = $1 WHERE id = $2', [targetHubId, participant.id]);
     const updated = await db.get('SELECT * FROM participants WHERE id = $1', [participant.id]);
-    movedCount++;
+    movedParticipantIds.push(participant.id);
     // Fire notification emails — non-blocking, errors are swallowed in mailer.
     sendParticipantCircleCombined(updated, closingHub, survivingHub);
   }
@@ -488,15 +495,76 @@ router.post('/hubs/:id/combine', async (req, res) => {
     `UPDATE hubs SET status = 'Merged', merged_into_hub_id = $1, merged_at = $2, last_updated = $2 WHERE id = $3`,
     [targetHubId, now, closingHubId]
   );
+  await db.run(
+    `INSERT INTO hub_merges (id, closing_hub_id, target_hub_id, participant_ids, merged_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [generateHubMergeId(), closingHubId, targetHubId, JSON.stringify(movedParticipantIds), now]
+  );
 
   // Let the closing circle's own Leader know — non-blocking, same as above.
-  sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount);
+  sendHubLeaderCircleMerged(closingHub, survivingHub, movedParticipantIds.length);
 
   const updatedClosingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [closingHubId]);
   res.json({
-    movedParticipants: movedCount,
+    movedParticipants: movedParticipantIds.length,
     closingHub: hubRowToJson(updatedClosingHub),
     survivingHub: hubRowToJson(survivingHub),
+  });
+});
+
+// POST /api/admin/hubs/:id/revert-merge — undo a combine. :id is the closed
+// (Merged) circle. Looks up the still-active hub_merges row for it (the one
+// its own /combine call created) and moves back only the participants that
+// (a) were part of that exact merge, AND (b) are still sitting in the
+// surviving hub — anyone who's since been manually transferred elsewhere is
+// deliberately left alone and counted as skipped, not force-moved.
+router.post('/hubs/:id/revert-merge', async (req, res) => {
+  const closingHubId = req.params.id;
+
+  const closingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [closingHubId]);
+  if (!closingHub) return res.status(404).json({ error: 'Circle not found.' });
+  if (closingHub.status !== 'Merged') {
+    return res.status(400).json({ error: 'Only a Merged circle can be reverted.' });
+  }
+
+  const merge = await db.get(
+    'SELECT * FROM hub_merges WHERE closing_hub_id = $1 AND reverted_at IS NULL ORDER BY merged_at DESC LIMIT 1',
+    [closingHubId]
+  );
+  if (!merge) return res.status(404).json({ error: 'No active merge record found for this circle.' });
+
+  const survivingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [merge.target_hub_id]);
+  const participantIds = merge.participant_ids || [];
+
+  let restoredCount = 0;
+  let skippedCount = 0;
+  for (const pid of participantIds) {
+    const participant = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
+    if (!participant || participant.hub_id !== merge.target_hub_id) {
+      skippedCount++;
+      continue;
+    }
+    await db.run('UPDATE participants SET hub_id = $1 WHERE id = $2', [closingHubId, pid]);
+    const updated = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
+    restoredCount++;
+    // Fire notification emails — non-blocking, errors are swallowed in mailer.
+    if (survivingHub) sendParticipantCircleMergeReverted(updated, survivingHub, closingHub);
+  }
+
+  const now = new Date().toISOString();
+  await db.run(
+    `UPDATE hubs SET status = 'Approved', merged_into_hub_id = NULL, merged_at = NULL, last_updated = $1 WHERE id = $2`,
+    [now, closingHubId]
+  );
+  await db.run(`UPDATE hub_merges SET reverted_at = $1 WHERE id = $2`, [now, merge.id]);
+
+  if (survivingHub) sendHubLeaderCircleMergeReverted(closingHub, survivingHub, restoredCount);
+
+  const updatedHub = await db.get('SELECT * FROM hubs WHERE id = $1', [closingHubId]);
+  res.json({
+    restoredParticipants: restoredCount,
+    skippedParticipants: skippedCount,
+    hub: hubRowToJson(updatedHub),
   });
 });
 

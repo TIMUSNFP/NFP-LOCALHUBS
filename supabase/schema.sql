@@ -42,6 +42,22 @@ alter table hubs add column if not exists change_notified_at text;
 alter table hubs add column if not exists merged_into_hub_id text references hubs(id);
 alter table hubs add column if not exists merged_at text;
 
+-- One row per /hubs/:id/combine call — records exactly which participants moved
+-- so a later "Undo Merge" can move back precisely those still sitting in the
+-- surviving hub (not anyone who joined it independently since, and not anyone
+-- who's since been manually transferred elsewhere). reverted_at IS NULL means
+-- this merge is still in effect; at most one such row per closing hub at a time
+-- (the "Combine" action is only offered on Approved hubs, and a hub already
+-- Merged can't be combined again until it's reverted).
+create table if not exists hub_merges (
+  id text primary key,
+  closing_hub_id text not null references hubs(id),
+  target_hub_id text not null references hubs(id),
+  participant_ids jsonb not null default '[]'::jsonb,
+  merged_at text not null,
+  reverted_at text
+);
+
 -- Participant registrations (each tied to an approved hub)
 create table if not exists participants (
   id text primary key,
@@ -155,3 +171,4 @@ alter table public.settings         enable row level security;
 alter table public.crm_contacts             enable row level security;
 alter table public.crm_campaigns            enable row level security;
 alter table public.crm_campaign_recipients  enable row level security;
+alter table public.hub_merges               enable row level security;

@@ -464,6 +464,50 @@ async function sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount) {
   });
 }
 
+// Sent when an admin undoes a combine (routes/admin.js's /hubs/:id/revert-merge).
+// Only participants actually moved back get this — anyone who joined the
+// (former) surviving circle independently, or was since manually transferred
+// elsewhere, is left alone.
+async function sendParticipantCircleMergeReverted(participant, fromHub, toHub) {
+  const html = wrap(`
+    <div class="badge">↩️ Your Circle Has Been Restored</div>
+    <h2>Hi ${participant.full_name}, your original NFP Circle is back</h2>
+    <p>The combination of your Circle with ${fromHub.full_name}'s Circle has been undone, and
+    your registration has moved back to your original Circle Leader. No action is needed from you.</p>
+    <div class="info-box">
+      <p><strong>Circle Leader:</strong> ${toHub.full_name}</p>
+      <p><strong>Address:</strong> ${formatHubAddress(toHub)}</p>
+      <p><strong>Venue Type:</strong> ${toHub.venue_type || '—'}</p>
+      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+    </div>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+  `);
+
+  await send({
+    to: participant.email,
+    subject: `Your NFP Circle has been restored — ${toHub.full_name}'s Circle`,
+    html,
+  });
+}
+
+// Sent to the Circle Leader whose closed circle just got restored.
+async function sendHubLeaderCircleMergeReverted(restoredHub, formerSurvivingHub, restoredCount) {
+  const html = wrap(`
+    <div class="badge">↩️ Your Circle Has Been Restored</div>
+    <h2>Hi ${restoredHub.full_name}, your NFP Circle is active again</h2>
+    <p>Your Circle's combination with ${formerSurvivingHub.full_name}'s Circle has been undone.
+    Your Circle is reopened, and ${restoredCount} participant${restoredCount === 1 ? '' : 's'}
+    ${restoredCount === 1 ? 'has' : 'have'} moved back to you automatically.</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+  `);
+
+  await send({
+    to: restoredHub.email,
+    subject: `Your NFP Circle has been restored`,
+    html,
+  });
+}
+
 // ─── NFP Circle CRM — city outreach campaign ──────────────────────────────────
 // Sent to cold-outreach contacts (NFP Members / QPFP Certificants) who are not
 // registered anywhere yet. Tells them which open Circles exist in their city and
@@ -553,6 +597,8 @@ module.exports = {
   sendParticipantTransferred,
   sendParticipantCircleCombined,
   sendHubLeaderCircleMerged,
+  sendParticipantCircleMergeReverted,
+  sendHubLeaderCircleMergeReverted,
   buildCircleCrmEmailHtml,
   sendCrmCampaignEmail,
   crmUnsubscribeUrl,

@@ -712,6 +712,9 @@ function renderTable(regs) {
                     ${r.status === 'Approved'
                         ? `<button class="act-btn act-view" onclick="openCombineHubModal('${escHtml(r.id)}')">Combine</button>`
                         : ''}
+                    ${r.status === 'Merged'
+                        ? `<button class="act-btn act-reset" onclick="confirmRevertMerge('${escHtml(r.id)}')">Undo Merge</button>`
+                        : ''}
                     <button class="act-btn act-view" onclick="viewDetails('${escHtml(r.id)}')">View</button>
                     <button class="act-btn act-delete" onclick="deleteHub('${escHtml(r.id)}')">Delete</button>
                 </div>
@@ -2723,6 +2726,48 @@ async function submitCombineHub() {
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }
+}
+
+function confirmRevertMerge(id) {
+    const hub = allHubs.find(h => String(h.id) === String(id));
+    if (!hub) return;
+    const survivor = allHubs.find(h => h.id === hub.mergedIntoHubId);
+    pendingRegId = id;
+    openConfirmModal(
+        'Undo Merge',
+        `Restore <strong>${escHtml(hub.fullName)}'s</strong> Circle? Participants still sitting in ` +
+        `${survivor ? `<strong>${escHtml(survivor.fullName)}'s</strong> Circle` : 'the combined circle'} ` +
+        `from this merge will move back automatically — anyone since transferred elsewhere is left alone.`,
+        '↩️',
+        executeRevertMerge,
+        'Undo Merge'
+    );
+}
+
+async function executeRevertMerge() {
+    if (!pendingRegId) return;
+    const id = pendingRegId;
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/revert-merge`, { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showToast(data.error || 'Could not undo this merge.', 'error');
+        } else {
+            showToast(
+                `Restored — moved ${data.restoredParticipants} participant${data.restoredParticipants === 1 ? '' : 's'} back` +
+                (data.skippedParticipants ? ` (${data.skippedParticipants} skipped — since moved elsewhere).` : '.'),
+                'success'
+            );
+            await loadHubs();
+            await loadParticipants();
+            applyFilters();
+            updateStats();
+        }
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+    closeConfirmModal();
+    pendingRegId = null;
 }
 
 function exportParticipantsCSV() {

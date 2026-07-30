@@ -41,6 +41,10 @@ function generateCrmCampaignId() {
   return `NFP-CRMC-${randomUUID()}`;
 }
 
+function generateHubMergeId() {
+  return `NFP-MERGE-${randomUUID()}`;
+}
+
 // Converts a hubs DB row (snake_case) to the camelCase API shape.
 function hubRowToJson(row) {
   if (!row) return null;
@@ -336,6 +340,7 @@ module.exports = {
   generateParticipantId,
   generateCrmContactId,
   generateCrmCampaignId,
+  generateHubMergeId,
   hubRowToJson,
   participantRowToJson,
   haversineKm,
