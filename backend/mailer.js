@@ -4,6 +4,8 @@
 // If SMTP is not configured, every send is a no-op (safe for local dev).
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 
 // Build the SMTP transport from environment variables. Common providers:
 //   Google Workspace / Gmail : host smtp.gmail.com,   port 465 (secure)
@@ -23,6 +25,16 @@ const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
 const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/L2G7DQQgWDcCiqV85giWtA?s=sh&p=i&ilr=1&amv=2';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
 const CRM_UNSUBSCRIBE_BASE_URL = 'https://nfp-circles.vercel.app/api/crm/unsubscribe';
+
+// Read once at startup and sent as a CID attachment (not a hosted <img src>) so
+// it always renders regardless of whether Images/ is served publicly.
+const SCHEDULE_IMAGE_PATH = path.join(__dirname, '..', 'Images', 'NFP Circles Schedule.png');
+let scheduleImageBuffer = null;
+try {
+  scheduleImageBuffer = fs.readFileSync(SCHEDULE_IMAGE_PATH);
+} catch (e) {
+  console.warn('[mailer] Schedule image not found at', SCHEDULE_IMAGE_PATH, '— reminder emails will send without it.');
+}
 
 // Full mailing address for a hub — "Street, Area, City - PIN Code", skipping any
 // pieces the leader didn't provide.
@@ -62,13 +74,13 @@ const transporter = (SMTP_HOST && SMTP_USER && SMTP_PASS)
     })
   : null;
 
-async function send({ to, subject, html }) {
+async function send({ to, subject, html, attachments }) {
   if (!transporter) {
     console.log(`[mailer] SMTP not configured — skipping email to ${to}: "${subject}"`);
     return;
   }
   try {
-    await transporter.sendMail({ from: FROM, to, subject, html });
+    await transporter.sendMail({ from: FROM, to, subject, html, ...(attachments ? { attachments } : {}) });
   } catch (err) {
     // Never let an email failure break the API response.
     console.error(`[mailer] Failed to send "${subject}" to ${to}:`, err.message);
@@ -403,6 +415,49 @@ async function sendParticipantTransferred(participant, oldHub, newHub) {
   });
 }
 
+// ─── Participant Event Reminder (5 days out) ──────────────────────────────────
+// Sent on-demand by an admin to Confirmed participants as the event approaches.
+// Includes the circle leader's own contact details so anyone the leader hasn't
+// gotten around to adding to the circle's WhatsApp group yet has a direct way
+// to follow up, rather than being left wondering.
+
+async function sendParticipantEventReminder(participant, hub) {
+  const scheduleImageHtml = scheduleImageBuffer
+    ? `<div style="text-align:center;margin:20px 0">
+         <img src="cid:circle-schedule" alt="NFP Circle Schedule" width="536" style="max-width:100%;height:auto;border-radius:8px" />
+       </div>`
+    : '';
+
+  const html = wrap(`
+    <div class="badge" style="background:#FEE2E2;color:#B91C1C">⏰ 5 Days to Go!</div>
+    <h2>Hi ${participant.full_name}, get ready for your NFP Circle!</h2>
+    <p>Just a quick reminder — your NFP Circle Meet is happening in <strong>5 days</strong>. Here are the details:</p>
+    <div class="info-box">
+      <p><strong>Circle Leader:</strong> ${hub.full_name}</p>
+      <p><strong>Address:</strong> ${formatHubAddress(hub)}</p>
+      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 3:30 PM to 7:00 PM</p>
+    </div>
+    <p class="section-heading">Here's what's on the agenda</p>
+    ${scheduleImageHtml}
+    <div class="info-box">
+      <p>If you are not in your Circle Leader's WhatsApp group, please connect with them directly:</p>
+      <p><strong>${hub.full_name}</strong> — <a href="tel:${hub.mobile}">${hub.mobile}</a></p>
+    </div>
+    <p>More details on participant guidelines will be shared shortly — stay tuned!</p>
+    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>See you there! 🙌</p>
+  `);
+
+  await send({
+    to: participant.email,
+    subject: `Hi ${participant.full_name}, get ready for NFP Circle!`,
+    html,
+    attachments: scheduleImageBuffer
+      ? [{ filename: 'NFP-Circle-Schedule.png', content: scheduleImageBuffer, cid: 'circle-schedule' }]
+      : undefined,
+  });
+}
+
 // Sent when an admin combines two circles (routes/admin.js's /hubs/:id/combine) —
 // distinct wording from sendParticipantTransferred above: this is framed as two
 // circles joining together into one bigger group, not an arbitrary reassignment.
@@ -595,6 +650,7 @@ module.exports = {
   sendHubRosterUpdate,
   sendHubDetailsUpdated,
   sendParticipantTransferred,
+  sendParticipantEventReminder,
   sendParticipantCircleCombined,
   sendHubLeaderCircleMerged,
   sendParticipantCircleMergeReverted,

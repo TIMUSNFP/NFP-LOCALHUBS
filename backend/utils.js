@@ -101,6 +101,7 @@ function participantRowToJson(row) {
     note: row.note,
     hubId: row.hub_id,
     confirmationSentAt: row.confirmation_sent_at,
+    eventReminderSentAt: row.event_reminder_sent_at,
   };
 }
 

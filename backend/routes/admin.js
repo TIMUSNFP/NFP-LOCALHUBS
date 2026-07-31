@@ -14,6 +14,7 @@ const {
   sendHubRosterUpdate,
   sendHubDetailsUpdated,
   sendParticipantTransferred,
+  sendParticipantEventReminder,
   sendParticipantCircleCombined,
   sendHubLeaderCircleMerged,
   sendParticipantCircleMergeReverted,
@@ -394,6 +395,26 @@ router.post('/participants/:id/send-confirmation', async (req, res) => {
   await db.run('UPDATE participants SET confirmation_sent_at = $1 WHERE id = $2', [confirmationSentAt, req.params.id]);
 
   res.json({ ok: true, confirmationSentAt });
+});
+
+// POST /api/admin/participants/:id/send-event-reminder — the "5 days to go"
+// reminder (schedule image + circle leader's contact for anyone not yet in the
+// WhatsApp group), sent on demand to a single Confirmed participant. Same
+// on-demand/resend convention as send-confirmation above.
+router.post('/participants/:id/send-event-reminder', async (req, res) => {
+  const participant = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
+  if (!participant) return res.status(404).json({ error: 'Participant not found' });
+  if (participant.status !== 'Confirmed') {
+    return res.status(400).json({ error: 'Only Confirmed participants can receive an event reminder.' });
+  }
+
+  const hub = await db.get('SELECT * FROM hubs WHERE id = $1', [participant.hub_id]);
+  await sendParticipantEventReminder(participant, hub);
+
+  const eventReminderSentAt = new Date().toISOString();
+  await db.run('UPDATE participants SET event_reminder_sent_at = $1 WHERE id = $2', [eventReminderSentAt, req.params.id]);
+
+  res.json({ ok: true, eventReminderSentAt });
 });
 
 // POST /api/admin/participants/transfer — moves one or more participants to a

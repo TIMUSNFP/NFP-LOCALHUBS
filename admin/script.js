@@ -2155,6 +2155,9 @@ function renderParticipantTable(parts) {
                     ${p.status === 'Confirmed'
                         ? `<button class="act-btn act-view" onclick="sendParticipantConfirmationEmail('${escHtml(p.id)}')" title="${p.confirmationSentAt ? 'Last sent ' + formatDate(p.confirmationSentAt) : 'Never sent'}">${p.confirmationSentAt ? 'Resend Confirmation' : 'Send Confirmation'}</button>`
                         : ''}
+                    ${p.status === 'Confirmed'
+                        ? `<button class="act-btn act-view" onclick="sendParticipantEventReminderEmail('${escHtml(p.id)}')" title="${p.eventReminderSentAt ? 'Last sent ' + formatDate(p.eventReminderSentAt) : 'Never sent'}">${p.eventReminderSentAt ? 'Resend Event Reminder' : 'Send Event Reminder'}</button>`
+                        : ''}
                     <button class="act-btn act-delete" onclick="deleteParticipant('${escHtml(p.id)}')">Delete</button>
                 </div>
             </td>
@@ -2440,6 +2443,96 @@ function sendAllParticipantConfirmations() {
         `Email <strong>all ${count}</strong> confirmed participant${plural} their registration confirmation as a reminder? This sends real emails immediately.`,
         '📩',
         () => { closeConfirmModal(); executeBulkSendParticipantConfirmations(confirmed.map(p => p.id)); },
+        'Send to All',
+        false
+    );
+}
+
+// ═══════════════════ EVENT REMINDER EMAIL — SEND / RESEND ═══════════════════
+// Same pattern as the confirmation email block above ("5 days to go" reminder
+// with the schedule image and the circle leader's contact details).
+
+function sendParticipantEventReminderEmail(id) {
+    const p = allParticipants.find(x => String(x.id) === String(id));
+    if (!p) return;
+    openConfirmModal(
+        p.eventReminderSentAt ? 'Resend Event Reminder' : 'Send Event Reminder',
+        `Email <strong>${escHtml(p.fullName)}</strong> the "5 days to go" reminder for ${escHtml(p.hubLeader)}'s circle in ${escHtml(p.hubCity)}? This sends a real email immediately.`,
+        '⏰',
+        async () => {
+            try {
+                const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-event-reminder`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('Event reminder sent.', 'success');
+                    await loadParticipants();
+                    applyParticipantFilters();
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    showToast(body.error || 'Failed to send event reminder.', 'error');
+                }
+            } catch (e) {
+                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+            }
+            closeConfirmModal();
+        },
+        'Send',
+        false
+    );
+}
+
+async function executeBulkSendParticipantEventReminders(ids) {
+    let successCount = 0;
+    for (const id of ids) {
+        try {
+            const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-event-reminder`, { method: 'POST' });
+            if (res.ok) successCount++;
+        } catch (e) { /* keep going through the rest */ }
+    }
+    await loadParticipants();
+    updateParticipantStats();
+    applyParticipantFilters();
+
+    if (successCount === ids.length) {
+        showToast(`${successCount} event reminder${successCount > 1 ? 's' : ''} sent!`, 'success');
+    } else {
+        showToast(`${successCount}/${ids.length} sent — the rest were skipped (not Confirmed) or failed.`, 'warning');
+    }
+}
+
+// Only targets Confirmed participants who've never received this reminder yet.
+function sendUnsentParticipantEventReminders() {
+    const unsent = allParticipants.filter(p => p.status === 'Confirmed' && !p.eventReminderSentAt);
+    if (unsent.length === 0) {
+        showToast('Every confirmed participant has already been sent the event reminder.', 'success');
+        return;
+    }
+    const count = unsent.length;
+    const plural = count > 1 ? 's' : '';
+    openConfirmModal(
+        `Send Event Reminder${plural} to ${count} Never-Sent Participant${plural}`,
+        `Email <strong>${count}</strong> confirmed participant${plural} who have never received the "5 days to go" reminder? This sends real emails immediately.`,
+        '⏰',
+        () => { closeConfirmModal(); executeBulkSendParticipantEventReminders(unsent.map(p => p.id)); },
+        'Send',
+        false
+    );
+}
+
+// One-click version — emails every currently Confirmed participant, regardless
+// of whether they've been sent one before.
+function sendAllParticipantEventReminders() {
+    const confirmed = allParticipants.filter(p => p.status === 'Confirmed');
+    if (confirmed.length === 0) {
+        showToast('No confirmed participants to send to.', 'warning');
+        return;
+    }
+    const count = confirmed.length;
+    const plural = count > 1 ? 's' : '';
+    openConfirmModal(
+        `Send Event Reminder to All ${count} Confirmed Participant${plural}`,
+        `Email <strong>all ${count}</strong> confirmed participant${plural} the "5 days to go" reminder? This sends real emails immediately.`,
+        '⏰',
+        () => { closeConfirmModal(); executeBulkSendParticipantEventReminders(confirmed.map(p => p.id)); },
         'Send to All',
         false
     );
