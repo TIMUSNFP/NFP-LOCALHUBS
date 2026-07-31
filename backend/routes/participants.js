@@ -1,7 +1,7 @@
 // routes/participants.js — public participant registration.
 const express = require('express');
 const db = require('../db');
-const { generateParticipantId } = require('../utils');
+const { generateParticipantId, combinedLeaderName } = require('../utils');
 
 const router = express.Router();
 
@@ -30,19 +30,35 @@ router.get('/check', async (req, res) => {
 router.get('/public', async (req, res) => {
   const rows = await db.all(`
     SELECT p.full_name, p.membership, p.status,
-           h.full_name AS hub_leader, h.city AS hub_city
+           h.id AS hub_id, h.full_name AS hub_leader, h.city AS hub_city
     FROM participants p
     JOIN hubs h ON h.id = p.hub_id
     WHERE p.status != 'Cancelled'
     ORDER BY p.registered_at DESC
   `);
-  res.json(rows.map(r => ({
-    fullName: r.full_name,
-    membership: r.membership,
-    status: r.status,
-    city: r.hub_city,
-    circleName: `${r.hub_leader}'s Circle`,
-  })));
+
+  // Circles absorbed into a surviving one via Combine — so a participant whose
+  // circle was closed still recognizes it in the combined name, same as the
+  // Find a Circle map/list (see routes/hubs.js).
+  const merges = await db.all(
+    `SELECT merged_into_hub_id, full_name FROM hubs WHERE status = 'Merged' AND merged_into_hub_id IS NOT NULL`
+  );
+  const mergedFromMap = {};
+  merges.forEach(m => {
+    (mergedFromMap[m.merged_into_hub_id] = mergedFromMap[m.merged_into_hub_id] || []).push(m.full_name);
+  });
+
+  res.json(rows.map(r => {
+    const mergedFromNames = mergedFromMap[r.hub_id] || [];
+    const leaderName = combinedLeaderName(r.hub_leader, mergedFromNames);
+    return {
+      fullName: r.full_name,
+      membership: r.membership,
+      status: r.status,
+      city: r.hub_city,
+      circleName: `${leaderName}'s Circle${mergedFromNames.length ? ' (Combined)' : ''}`,
+    };
+  }));
 });
 
 // POST /api/participants — register a participant against an Approved hub.

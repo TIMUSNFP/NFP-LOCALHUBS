@@ -45,6 +45,17 @@ function generateHubMergeId() {
   return `NFP-MERGE-${randomUUID()}`;
 }
 
+// After a combine, participants and visitors who knew the closed circle by its
+// old leader's name should still recognize it — so the surviving circle's
+// public-facing name credits everyone merged into it, not just its own leader.
+// Returns the survivor's name unchanged when nothing has ever merged into it.
+function combinedLeaderName(survivorFullName, mergedFromNames) {
+  if (!mergedFromNames || mergedFromNames.length === 0) return survivorFullName;
+  const names = [...mergedFromNames, survivorFullName];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 // Converts a hubs DB row (snake_case) to the camelCase API shape.
 function hubRowToJson(row) {
   if (!row) return null;
@@ -341,6 +352,7 @@ module.exports = {
   generateCrmContactId,
   generateCrmCampaignId,
   generateHubMergeId,
+  combinedLeaderName,
   hubRowToJson,
   participantRowToJson,
   haversineKm,

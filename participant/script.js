@@ -382,8 +382,11 @@ function escHtml(str) {
 }
 
 // "City - Circle Leader Name" — used wherever a circle's display name is shown.
+// After a Combine, the backend sends displayName crediting both leaders (e.g.
+// "Vishal and Nihar's Circle (Combined)") instead of just fullName — fall back
+// to fullName for hubs that were never part of a combine.
 function circleName(hub) {
-    return `${escHtml(hub.city)} - ${escHtml(hub.fullName)}`;
+    return `${escHtml(hub.city)} - ${escHtml(hub.displayName || hub.fullName)}`;
 }
 
 // Structured address line — "Street/Area, City - PIN Code" — used wherever a

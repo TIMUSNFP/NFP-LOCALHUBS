@@ -694,7 +694,7 @@ function renderTable(regs) {
             <td>${r.hostedBefore === 'Yes' ? '✅ Yes' : '❌ No'}</td>
             <td>${escHtml(r.hostingFrequency || '—')}</td>
             <td>${formatDate(r.submittedAt)}</td>
-            <td>${statusBadge(r.status)}${mergedIntoLabel(r)}</td>
+            <td>${statusBadge(r.status)}${mergedIntoLabel(r)}${combinedFromLabel(r)}</td>
             <td>
                 <div class="action-btns">
                     ${r.status !== 'Approved' && r.status !== 'Merged'
@@ -742,6 +742,17 @@ function mergedIntoLabel(hub) {
     if (hub.status !== 'Merged' || !hub.mergedIntoHubId) return '';
     const survivor = allHubs.find(h => h.id === hub.mergedIntoHubId);
     return `<div style="font-size:11px;color:var(--muted);margin-top:2px">&rarr; merged into ${escHtml(survivor ? survivor.fullName : hub.mergedIntoHubId)}</div>`;
+}
+
+// For a surviving (Approved) row, shows which now-Merged circle(s) were
+// combined into it — so admins see "(Combined)" the same way participants do,
+// not just from the closing row's side.
+function combinedFromLabel(hub) {
+    if (hub.status !== 'Approved') return '';
+    const absorbed = allHubs.filter(h => h.status === 'Merged' && h.mergedIntoHubId === hub.id);
+    if (!absorbed.length) return '';
+    const names = absorbed.map(h => escHtml(h.fullName)).join(', ');
+    return `<div style="font-size:11px;color:var(--info);margin-top:2px">&#129309; Combined with: ${names}</div>`;
 }
 
 // ═══════════════════ ADMIN ACTIONS (HUBS) ═══════════════════

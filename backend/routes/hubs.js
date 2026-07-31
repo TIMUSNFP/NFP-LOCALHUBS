@@ -1,7 +1,7 @@
 // routes/hubs.js — public hub registration + listing endpoints.
 const express = require('express');
 const db = require('../db');
-const { generateHubId, hubRowToJson } = require('../utils');
+const { generateHubId, hubRowToJson, combinedLeaderName } = require('../utils');
 
 const router = express.Router();
 
@@ -139,7 +139,27 @@ router.get('/', async (req, res) => {
   const counts = await db.all('SELECT hub_id, COUNT(*) as cnt FROM participants GROUP BY hub_id');
   const countMap = {};
   counts.forEach(r => { countMap[r.hub_id] = Number(r.cnt); });
-  res.json(rows.map(row => ({ ...hubRowToJson(row), participantCount: countMap[row.id] || 0 })));
+
+  // Circles absorbed into this one via Combine — surfaced as displayName below
+  // so participants who knew the closed circle by its old leader's name still
+  // recognize it (e.g. "Vishal and Nihar's Circle (Combined)").
+  const merges = await db.all(
+    `SELECT merged_into_hub_id, full_name FROM hubs WHERE status = 'Merged' AND merged_into_hub_id IS NOT NULL`
+  );
+  const mergedFromMap = {};
+  merges.forEach(m => {
+    (mergedFromMap[m.merged_into_hub_id] = mergedFromMap[m.merged_into_hub_id] || []).push(m.full_name);
+  });
+
+  res.json(rows.map(row => {
+    const mergedFromNames = mergedFromMap[row.id] || [];
+    const leaderName = combinedLeaderName(row.full_name, mergedFromNames);
+    return {
+      ...hubRowToJson(row),
+      participantCount: countMap[row.id] || 0,
+      displayName: mergedFromNames.length ? `${leaderName} (Combined)` : row.full_name,
+    };
+  }));
 });
 
 // GET /api/hubs/:id — single hub.
