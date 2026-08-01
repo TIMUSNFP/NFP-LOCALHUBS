@@ -508,6 +508,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     line-height: 1;
 }
 .sc-lbl { font-size: 12px; color: var(--muted); font-weight: 500; }
+.sc-merged-note { font-size: 12px; color: var(--muted); font-weight: 500; }
 .sc-trend { font-size: 11px; color: var(--light-text); font-weight: 500; white-space: nowrap; }
 
 /* Filter Bar */

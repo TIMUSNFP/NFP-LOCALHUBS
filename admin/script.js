@@ -299,10 +299,17 @@ function updateStats() {
     const pending  = allHubs.filter(r => r.status === 'Pending').length;
     const approved = allHubs.filter(r => r.status === 'Approved').length;
     const rejected = allHubs.filter(r => r.status === 'Rejected').length;
+    const merged   = allHubs.filter(r => r.status === 'Merged').length;
     animateCount('statTotal',    total);
     animateCount('statPending',  pending);
     animateCount('statApproved', approved);
     animateCount('statRejected', rejected);
+
+    // Merged circles fold into the surviving circle's count above (they don't
+    // add a second entry), so this just makes that explicit rather than
+    // leaving anyone to wonder why the number looks "short" by a couple.
+    const mergedNote = document.getElementById('statApprovedMergedNote');
+    if (mergedNote) mergedNote.textContent = merged > 0 ? `(${merged} combined)` : '';
 }
 
 function animateCount(id, target) {
