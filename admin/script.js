@@ -309,7 +309,7 @@ function updateStats() {
     // add a second entry), so this just makes that explicit rather than
     // leaving anyone to wonder why the number looks "short" by a couple.
     const mergedNote = document.getElementById('statApprovedMergedNote');
-    if (mergedNote) mergedNote.textContent = merged > 0 ? `(${merged} combined)` : '';
+    if (mergedNote) mergedNote.textContent = merged > 0 ? `(${approved + merged} without combining)` : '';
 }
 
 function animateCount(id, target) {
