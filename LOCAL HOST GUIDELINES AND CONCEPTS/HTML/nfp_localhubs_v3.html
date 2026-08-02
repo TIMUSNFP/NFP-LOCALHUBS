@@ -1,0 +1,563 @@
+
+<h2 class="sr-only">NFP LocalHubs registration system with in-memory state and optional persistent storage</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.page{min-height:600px;background:var(--color-background-tertiary)}
+.topbar{background:#E05B25;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.brand{font-weight:500;font-size:16px;color:#fff}
+.brand span{background:#fff;color:#E05B25;padding:1px 5px;border-radius:3px;margin-left:2px;font-size:13px}
+.tsub{font-size:11px;opacity:.8;margin-top:2px}
+.tbtn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+.tbtn:hover{background:rgba(255,255,255,.3)}
+.content{max-width:580px;margin:0 auto;padding:20px 16px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px;margin-bottom:14px}
+.field{margin-bottom:14px}
+.field label{font-size:12px;font-weight:500;color:var(--color-text-secondary);display:block;margin-bottom:5px}
+.field input,.field select{width:100%;padding:9px 11px;border:0.5px solid var(--color-border-secondary);border-radius:8px;font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none}
+.field input:focus,.field select:focus{border-color:#E05B25;box-shadow:0 0 0 2px rgba(224,91,37,.1)}
+.ferr{color:var(--color-text-danger);font-size:11px;margin-top:4px;display:block}
+.req{color:#E05B25}
+.btnp{width:100%;padding:12px;background:#E05B25;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.btnp:hover{opacity:.9}
+.btnp:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+.btno{background:var(--color-background-primary);color:#E05B25;border:1px solid #E05B25;padding:10px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500}
+.btng{background:var(--color-background-secondary);color:var(--color-text-secondary);border:none;padding:10px 20px;border-radius:8px;font-size:13px;cursor:pointer}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.bg{background:var(--color-background-success);color:var(--color-text-success)}
+.ba{background:var(--color-background-warning);color:var(--color-text-warning)}
+.br{background:var(--color-background-danger);color:var(--color-text-danger)}
+.stepbar{background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);padding:12px 20px;display:flex;align-items:center}
+.sdot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.sline{flex:1;height:1px;background:var(--color-border-secondary);margin:0 8px}
+.sline.done{background:#E05B25}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--color-background-secondary);border-radius:8px;padding:14px}
+.slbl{font-size:11px;color:var(--color-text-secondary);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.sval{font-size:24px;font-weight:500;color:#E05B25}
+.ssub{font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.tabs{background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);display:flex;overflow-x:auto}
+.tab{padding:12px 16px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:#E05B25;border-bottom-color:#E05B25}
+.togtrack{width:40px;height:22px;border-radius:11px;cursor:pointer;position:relative;display:inline-block;flex-shrink:0;transition:background .2s}
+.togknob{position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s}
+.litem{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:14px;margin-bottom:8px}
+.hubbar{height:6px;background:var(--color-background-secondary);border-radius:3px;margin:10px 0}
+.hubfill{height:100%;border-radius:3px}
+.payopt{display:flex;align-items:center;gap:10px;padding:10px 12px;border:0.5px solid var(--color-border-secondary);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .1s}
+.payopt.sel{border-color:#E05B25;background:#FDF0EB}
+.radio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .1s}
+.radio.sel{border-color:#E05B25}
+.rdot{width:8px;height:8px;border-radius:50%;background:#E05B25}
+.ibox{border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.55}
+.io{background:#FDF0EB;color:#7a3010;border-left:3px solid #E05B25}
+.ig{background:var(--color-background-success);color:var(--color-text-success);border-left:3px solid var(--color-border-success)}
+.iw{background:var(--color-background-warning);color:var(--color-text-warning);border-left:3px solid var(--color-border-warning)}
+.divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:16px 0}
+.hero{background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);padding:28px 20px;text-align:center}
+.htag{font-size:11px;color:#E05B25;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.htitle{font-size:22px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px}
+.hsub{font-size:13px;color:var(--color-text-secondary);margin-bottom:4px}
+.hmeta{font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px}
+.howstep{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.hownum{width:24px;height:24px;border-radius:50%;background:#FDF0EB;color:#E05B25;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;margin-top:1px}
+.shead{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:14px}
+.dzone{border:0.5px solid var(--color-border-danger);border-radius:12px;padding:16px;margin-bottom:12px}
+</style>
+
+<div id="app" class="page"></div>
+
+<script>
+const MAX=5;
+const ADMIN_PW="nfp2024";
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+const S={
+  view:"home",
+  leaders:[],
+  parts:[],
+  regOpen:false,
+  adminAuth:false,adminPass:"",adminErr:"",adminTab:"overview",
+  lf:{name:"",email:"",mobile:"",city:"",area:"",pincode:"",membership:"",venueType:"",capacity:"",hostedBefore:""},
+  le:{},
+  pf:{name:"",email:"",mobile:"",city:"",area:"",pincode:"",membership:""},
+  pe:{},
+  pstep:1,payMethod:"",assignedHub:null,
+  submitting:false,paying:false,
+  successInfo:null,clearConfirm:false
+};
+
+function persist(key,val){
+  try{window.storage&&window.storage.set(key,JSON.stringify(val));}catch(e){}
+}
+async function hydrate(){
+  try{
+    if(!window.storage)return;
+    const l=await window.storage.get("nfp3_hl");
+    const p=await window.storage.get("nfp3_pp");
+    const st=await window.storage.get("nfp3_st");
+    if(l&&l.value){const d=JSON.parse(l.value);if(Array.isArray(d))S.leaders=d;}
+    if(p&&p.value){const d=JSON.parse(p.value);if(Array.isArray(d))S.parts=d;}
+    if(st&&st.value){const d=JSON.parse(st.value);if(typeof d.regOpen==="boolean")S.regOpen=d.regOpen;}
+  }catch(e){}
+  render();
+}
+
+function getHubCounts(){
+  const c={};
+  S.parts.forEach(p=>{if(p.hubId)c[p.hubId]=(c[p.hubId]||0)+1});
+  return c;
+}
+function findHub(person){
+  const c=getHubCounts();
+  const avail=S.leaders.filter(l=>l.status==="approved"&&(c[l.id]||0)<MAX);
+  if(!avail.length)return null;
+  const pin=String(person.pincode||"");
+  return(
+    avail.find(h=>String(h.pincode)===pin)||
+    avail.find(h=>pin.length>=3&&String(h.pincode).slice(0,3)===pin.slice(0,3))||
+    avail.find(h=>pin.length>=2&&String(h.pincode).slice(0,2)===pin.slice(0,2))||
+    avail.find(h=>(h.city||"").toLowerCase()===(person.city||"").toLowerCase())||
+    avail[0]
+  );
+}
+
+function go(v){
+  S.view=v;
+  if(["home","leader-form","participant-form"].includes(v)){
+    S.le={};S.pe={};S.pstep=1;S.payMethod="";S.assignedHub=null;S.submitting=false;S.paying=false;
+  }
+  render();
+}
+
+function sf(id,val){
+  const lk=["name","email","mobile","city","area","pincode","membership","venueType","capacity","hostedBefore"];
+  const pk=["name","email","mobile","city","area","pincode","membership"];
+  if(lk.includes(id)){S.lf[id]=val;delete S.le[id];}
+  if(pk.includes(id)){S.pf[id]=val;delete S.pe[id];}
+  const el=document.getElementById("fe_"+id);if(el)el.textContent="";
+}
+
+function valL(){
+  const f=S.lf;const e={};
+  if(!f.name.trim())e.name="Required";
+  if(!f.email.includes("@"))e.email="Valid email required";
+  if(f.mobile.replace(/\D/g,"").length<10)e.mobile="10-digit number required";
+  if(!f.city.trim())e.city="Required";
+  if(!f.area.trim())e.area="Required";
+  if(f.pincode.replace(/\D/g,"").length!==6)e.pincode="6-digit PIN required";
+  if(!f.membership)e.membership="Required";
+  if(!f.venueType)e.venueType="Required";
+  if(!f.capacity)e.capacity="Required";
+  return e;
+}
+function valP(){
+  const f=S.pf;const e={};
+  if(!f.name.trim())e.name="Required";
+  if(!f.email.includes("@"))e.email="Valid email required";
+  if(f.mobile.replace(/\D/g,"").length<10)e.mobile="10-digit number required";
+  if(!f.city.trim())e.city="Required";
+  if(!f.area.trim())e.area="Required";
+  if(f.pincode.replace(/\D/g,"").length!==6)e.pincode="6-digit PIN required";
+  if(!f.membership)e.membership="Required";
+  return e;
+}
+
+function submitLeader(){
+  const e=valL();
+  if(Object.keys(e).length){S.le=e;render();return;}
+  if(S.leaders.find(l=>l.email.toLowerCase()===S.lf.email.toLowerCase())){
+    S.le={email:"This email is already registered"};render();return;
+  }
+  S.submitting=true;render();
+  const nl={...S.lf,id:uid(),status:"pending",registeredAt:new Date().toISOString()};
+  S.leaders=[...S.leaders,nl];
+  persist("nfp3_hl",S.leaders);
+  S.successInfo={type:"leader",name:S.lf.name,city:S.lf.city,area:S.lf.area};
+  S.lf={name:"",email:"",mobile:"",city:"",area:"",pincode:"",membership:"",venueType:"",capacity:"",hostedBefore:""};
+  S.submitting=false;
+  go("success");
+}
+
+function partNext(){
+  if(S.parts.find(p=>p.email.toLowerCase()===S.pf.email.toLowerCase())){
+    S.pe={email:"This email is already registered"};render();return;
+  }
+  const e=valP();
+  if(Object.keys(e).length){S.pe=e;render();return;}
+  S.assignedHub=findHub(S.pf);
+  S.pstep=2;render();
+}
+
+function submitPart(){
+  if(!S.payMethod||S.paying)return;
+  S.paying=true;render();
+  setTimeout(function(){
+    const hub=S.assignedHub;
+    const np={
+      ...S.pf,id:uid(),
+      hubId:hub?hub.id:null,hubLeaderName:hub?hub.name:null,
+      hubArea:hub?hub.area:null,hubCity:hub?hub.city:null,hubPincode:hub?hub.pincode:null,
+      paymentStatus:"paid",paymentMethod:S.payMethod,
+      registeredAt:new Date().toISOString(),
+      status:hub?"confirmed":"waitlisted"
+    };
+    S.parts=[...S.parts,np];
+    persist("nfp3_pp",S.parts);
+    S.successInfo={type:"participant",name:S.pf.name,hub:hub,waitlisted:!hub};
+    S.pf={name:"",email:"",mobile:"",city:"",area:"",pincode:"",membership:""};
+    S.pstep=1;S.payMethod="";S.assignedHub=null;S.paying=false;
+    go("success");
+  },1500);
+}
+
+function approveLeader(id){S.leaders=S.leaders.map(l=>l.id===id?{...l,status:"approved"}:l);persist("nfp3_hl",S.leaders);render();}
+function rejectLeader(id){S.leaders=S.leaders.map(l=>l.id===id?{...l,status:"rejected"}:l);persist("nfp3_hl",S.leaders);render();}
+function toggleReg(){S.regOpen=!S.regOpen;persist("nfp3_st",{regOpen:S.regOpen});render();}
+function clearAll(){S.leaders=[];S.parts=[];S.clearConfirm=false;persist("nfp3_hl",[]);persist("nfp3_pp",[]);render();}
+function tryAdmin(){
+  if(S.adminPass===ADMIN_PW){S.adminAuth=true;S.adminErr="";S.adminTab="overview";}
+  else S.adminErr="Incorrect password. Try: nfp2024";
+  render();
+}
+
+function mkF(label,id,type,ph,val,opts,req){
+  const err=S.le[id]||S.pe[id]||"";
+  if(opts){return `<div class="field"><label>${label}${req?'<span class="req"> *</span>':''}</label>
+    <select id="${id}" onchange="sf('${id}',this.value)">
+      <option value="">Select...</option>
+      ${opts.map(o=>`<option value="${o}"${val===o?"selected":""}>${o}</option>`).join("")}
+    </select><span class="ferr" id="fe_${id}">${err}</span></div>`;}
+  return `<div class="field"><label>${label}${req?'<span class="req"> *</span>':''}</label>
+    <input type="${type||"text"}" value="${(val||"").toString().replace(/"/g,"&quot;")}" placeholder="${ph||""}" oninput="sf('${id}',this.value)" />
+    <span class="ferr" id="fe_${id}">${err}</span></div>`;
+}
+
+function tbar(back){
+  return `<div class="topbar"><div style="display:flex;align-items:center;gap:10px">
+    ${back?`<button class="tbtn" onclick="go('home')">← Back</button>`:""}
+    <div><div class="brand">network<span>FP</span></div><div class="tsub">NFP LocalHubs · FAST Summit 2025</div></div>
+  </div>
+  <button class="tbtn" onclick="go('admin')">${S.adminAuth?"Dashboard":"Admin"}</button></div>`;
+}
+
+function rHome(){
+  return `${tbar(false)}
+  <div class="hero">
+    <div class="htag">FAST Summit 2025</div>
+    <div class="htitle">NFP LocalHubs</div>
+    <div class="hsub">Financial Advisors Solutions &amp; Technologies</div>
+    <div class="hmeta">24 July 2025 &nbsp;·&nbsp; Pan India — 100+ Locations</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btnp" style="width:auto;padding:11px 28px" onclick="go('leader-form')">Register as Hub Leader</button>
+      ${S.regOpen
+        ?`<button class="btno" onclick="go('participant-form')">Join a Hub</button>`
+        :`<div style="padding:11px 20px;border-radius:8px;background:var(--color-background-secondary);font-size:13px;color:var(--color-text-tertiary)">Participant registration opening soon</div>`}
+    </div>
+  </div>
+  <div class="content">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px">
+      ${[["100+ Locations","Hubs across India"],["4–5 Per Hub","Intimate groups"],["PIN matching","By your location"],["Peer learning","Real discussions"]].map(([t,s])=>`
+      <div class="card" style="text-align:center;padding:16px;margin-bottom:0">
+        <div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px">${t}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary)">${s}</div>
+      </div>`).join("")}
+    </div>
+    <div class="card">
+      <div class="shead">How it works</div>
+      ${["Hub Leaders (ProMembers / QPFP Certificants) register their venue","NFP reviews and approves Hub Leaders","Participant registration opens — join by your PIN code","Pay ₹600 directly to your Hub Leader","Attend FAST Summit on 24 July with your local group"].map((s,i)=>`
+      <div class="howstep"><div class="hownum">${i+1}</div><div style="font-size:13px;color:var(--color-text-secondary);line-height:1.6">${s}</div></div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function rLeader(){
+  const f=S.lf;
+  return `${tbar(true)}
+  <div class="content">
+    <div class="ibox io"><strong>Eligibility:</strong> Any NFP ProMember or QPFP Certificant who can host 4–5 participants at their home, office, or co-working space.</div>
+    <div class="card">
+      <div class="shead">Personal details</div>
+      ${mkF("Full name","name","text","As registered with NFP",f.name,null,true)}
+      ${mkF("Email ID","email","email","your@email.com",f.email,null,true)}
+      ${mkF("Mobile number","mobile","tel","10-digit number",f.mobile,null,true)}
+      ${mkF("Membership type","membership",null,null,f.membership,["ProMember","QPFP Certificant","Both (ProMember + QPFP)"],true)}
+      <hr class="divider">
+      <div class="shead">Hub / venue details</div>
+      ${mkF("City","city","text","e.g. Mumbai, Bangalore",f.city,null,true)}
+      ${mkF("Area / locality","area","text","e.g. Andheri West, Koramangala",f.area,null,true)}
+      ${mkF("PIN code","pincode","text","6-digit PIN",f.pincode,null,true)}
+      ${mkF("Venue type","venueType",null,null,f.venueType,["Home","Own office","Co-working space","AMC office","Society clubhouse"],true)}
+      ${mkF("Approximate hosting capacity","capacity",null,null,f.capacity,["4–6 people","7–10 people","11–15 people","16–20 people"],true)}
+      ${mkF("Hosted an NFP event before?","hostedBefore",null,null,f.hostedBefore,["Yes","No"],false)}
+      <button class="btnp" onclick="submitLeader()" ${S.submitting?"disabled":""} style="margin-top:6px">
+        ${S.submitting?"Saving registration...":"Submit Hub Leader Registration"}
+      </button>
+    </div>
+  </div>`;
+}
+
+function rPart(){
+  const f=S.pf;const st=S.pstep;
+  const approvedCount=S.leaders.filter(l=>l.status==="approved").length;
+  if(!S.regOpen)return `${tbar(true)}<div class="content"><div class="card" style="text-align:center;padding:40px">
+    <div style="font-size:32px;margin-bottom:12px;color:var(--color-text-tertiary)">⏳</div>
+    <div style="font-size:16px;font-weight:500;margin-bottom:8px">Registration not open yet</div>
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px">Opens once Hub Leaders are confirmed.</div>
+    <button class="btno" onclick="go('home')">Back to home</button></div></div>`;
+  if(approvedCount===0)return `${tbar(true)}<div class="content"><div class="card" style="text-align:center;padding:40px">
+    <div style="font-size:32px;margin-bottom:12px;color:var(--color-text-warning)">⚠</div>
+    <div style="font-size:16px;font-weight:500;margin-bottom:8px">No hubs approved yet</div>
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px">Hub Leaders are being reviewed. Check back soon.</div>
+    <button class="btno" onclick="go('home')">Back to home</button></div></div>`;
+
+  return `${tbar(true)}
+  <div class="stepbar">
+    <div style="display:flex;align-items:center;gap:6px;flex:1">
+      <div class="sdot" style="background:${st>1?"#E05B25":st===1?"#FDF0EB":"var(--color-background-secondary)"};color:${st>1?"#fff":"#E05B25"};${st===1?"border:1.5px solid #E05B25":""}">
+        ${st>1?"✓":"1"}
+      </div>
+      <span style="font-size:12px;font-weight:${st===1?"500":"400"};color:${st===1?"#E05B25":"var(--color-text-secondary)"}">Your details</span>
+    </div>
+    <div class="sline ${st>1?"done":""}"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:1">
+      <div class="sdot" style="background:${st===2?"#FDF0EB":"var(--color-background-secondary)"};color:${st===2?"#E05B25":"var(--color-text-tertiary)"};${st===2?"border:1.5px solid #E05B25":""}">2</div>
+      <span style="font-size:12px;font-weight:${st===2?"500":"400"};color:${st===2?"#E05B25":"var(--color-text-secondary)"}">Payment</span>
+    </div>
+  </div>
+  <div class="content">
+    ${st===1?`
+    <div class="ibox io">You'll be auto-assigned to the nearest hub by PIN code. Fee: <strong>₹600 per person</strong></div>
+    <div class="card">
+      <div class="shead">Your details</div>
+      ${mkF("Full name","name","text","Your full name",f.name,null,true)}
+      ${mkF("Email ID","email","email","your@email.com",f.email,null,true)}
+      ${mkF("Mobile number","mobile","tel","10-digit number",f.mobile,null,true)}
+      ${mkF("Membership type","membership",null,null,f.membership,["NFP ProMember","QPFP Certificant","Summit delegate","Other financial advisor"],true)}
+      <hr class="divider">
+      <div class="shead">Your location <span style="font-size:11px;font-weight:400;color:var(--color-text-secondary)">(for hub matching)</span></div>
+      ${mkF("City","city","text","e.g. Mumbai, Bangalore",f.city,null,true)}
+      ${mkF("Area / locality","area","text","e.g. Bandra, Whitefield",f.area,null,true)}
+      ${mkF("PIN code","pincode","text","6-digit PIN code",f.pincode,null,true)}
+      <button class="btnp" onclick="partNext()" style="margin-top:6px">Continue to payment →</button>
+    </div>`:`
+    <div class="card">
+      <div class="shead">Your assigned hub</div>
+      ${S.assignedHub
+        ?`<div class="ibox ig">
+           <div style="font-weight:500;margin-bottom:6px">✓ Hub found near you</div>
+           <div><strong>Hub Leader:</strong> ${S.assignedHub.name}</div>
+           <div><strong>Location:</strong> ${S.assignedHub.area}, ${S.assignedHub.city}</div>
+           <div><strong>PIN code:</strong> ${S.assignedHub.pincode}</div>
+           <div style="font-size:11px;margin-top:8px;opacity:.8">Hub Leader contact shared after payment.</div>
+         </div>`
+        :`<div class="ibox iw">
+           <div style="font-weight:500;margin-bottom:4px">⚠ You'll be waitlisted</div>
+           <div style="font-size:12px">All nearby hubs are full. You'll be assigned when a spot opens.</div>
+         </div>`}
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="shead" style="margin:0">Payment summary</div>
+        <div style="font-size:20px;font-weight:500;color:#E05B25">₹600</div>
+      </div>
+      <div style="font-size:13px;color:var(--color-text-secondary);padding:10px 0;border-top:0.5px solid var(--color-border-tertiary);border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span>Participation fee</span><span>₹500</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span>Lunch &amp; refreshments</span><span>₹100</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:500;color:var(--color-text-primary);margin-top:8px;padding-top:8px;border-top:0.5px solid var(--color-border-tertiary)"><span>Total</span><span>₹600</span></div>
+      </div>
+      <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:10px">Select payment method</div>
+      ${["UPI (Google Pay, PhonePe, BHIM)","Debit / Credit card","Net banking"].map(m=>`
+      <div class="payopt ${S.payMethod===m?"sel":""}" onclick="S.payMethod='${m}';render()">
+        <div class="radio ${S.payMethod===m?"sel":""}">
+          ${S.payMethod===m?`<div class="rdot"></div>`:""}
+        </div>
+        <span style="font-size:13px;color:var(--color-text-primary)">${m}</span>
+      </div>`).join("")}
+      <button class="btnp" onclick="submitPart()" ${!S.payMethod||S.paying?"disabled":""} style="margin-top:10px">
+        ${S.paying?"Processing payment...":"Pay ₹600 &amp; confirm registration"}
+      </button>
+      <div style="font-size:11px;color:var(--color-text-tertiary);text-align:center;margin-top:10px">
+        🔒 Secure payment · No refunds within 3 days of event
+      </div>
+    </div>`}
+  </div>`;
+}
+
+function rSuccess(){
+  const inf=S.successInfo;if(!inf)return rHome();
+  const isL=inf.type==="leader";
+  return `${tbar(false)}<div class="content" style="display:flex;align-items:center;justify-content:center;min-height:500px">
+  <div class="card" style="text-align:center;max-width:460px;width:100%;padding:32px">
+    <div style="font-size:48px;margin-bottom:14px">${isL?"🎉":inf.waitlisted?"⏳":"✅"}</div>
+    <div style="font-size:19px;font-weight:500;margin-bottom:8px">
+      ${isL?"Registration received!":(inf.waitlisted?"You're on the waitlist!":"You're confirmed!")}
+    </div>
+    <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:20px">
+      ${isL?`Thank you <strong>${inf.name}</strong>! Your Hub Leader application for <strong>${inf.area}, ${inf.city}</strong> has been received. NFP team will review and confirm within 3–5 working days.`
+        :inf.waitlisted?`Thank you <strong>${inf.name}</strong>! All nearby hubs are full. You're on the waitlist.`
+        :`You're all set, <strong>${inf.name}</strong>! Assigned to a hub in <strong>${inf.hub.area}, ${inf.hub.city}</strong>. Your Hub Leader <strong>${inf.hub.name}</strong> will be in touch.`}
+    </div>
+    ${!isL&&!inf.waitlisted&&inf.hub?`
+    <div class="ibox io" style="text-align:left;margin-bottom:20px">
+      <div style="font-weight:500;margin-bottom:8px">Your hub details</div>
+      <div>📍 ${inf.hub.area}, ${inf.hub.city} — PIN ${inf.hub.pincode}</div>
+      <div style="margin-top:5px">👤 Hub Leader: ${inf.hub.name}</div>
+      <div style="margin-top:5px">📅 24 July 2025</div>
+    </div>`:""}
+    <button class="btnp" onclick="go('home')">Back to home</button>
+  </div></div>`;
+}
+
+function rAdmin(){
+  if(!S.adminAuth){
+    return `${tbar(true)}<div class="content" style="display:flex;align-items:center;justify-content:center;min-height:500px">
+    <div class="card" style="max-width:340px;width:100%">
+      <div style="font-size:16px;font-weight:500;margin-bottom:4px">Admin access</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px">NFP LocalHubs dashboard</div>
+      <div class="field"><label>Password</label>
+        <input type="password" value="${S.adminPass}" oninput="S.adminPass=this.value" onkeydown="if(event.key==='Enter')tryAdmin()" placeholder="Enter admin password" />
+      </div>
+      ${S.adminErr?`<div class="ferr" style="margin-bottom:10px">${S.adminErr}</div>`:""}
+      <div style="display:flex;gap:8px">
+        <button class="btnp" style="flex:1" onclick="tryAdmin()">Login</button>
+        <button class="btng" onclick="go('home')">Cancel</button>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);text-align:center;margin-top:10px">Demo password: nfp2024</div>
+    </div></div>`;
+  }
+  const counts=getHubCounts();
+  const approved=S.leaders.filter(l=>l.status==="approved");
+  const pending=S.leaders.filter(l=>l.status==="pending");
+  const confirmed=S.parts.filter(p=>p.status==="confirmed");
+  const waitlisted=S.parts.filter(p=>p.status==="waitlisted");
+  const t=S.adminTab;
+
+  return `<div class="topbar"><div style="display:flex;align-items:center;gap:8px">
+    <div><div class="brand">network<span>FP</span> <span style="background:rgba(255,255,255,.25);color:#fff;border-radius:3px;padding:1px 6px;font-size:11px;margin-left:4px">Admin</span></div>
+    <div class="tsub">LocalHubs · FAST Summit 2025</div></div></div>
+    <div style="display:flex;gap:6px">
+      <button class="tbtn" onclick="go('home')">← Home</button>
+      <button class="tbtn" onclick="S.adminAuth=false;render()">Logout</button>
+    </div></div>
+  <div class="tabs">
+    ${["overview","leaders","participants","hubs","settings"].map(tab=>`
+    <button class="tab ${t===tab?"on":""}" onclick="S.adminTab='${tab}';render()">${tab[0].toUpperCase()+tab.slice(1)}</button>`).join("")}
+  </div>
+  <div class="content">
+  ${t==="overview"?`
+    <div class="statgrid">
+      <div class="stat"><div class="slbl">Hub Leaders</div><div class="sval">${S.leaders.length}</div><div class="ssub">${approved.length} approved · ${pending.length} pending</div></div>
+      <div class="stat"><div class="slbl">Participants</div><div class="sval">${S.parts.length}</div><div class="ssub">${confirmed.length} confirmed</div></div>
+      <div class="stat"><div class="slbl">Total capacity</div><div class="sval">${approved.length*MAX}</div><div class="ssub">${MAX}/hub × ${approved.length} hubs</div></div>
+      <div class="stat"><div class="slbl">Waitlisted</div><div class="sval">${waitlisted.length}</div><div class="ssub">pending assignment</div></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px">Participant registration</div>
+          <div style="font-size:12px;color:var(--color-text-secondary)">${S.regOpen?"Open — participants can register":"Closed — open after approving Hub Leaders"}</div>
+        </div>
+        <div onclick="toggleReg()" class="togtrack" style="background:${S.regOpen?"#E05B25":"var(--color-border-secondary)"}">
+          <div class="togknob" style="left:${S.regOpen?"21px":"3px"}"></div>
+        </div>
+      </div>
+    </div>`:""}
+  ${t==="leaders"?`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:500">Hub Leaders (${S.leaders.length})</div>
+      <div style="display:flex;gap:6px"><span class="badge bg">${approved.length} approved</span><span class="badge ba">${pending.length} pending</span></div>
+    </div>
+    ${S.leaders.length===0
+      ?`<div class="card" style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:13px">No Hub Leaders registered yet.</div>`
+      :S.leaders.map(l=>`<div class="litem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div style="flex:1;min-width:180px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:14px;font-weight:500">${l.name}</span>
+              <span class="badge ${l.status==="approved"?"bg":l.status==="rejected"?"br":"ba"}">${l.status}</span>
+            </div>
+            <div style="font-size:12px;color:var(--color-text-secondary)">${l.area}, ${l.city} · PIN ${l.pincode} · ${l.mobile}</div>
+            <div style="font-size:12px;color:var(--color-text-tertiary);margin-top:2px">${l.venueType} · ${l.capacity} · ${l.membership}</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">Participants: ${counts[l.id]||0}/${MAX}</div>
+          </div>
+          ${l.status==="pending"?`<div style="display:flex;gap:6px;flex-shrink:0">
+            <button onclick="approveLeader('${l.id}')" style="padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer">Approve</button>
+            <button onclick="rejectLeader('${l.id}')" style="padding:6px 12px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer">Reject</button>
+          </div>`:""}
+        </div>
+      </div>`).join("")}`:""}
+  ${t==="participants"?`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:500">Participants (${S.parts.length})</div>
+      <div style="display:flex;gap:6px"><span class="badge bg">${confirmed.length} confirmed</span><span class="badge ba">${waitlisted.length} waitlisted</span></div>
+    </div>
+    ${S.parts.length===0
+      ?`<div class="card" style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:13px">No participants registered yet.</div>`
+      :S.parts.map(p=>`<div class="litem">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:500">${p.name}</span>
+          <span class="badge ${p.status==="confirmed"?"bg":"ba"}">${p.status}</span>
+        </div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">${p.area}, ${p.city} · PIN ${p.pincode} · ${p.mobile}</div>
+        ${p.hubId?`<div style="font-size:12px;color:var(--color-text-tertiary);margin-top:2px">📍 ${p.hubArea}, ${p.hubCity} (Leader: ${p.hubLeaderName})</div>`:""}
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">💳 Paid via ${p.paymentMethod}</div>
+      </div>`).join("")}`:""}
+  ${t==="hubs"?`
+    <div style="font-size:14px;font-weight:500;margin-bottom:12px">Hub distribution</div>
+    ${approved.length===0
+      ?`<div class="card" style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:13px">No approved hubs yet. Approve leaders in the Leaders tab.</div>`
+      :approved.map(l=>{
+        const hp=S.parts.filter(p=>p.hubId===l.id);
+        const pct=Math.round((hp.length/MAX)*100);
+        return `<div class="card" style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+            <div><div style="font-size:14px;font-weight:500">${l.area}, ${l.city}</div>
+            <div style="font-size:12px;color:var(--color-text-secondary)">Leader: ${l.name} · PIN ${l.pincode}</div></div>
+            <span style="font-size:13px;font-weight:500;color:${hp.length>=MAX?"#dc2626":"#16a34a"}">${hp.length}/${MAX} filled</span>
+          </div>
+          <div class="hubbar"><div class="hubfill" style="width:${pct}%;background:${hp.length>=MAX?"#dc2626":"#E05B25"}"></div></div>
+          ${hp.length>0
+            ?hp.map((p,i)=>`<div style="font-size:12px;color:var(--color-text-secondary);padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:8px">
+              <span style="color:var(--color-text-tertiary);min-width:14px">${i+1}.</span>
+              <span>${p.name}</span><span style="color:var(--color-text-tertiary)">·</span><span>${p.area}</span><span style="color:var(--color-text-tertiary)">·</span><span>${p.pincode}</span>
+            </div>`).join("")
+            :`<div style="font-size:12px;color:var(--color-text-tertiary);padding-top:8px">No participants yet.</div>`}
+        </div>`;}).join("")}`:""}
+  ${t==="settings"?`
+    <div class="card">
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px">Participant registration</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">Toggle to open or close participant registration.</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div onclick="toggleReg()" class="togtrack" style="background:${S.regOpen?"#E05B25":"var(--color-border-secondary)"}">
+          <div class="togknob" style="left:${S.regOpen?"21px":"3px"}"></div>
+        </div>
+        <span style="font-size:13px">Registration is <strong>${S.regOpen?"OPEN":"CLOSED"}</strong></span>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px">Max participants per hub</div>
+      <div style="font-size:12px;color:var(--color-text-secondary)"><strong>${MAX} participants per hub</strong> + 1 Hub Leader.</div>
+    </div>
+    <div class="dzone">
+      <div style="font-size:14px;font-weight:500;color:var(--color-text-danger);margin-bottom:6px">Danger zone</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">Clear all registration data. Cannot be undone.</div>
+      ${!S.clearConfirm
+        ?`<button onclick="S.clearConfirm=true;render()" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer">Clear all data</button>`
+        :`<div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:13px;color:var(--color-text-danger)">Are you sure?</span>
+          <button onclick="clearAll()" style="padding:7px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer">Yes, clear all</button>
+          <button onclick="S.clearConfirm=false;render()" class="btng" style="padding:7px 14px;font-size:12px">Cancel</button>
+        </div>`}
+    </div>`:""}
+  </div>`;
+}
+
+function render(){
+  const el=document.getElementById("app");if(!el)return;
+  const views={home:rHome,"leader-form":rLeader,"participant-form":rPart,success:rSuccess,admin:rAdmin};
+  el.innerHTML=(views[S.view]||rHome)();
+}
+
+render();
+hydrate();
+</script>

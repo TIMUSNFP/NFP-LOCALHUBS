@@ -100,6 +100,10 @@ router.post('/', async (req, res) => {
 
   // Capacity check — parse the numeric limit from strings like "10 People".
   // If parsing fails for any reason, skip the check so no valid registration is blocked.
+  // Counts every registration regardless of status (Pending included) by design —
+  // a slot is reserved first-come-first-served at registration time and verified
+  // afterward, so the circle shouldn't advertise a spot that's already spoken for
+  // and risk giving a later registrant false hope.
   const capacityLimit = parseInt(hub.capacity, 10);
   if (!isNaN(capacityLimit) && capacityLimit > 0) {
     const countRow = await db.get('SELECT COUNT(*) as cnt FROM participants WHERE hub_id = $1', [hub.id]);

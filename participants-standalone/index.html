@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NFP Circle Participants — check the status of your Circle registration.">
+    <meta property="og:title" content="NFP Circle Participants">
+    <meta property="og:description" content="Check whether your NFP Circle registration has been approved.">
+    <meta property="og:site_name" content="NetworkFP">
+    <link rel="icon" type="image/png" href="Images/NetworkFP Logo.png">
+    <title>NFP Circle Participants</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ══════════════════ NAVBAR ══════════════════ -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <div class="nav-logo">
+            <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-nav">
+        </div>
+    </div>
+</nav>
+
+<!-- ══════════════════ NFP CIRCLE PARTICIPANTS ══════════════════ -->
+<section id="participantsList" class="page active">
+    <div class="ppage-header">
+        <div class="container">
+            <div class="ppage-title-row">
+                <div>
+                    <span class="section-tag">Our Community</span>
+                    <h1 class="ppage-title">NFP Circle Participants &mdash; 5th Aug</h1>
+                    <p class="ppage-sub">This is the list of everyone who has registered to join an NFP Circle. All Participants can now check their name simply by searching and checking the status of their application.</p>
+                    <p class="ppage-sub">Once you are approved, you will be added by your Circle Lead to a WhatsApp group of your circle within 48 hours.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="participants-note">
+            <strong>Please Note:</strong>
+            <ol>
+                <li>Every new registration is reviewed and confirmed by the NetworkFP Team, so please avoid registering more than once.</li>
+                <li>Already registered and do not see your name? Reach out to Sumit Sawant at <a href="mailto:Sumit@networkfp.com">Sumit@networkfp.com</a> or call <a href="tel:+917208931022">72089 31022</a>.</li>
+            </ol>
+        </div>
+        <div class="participants-stats-bar">
+            <div class="pstat-chip"><strong id="statParticipants">0</strong> Participants</div>
+            <div class="pstat-chip"><strong id="statCircles">0</strong> Circles</div>
+            <div class="pstat-chip"><strong id="statCities">0</strong> Cities</div>
+        </div>
+        <div class="participants-table-wrap">
+            <table class="participants-table">
+                <thead>
+                    <tr class="ptable-header-row">
+                        <th class="sortable" onclick="sortParticipantsBy('srNo')">Sr. No<span class="sort-arrow" id="arrow-srNo"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('fullName')">Participant Name<span class="sort-arrow" id="arrow-fullName"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('city')">City<span class="sort-arrow" id="arrow-city"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('circleName')">Circle Joined<span class="sort-arrow" id="arrow-circleName"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('membership')">Member Type<span class="sort-arrow" id="arrow-membership"></span></th>
+                        <th class="sortable" onclick="sortParticipantsBy('status')">Status<span class="sort-arrow" id="arrow-status"></span></th>
+                    </tr>
+                    <tr class="ptable-filter-row">
+                        <td></td>
+                        <td><input type="text" id="filter-fullName" class="ptable-filter-input" placeholder="Search name..." oninput="applyParticipantsFilter()"></td>
+                        <td><select id="filter-city" class="ptable-filter-select" onchange="applyParticipantsFilter()"><option value="">All Cities</option></select></td>
+                        <td><input type="text" id="filter-circleName" class="ptable-filter-input" placeholder="Search circle..." oninput="applyParticipantsFilter()"></td>
+                        <td><select id="filter-membership" class="ptable-filter-select" onchange="applyParticipantsFilter()"><option value="">All Types</option></select></td>
+                        <td>
+                            <select id="filter-status" class="ptable-filter-select" onchange="applyParticipantsFilter()">
+                                <option value="">All Statuses</option>
+                                <option value="Confirmed">Approved</option>
+                                <option value="Pending">Awaiting Approval</option>
+                            </select>
+                        </td>
+                    </tr>
+                </thead>
+                <tbody id="participantsTableBody">
+                    <tr><td colspan="6" class="ptable-msg"><div class="spinner"></div><p>Loading participants...</p></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script src="script.js"></script>
+</body>
+</html>
