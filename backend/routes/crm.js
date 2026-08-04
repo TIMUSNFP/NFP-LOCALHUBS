@@ -114,7 +114,9 @@ function campaignRowToJson(row) {
 // by groupOpenHubsByCityKey below (auto mode, which must never feature a full one).
 async function getApprovedHubsWithCounts() {
   const hubs = await db.all("SELECT * FROM hubs WHERE status = 'Approved' ORDER BY city ASC, area ASC");
-  const countRows = await db.all('SELECT hub_id, COUNT(*)::int AS cnt FROM participants GROUP BY hub_id');
+  const countRows = await db.all(
+    "SELECT hub_id, COUNT(*)::int AS cnt FROM participants WHERE status != 'Cancelled' GROUP BY hub_id"
+  );
   const countMap = new Map(countRows.map((r) => [r.hub_id, r.cnt]));
   return hubs.map((hub) => {
     const capacityLimit = parseInt(hub.capacity, 10);

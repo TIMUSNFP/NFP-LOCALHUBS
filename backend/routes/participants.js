@@ -100,13 +100,16 @@ router.post('/', async (req, res) => {
 
   // Capacity check — parse the numeric limit from strings like "10 People".
   // If parsing fails for any reason, skip the check so no valid registration is blocked.
-  // Counts every registration regardless of status (Pending included) by design —
-  // a slot is reserved first-come-first-served at registration time and verified
-  // afterward, so the circle shouldn't advertise a spot that's already spoken for
-  // and risk giving a later registrant false hope.
+  // Counts Pending + Confirmed registrations (Cancelled excluded) — a slot is
+  // reserved first-come-first-served at registration time and verified afterward,
+  // so the circle shouldn't advertise a spot that's already spoken for, but a
+  // Cancelled registration genuinely frees that spot back up for someone else.
   const capacityLimit = parseInt(hub.capacity, 10);
   if (!isNaN(capacityLimit) && capacityLimit > 0) {
-    const countRow = await db.get('SELECT COUNT(*) as cnt FROM participants WHERE hub_id = $1', [hub.id]);
+    const countRow = await db.get(
+      "SELECT COUNT(*) as cnt FROM participants WHERE hub_id = $1 AND status != 'Cancelled'",
+      [hub.id]
+    );
     const currentCount = countRow ? Number(countRow.cnt) : 0;
     if (currentCount >= capacityLimit) {
       return res.status(409).json({ error: 'This Circle is fully booked. No spots remaining.' });

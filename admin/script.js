@@ -2577,6 +2577,7 @@ function viewHubParticipants(hubId) {
     const hub = allHubs.find(h => String(h.id) === String(hubId));
     if (!hub) return;
     const hubParticipants = allParticipants.filter(p => String(p.hubId) === String(hubId));
+    const activeCount = hubParticipants.filter(p => p.status !== 'Cancelled').length;
 
     const titleEl = document.getElementById('detailsTitle');
     if (titleEl) titleEl.textContent = `${hub.fullName}'s Circle — Participants`;
@@ -2610,7 +2611,7 @@ function viewHubParticipants(hubId) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Participants <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 10px;font-size:13px;font-weight:600;margin-left:6px;vertical-align:middle">${hubParticipants.length}</span></h4>
+            <h4>Participants <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 10px;font-size:13px;font-weight:600;margin-left:6px;vertical-align:middle">${activeCount}${activeCount !== hubParticipants.length ? ` / ${hubParticipants.length}` : ''}</span></h4>
             ${participantRows}
         </div>
     `;
@@ -2676,7 +2677,7 @@ async function openTransferParticipantsModal(participantIds) {
     await loadHubs(); // refresh allHubs so capacity/counts are current
     const approved = allHubs.filter(h => h.status === 'Approved');
     const countByHub = {};
-    allParticipants.forEach(p => { countByHub[p.hubId] = (countByHub[p.hubId] || 0) + 1; });
+    allParticipants.filter(p => p.status !== 'Cancelled').forEach(p => { countByHub[p.hubId] = (countByHub[p.hubId] || 0) + 1; });
 
     const names = participantIds
         .map(id => allParticipants.find(p => p.id === id))
@@ -2768,7 +2769,7 @@ async function openCombineHubModal(closingHubId) {
     await loadHubs(); // refresh allHubs so participant counts are current
     const candidates = allHubs.filter(h => h.status === 'Approved' && h.id !== closingHubId);
     const countByHub = {};
-    allParticipants.forEach(p => { countByHub[p.hubId] = (countByHub[p.hubId] || 0) + 1; });
+    allParticipants.filter(p => p.status !== 'Cancelled').forEach(p => { countByHub[p.hubId] = (countByHub[p.hubId] || 0) + 1; });
     const closingCount = countByHub[closingHubId] || 0;
 
     content.innerHTML = `
