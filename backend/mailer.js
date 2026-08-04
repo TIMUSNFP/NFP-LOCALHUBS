@@ -574,6 +574,8 @@ function crmUnsubscribeUrl(contactId) {
 }
 
 const DEFAULT_CRM_INTRO = `
+  <p>Registrations for NFP Circles in your city close <strong>today at 4:00 PM</strong> — after that,
+  we won't be able to accommodate any more sign-ups for the 5th August meetup.</p>
   <p>NFP Circles are small, in-person peer-learning meetups made specifically for NFP Members —
   a few hours to connect with peers in your city, discuss real challenges, and walk away with
   practical ideas you can use right away.</p>
@@ -605,22 +607,22 @@ function buildCircleCrmEmailHtml(contact, hubs, campaign) {
   `).join('');
 
   const html = wrap(`
-    <div class="badge">📍 NFP Circles open in ${cityLabel}</div><br>
-    <div class="badge" style="background:#FEE2E2;color:#B91C1C;margin-top:8px">⏰ One Week to Go — Limited Seats Left!</div>
-    <h2>Hi ${escHtml(contact.full_name)}, there ${hubs.length === 1 ? 'is' : 'are'} ${hubs.length} NFP Circle${hubs.length === 1 ? '' : 's'} open near you!</h2>
+    <div class="badge" style="background:#FEE2E2;color:#B91C1C">🚨 FINAL DEADLINE — Registrations close today at 4:00 PM</div><br>
+    <div class="badge" style="margin-top:8px">📍 NFP Circles open in ${cityLabel}</div>
+    <h2>Hi ${escHtml(contact.full_name)}, this is your last chance to join an NFP Circle near you!</h2>
     ${campaign.introHtml || DEFAULT_CRM_INTRO}
     <p class="section-heading">Open Circles in ${cityLabel}</p>
     ${hubsHtml}
-    <p>Spots are limited and filling up — register now to lock in your place.</p>
+    <p>Don't miss out — registration closes at <strong>4:00 PM today</strong>.</p>
     <div class="btn-wrap">
-      <a class="btn" href="${PARTICIPANT_URL}">Register for an NFP Circle</a>
+      <a class="btn" href="${PARTICIPANT_URL}">Register Now — Before 4 PM</a>
     </div>
     <p class="section-heading">How to Register</p>
     <ol class="next-steps">
-      <li>Click the <strong>Register for an NFP Circle</strong> button above.</li>
+      <li>Click the <strong>Register Now</strong> button above.</li>
       <li>Click <strong>Find a Circle</strong>.</li>
       <li>Type your city into the search box.</li>
-      <li>The Circle(s) open near you will show up on the right-hand side — pick one and register.</li>
+      <li>The Circle(s) open near you will show up on the right-hand side — pick one and register before the deadline.</li>
     </ol>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p style="font-size:12px;color:#6A7D8B;text-align:center;margin-top:24px">
