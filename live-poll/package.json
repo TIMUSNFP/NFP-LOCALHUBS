@@ -1,0 +1,21 @@
+{
+  "name": "nfp-live-poll",
+  "version": "1.0.0",
+  "description": "NFP Live Poll — real-time audience polling for NFP Circle events, backed by the same Supabase Postgres as NFP Circles.",
+  "private": true,
+  "scripts": {
+    "dev": "node poll-server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "qrcode": "^1.5.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

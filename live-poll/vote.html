@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>NFP Live Poll</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+  <header class="header">
+    <img src="Images/NetworkFP Logo.png" alt="NetworkFP">
+    <span class="brand-tag" id="poll-code-badge">Live Poll</span>
+  </header>
+
+  <main class="main">
+    <section class="card" id="vote-root" aria-live="polite">
+      <div class="waiting">
+        <div class="pulse-dot">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+        </div>
+        <h2>Connecting…</h2>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="poll-client.js"></script>
+<script src="vote.js"></script>
+</body>
+</html>

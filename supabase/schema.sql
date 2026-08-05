@@ -157,6 +157,69 @@ create table if not exists crm_campaign_recipients (
 );
 alter table crm_campaign_recipients add column if not exists claimed_at timestamptz;
 
+-- ── NFP Live Poll ──────────────────────────────────────────────────────────────
+-- Real-time audience polling for live NFP Circle events. Deliberately separate
+-- from the hubs/participants CRM tables above — a live-poll participant may or
+-- may not be a registered Circle participant. Served by the `live-poll/` app,
+-- a SEPARATE Vercel project from the main NFP Circles backend (isolates a
+-- 700-phone polling spike from hub/participant registration traffic), but the
+-- SAME Supabase Postgres database via the same DATABASE_URL.
+
+create table if not exists poll_sessions (
+  id text primary key,                    -- NFP-POLL-YYYYMMDD-NNNN
+  code text unique not null,              -- 6-digit join code shown on the presenter screen / QR
+  title text not null,
+  status text not null default 'draft',   -- draft | live | ended
+  current_question_id text,
+  created_at text not null,
+  started_at text,
+  ended_at text
+);
+
+create table if not exists poll_questions (
+  id text primary key,                    -- NFP-PQ-YYYYMMDD-NNNN
+  session_id text not null references poll_sessions(id),
+  order_index integer not null,
+  type text not null,                     -- multiple_choice | true_false | rating | word_cloud | quiz | ranking | pulse
+  prompt text not null,
+  options jsonb,                          -- choice list / rating bounds / ranking items — shape depends on type
+  correct_option text,                    -- quiz only
+  status text not null default 'pending', -- pending | live | closed
+  revealed boolean not null default false
+);
+create index if not exists poll_questions_session_idx on poll_questions (session_id, order_index);
+
+-- One row per person who joins a session (via the join screen). Re-identified
+-- across page reloads by device_token (random, stored in the browser), not a
+-- login — so a participant can leave and come back to the same session as the
+-- same person without re-entering their details.
+create table if not exists poll_participants (
+  id text primary key,                    -- NFP-PP-YYYYMMDD-NNNN
+  session_id text not null references poll_sessions(id),
+  full_name text not null,
+  phone text,
+  join_source text not null,              -- manual | circle_leader
+  circle_leader_hub_id text references hubs(id),
+  device_token text not null,
+  joined_at text not null,
+  unique (session_id, device_token)
+);
+
+-- One vote per participant per question — the unique constraint is the
+-- vote-integrity backbone (a repeat POST from the same device just no-ops
+-- rather than double-counting). `answer` is intentionally never joined back
+-- to full_name/phone in any PUBLIC endpoint response — only the host export
+-- (authenticated) reads across poll_votes + poll_participants together.
+create table if not exists poll_votes (
+  id text primary key,                    -- NFP-PV-YYYYMMDD-NNNN
+  question_id text not null references poll_questions(id),
+  participant_id text not null references poll_participants(id),
+  answer jsonb not null,
+  submitted_at text not null,
+  unique (question_id, participant_id)
+);
+create index if not exists poll_votes_question_idx on poll_votes (question_id);
+
 -- ── Row Level Security ────────────────────────────────────────────────────────
 -- All tables must have RLS enabled because Supabase exposes the public schema
 -- via PostgREST. With RLS on and no policies defined, PostgREST's anon/
@@ -172,3 +235,7 @@ alter table public.crm_contacts             enable row level security;
 alter table public.crm_campaigns            enable row level security;
 alter table public.crm_campaign_recipients  enable row level security;
 alter table public.hub_merges               enable row level security;
+alter table public.poll_sessions      enable row level security;
+alter table public.poll_questions     enable row level security;
+alter table public.poll_participants  enable row level security;
+alter table public.poll_votes         enable row level security;

@@ -1,0 +1,93 @@
+/* host.css — desktop console layer, on top of ../styles.css tokens. */
+
+.host-body { background: var(--bg); }
+
+.host-login-shell {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+}
+
+.host-topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 24px;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+}
+.host-topbar img { height: 26px; }
+
+.host-main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; width: 100%; }
+.host-main-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.host-main-header h1 { font-size: 22px; color: var(--dark); }
+
+.host-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    align-items: start;
+}
+@media (max-width: 900px) {
+    .host-detail-grid { grid-template-columns: 1fr; }
+}
+
+.host-panel {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 22px;
+}
+.host-panel-head h2 { font-size: 19px; color: var(--dark); margin-bottom: 6px; }
+.host-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.status-pill {
+    display: inline-block;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--secondary); color: var(--primary);
+}
+.status-pill.live { background: var(--success-bg); color: var(--success); }
+.status-pill.ended { background: var(--border); color: var(--muted); }
+.hint { font-size: 13px; color: var(--light-text); }
+
+.host-links { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.host-links .btn { width: auto; text-decoration: none; }
+
+.host-control-bar {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    padding: 14px;
+    background: var(--secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: 22px;
+}
+.host-control-bar .btn { width: auto; }
+.host-control-bar .cb-empty { font-size: 13px; color: var(--muted); }
+
+.host-subhead { font-size: 14px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 12px; }
+
+.q-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
+}
+.q-row .q-order { width: 24px; height: 24px; border-radius: 50%; background: var(--secondary); color: var(--primary); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.q-row .q-info { flex: 1; min-width: 0; }
+.q-row .q-info .q-type-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--light-text); }
+.q-row .q-info .q-prompt-text { font-size: 14px; color: var(--dark); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-row .q-badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+.q-row .q-badge.pending { background: var(--secondary); color: var(--muted); }
+.q-row .q-badge.live { background: var(--success-bg); color: var(--success); }
+.q-row .q-badge.closed { background: var(--border); color: var(--muted); }
+.q-row .btn { width: auto; }
+
+.host-add-question { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+.host-add-question summary { cursor: pointer; font-weight: 700; color: var(--primary); font-size: 14px; margin-bottom: 12px; }
+.host-add-question .field input, .host-add-question .field select { min-height: 42px; }
+
+.dyn-choice-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.dyn-choice-row input { flex: 1; min-height: 42px; padding: 8px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); }
+.dyn-choice-row button { background: transparent; border: none; color: var(--danger); font-weight: 700; font-size: 18px; width: 32px; }
+.dyn-add-choice { font-size: 13px; color: var(--primary); font-weight: 700; background: none; border: none; padding: 6px 0; }
+
+.host-live-panel { position: sticky; top: 20px; }

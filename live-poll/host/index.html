@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFP Live Poll — Host Console</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="host.css">
+</head>
+<body class="host-body">
+
+<!-- LOGIN -->
+<div class="host-login-shell" id="login-screen">
+  <div class="card" style="max-width:380px;">
+    <img src="../Images/NetworkFP Logo.png" alt="NetworkFP" style="height:28px; margin-bottom:18px;">
+    <h1 class="q-prompt" style="font-size:20px; margin-bottom:18px;">Host Console Login</h1>
+    <div id="login-banner"></div>
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">Admin email</label>
+        <input id="login-email" type="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary" id="login-submit" type="submit"><span class="btn-label">Log in</span></button>
+    </form>
+    <p style="font-size:12px; color:var(--light-text); margin-top:14px;">Uses your existing NFP Circles admin login.</p>
+  </div>
+</div>
+
+<!-- SESSION LIST -->
+<div class="host-app-shell" id="list-screen" style="display:none;">
+  <header class="host-topbar">
+    <img src="../Images/NetworkFP Logo.png" alt="NetworkFP">
+    <span class="brand-tag">Host Console</span>
+    <button class="btn btn-ghost btn-sm" id="logout-btn" style="margin-left:auto;">Log out</button>
+  </header>
+  <main class="host-main">
+    <div class="host-main-header">
+      <h1>Your Polls</h1>
+      <button class="btn btn-primary btn-sm" id="new-session-btn">+ New Poll</button>
+    </div>
+    <div id="session-list"></div>
+  </main>
+</div>
+
+<!-- NEW SESSION MODAL -->
+<div class="host-modal-backdrop" id="new-session-modal" style="display:none;">
+  <div class="card host-modal">
+    <h2 class="q-prompt" style="font-size:18px;">New poll</h2>
+    <div id="new-session-banner"></div>
+    <div class="field">
+      <label for="new-session-title">Poll title</label>
+      <input id="new-session-title" placeholder="e.g. NFP Circles Annual Meet 2026">
+    </div>
+    <div class="field">
+      <label for="new-session-code">Custom join code (optional)</label>
+      <input id="new-session-code" placeholder="e.g. ABC1234" style="text-transform:uppercase;">
+      <div class="hint">Leave blank for a random 6-digit code. Letters and numbers only, min 4 characters.</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-outline" id="new-session-cancel">Cancel</button>
+      <button class="btn btn-primary" id="new-session-create"><span class="btn-label">Create</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION DETAIL -->
+<div class="host-app-shell" id="detail-screen" style="display:none;">
+  <header class="host-topbar">
+    <img src="../Images/NetworkFP Logo.png" alt="NetworkFP">
+    <button class="btn btn-ghost btn-sm" id="back-to-list">&larr; All polls</button>
+    <span class="brand-tag" id="detail-code-badge" style="margin-left:auto;">Code ——————</span>
+    <button class="btn btn-ghost btn-sm" id="change-code-btn" title="Change join code">Edit code</button>
+  </header>
+
+  <main class="host-main host-detail-grid">
+    <section class="host-panel">
+      <div class="host-panel-head">
+        <h2 id="detail-title">—</h2>
+        <div class="host-status-row">
+          <span class="status-pill" id="detail-status">draft</span>
+          <span id="detail-participant-count" class="hint">0 joined</span>
+        </div>
+      </div>
+
+      <div class="host-links">
+        <a id="link-present" target="_blank" class="btn btn-outline btn-sm">Open Presenter Screen ↗</a>
+        <a id="link-join" target="_blank" class="btn btn-outline btn-sm">Open Join Page ↗</a>
+        <button class="btn btn-outline btn-sm" id="export-btn">Export CSV</button>
+      </div>
+
+      <div class="host-control-bar" id="control-bar"></div>
+
+      <h3 class="host-subhead">Questions</h3>
+      <div id="question-list"></div>
+
+      <details class="host-add-question">
+        <summary>+ Add a question</summary>
+        <div class="field">
+          <label for="q-type">Question type</label>
+          <select id="q-type">
+            <option value="multiple_choice">Multiple Choice</option>
+            <option value="true_false">True / False</option>
+            <option value="rating">Rating / Likert Scale</option>
+            <option value="word_cloud">Word Cloud (one/two words)</option>
+            <option value="open_text">Open Question (full sentence)</option>
+            <option value="quiz">Quiz (with correct answer)</option>
+            <option value="ranking">Ranking</option>
+            <option value="pulse">Pulse Check (👍/😐/👎)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="q-prompt">Question / prompt</label>
+          <input id="q-prompt" placeholder="e.g. Which city should host next year's meet?">
+        </div>
+        <div id="q-type-fields"></div>
+        <div id="add-question-banner"></div>
+        <button class="btn btn-primary btn-sm" id="add-question-btn"><span class="btn-label">Add question</span></button>
+      </details>
+    </section>
+
+    <aside class="host-panel host-live-panel">
+      <h3 class="host-subhead">Live results</h3>
+      <div id="live-results">
+        <p class="hint">Open a question to see live results here.</p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script src="../poll-client.js"></script>
+<script src="host.js"></script>
+</body>
+</html>
