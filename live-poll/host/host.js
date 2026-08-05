@@ -274,6 +274,7 @@ function renderQuestionList(session) {
         </div>
         <span class="q-badge ${isLive ? 'live' : q.status}">${isLive ? 'live now' : q.status}</span>
         ${canOpen ? `<button class="btn btn-outline btn-sm" data-open="${q.id}">${q.status === 'closed' ? 'Reopen' : 'Open'}</button>` : ''}
+        ${q.status === 'pending' ? `<button class="btn btn-outline btn-sm" data-edit="${q.id}">Edit</button>` : ''}
         ${q.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-delete="${q.id}" aria-label="Delete question">✕</button>` : ''}
       </div>`;
   }).join('');
@@ -281,6 +282,12 @@ function renderQuestionList(session) {
   listEl.querySelectorAll('[data-open]').forEach((btn) => {
     btn.addEventListener('click', (e) =>
       runAction(e.currentTarget, `/api/host/sessions/${session.id}/questions/${btn.dataset.open}/open`, btn.textContent));
+  });
+  listEl.querySelectorAll('[data-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const question = session.questions.find((q) => q.id === btn.dataset.edit);
+      if (question) enterEditMode(question);
+    });
   });
   listEl.querySelectorAll('[data-delete]').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
@@ -366,6 +373,60 @@ function wireChoiceRows(type) {
 qTypeSelect.addEventListener('change', () => renderTypeFields(qTypeSelect.value));
 renderTypeFields(qTypeSelect.value);
 
+/* ── Edit mode: reuses the Add-a-question form/fields ─────────────── */
+let editingQuestionId = null;
+const addQuestionDetails = document.querySelector('.host-add-question');
+const addQuestionBtn = document.getElementById('add-question-btn');
+
+function exitEditMode() {
+  editingQuestionId = null;
+  document.getElementById('q-prompt').value = '';
+  qTypeSelect.disabled = false;
+  renderTypeFields(qTypeSelect.value);
+  addQuestionBtn.querySelector('.btn-label').textContent = 'Add question';
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  if (cancelBtn) cancelBtn.remove();
+}
+
+function enterEditMode(question) {
+  editingQuestionId = question.id;
+  addQuestionDetails.open = true;
+  qTypeSelect.value = question.type;
+  qTypeSelect.disabled = true; // changing type mid-edit would orphan the options shape
+  document.getElementById('q-prompt').value = question.prompt;
+  renderTypeFields(question.type);
+
+  if (question.type === 'multiple_choice' || question.type === 'quiz' || question.type === 'ranking') {
+    const values = question.options?.choices || question.options?.items || [];
+    document.getElementById('choice-rows').innerHTML = choiceRowsMarkup(values.length ? values : ['', '']);
+    wireChoiceRows(question.type);
+    if (question.type === 'quiz') {
+      const sel = document.getElementById('correct-select');
+      if (sel) sel.value = question.correctOption || '';
+    }
+  } else if (question.type === 'true_false') {
+    document.getElementById('tf-correct').value = question.correctOption || '';
+  } else if (question.type === 'rating') {
+    document.getElementById('rate-min').value = question.options?.min ?? 1;
+    document.getElementById('rate-max').value = question.options?.max ?? 5;
+    document.getElementById('rate-low').value = question.options?.lowLabel || '';
+    document.getElementById('rate-high').value = question.options?.highLabel || '';
+  }
+
+  addQuestionBtn.querySelector('.btn-label').textContent = 'Save changes';
+  if (!document.getElementById('cancel-edit-btn')) {
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.id = 'cancel-edit-btn';
+    cancel.className = 'btn btn-ghost btn-sm';
+    cancel.textContent = 'Cancel edit';
+    cancel.style.marginLeft = '8px';
+    cancel.addEventListener('click', exitEditMode);
+    addQuestionBtn.insertAdjacentElement('afterend', cancel);
+  }
+  addQuestionDetails.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 document.getElementById('add-question-btn').addEventListener('click', async (e) => {
   const banner = document.getElementById('add-question-banner');
   setBanner(banner, '');
@@ -404,19 +465,30 @@ document.getElementById('add-question-btn').addEventListener('click', async (e) 
   }
   // word_cloud needs no options.
 
-  setBusy(e.currentTarget, true, 'Add question');
+  const isEditing = Boolean(editingQuestionId);
+  const busyLabel = isEditing ? 'Save changes' : 'Add question';
+  setBusy(e.currentTarget, true, busyLabel);
   try {
-    await hostFetch(`/api/host/sessions/${currentSessionId}/questions`, {
-      method: 'POST',
-      body: JSON.stringify({ type, prompt, options, correctOption }),
-    });
-    document.getElementById('q-prompt').value = '';
-    renderTypeFields(type);
+    if (isEditing) {
+      await hostFetch(`/api/host/sessions/${currentSessionId}/questions/${editingQuestionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ type, prompt, options, correctOption }),
+      });
+      exitEditMode();
+      showToast('Question updated.');
+    } else {
+      await hostFetch(`/api/host/sessions/${currentSessionId}/questions`, {
+        method: 'POST',
+        body: JSON.stringify({ type, prompt, options, correctOption }),
+      });
+      document.getElementById('q-prompt').value = '';
+      renderTypeFields(type);
+    }
     await refreshDetail();
   } catch (err) {
     setBanner(banner, err.message);
   } finally {
-    setBusy(e.currentTarget, false, 'Add question');
+    setBusy(e.currentTarget, false, busyLabel);
   }
 });
 

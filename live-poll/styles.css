@@ -119,6 +119,24 @@ a { color: inherit; }
     width: 100%;
 }
 
+/* ── Motion ──────────────────────────────────────────── */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes popIn {
+    from { opacity: 0; transform: scale(.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+/* Wrap freshly-rendered dynamic content (questions, results, panels) in this
+   class — since it's applied to newly-created DOM nodes each render, the
+   animation replays automatically with no JS timing logic needed. */
+.fade-in { animation: fadeInUp .35s cubic-bezier(.22,1,.36,1) both; }
+
 /* ── Cards / surfaces ────────────────────────────────── */
 .card {
     background: var(--white);
@@ -128,6 +146,7 @@ a { color: inherit; }
     padding: 28px 22px;
     width: 100%;
     max-width: 440px;
+    animation: fadeInUp .4s cubic-bezier(.22,1,.36,1) both;
 }
 
 /* ── Buttons: big tap targets everywhere on participant surfaces ── */
@@ -153,7 +172,8 @@ a { color: inherit; }
     color: var(--white);
     box-shadow: var(--shadow-md);
 }
-.btn-primary:hover:not(:disabled) { background: var(--primary-dark); box-shadow: var(--shadow-lg); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.btn-primary:active:not(:disabled) { transform: scale(.98) translateY(0); }
 .btn-outline {
     background: var(--white);
     color: var(--dark);
@@ -275,7 +295,12 @@ a { color: inherit; }
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
 }
-.option-btn.selected { border-color: var(--primary); background: var(--secondary); color: var(--primary-dark); }
+@keyframes selectPulse {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+.option-btn.selected { border-color: var(--primary); background: var(--secondary); color: var(--primary-dark); animation: selectPulse .3s ease; }
 .option-btn.selected .letter { background: var(--primary); color: var(--white); }
 .option-btn:disabled { cursor: default; }
 .option-btn.correct { border-color: var(--success); background: var(--success-bg); }
@@ -294,7 +319,7 @@ a { color: inherit; }
     color: var(--text);
     transition: all var(--transition);
 }
-.rating-scale button.selected { border-color: var(--primary); background: var(--primary); color: var(--white); }
+.rating-scale button.selected { border-color: var(--primary); background: var(--primary); color: var(--white); animation: selectPulse .3s ease; }
 .rating-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; }
 
 .textarea-answer {
@@ -410,6 +435,10 @@ a { color: inherit; }
 .bar-row.correct .bar-fill { background: var(--success); }
 .bar-row .bar-pct { font-variant-numeric: tabular-nums; }
 
+@keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
 .toast {
     position: fixed;
     left: 50%; bottom: 24px;
@@ -423,6 +452,7 @@ a { color: inherit; }
     font-size: 14px;
     z-index: 500;
     max-width: 90vw;
+    animation: toastIn .3s cubic-bezier(.22,1,.36,1) both;
 }
 
 .spinner {
@@ -617,6 +647,7 @@ body.presenter .p-wordcloud span {
     font-weight: 700;
     color: var(--primary-light);
     line-height: 1;
+    animation: popIn .4s cubic-bezier(.22,1,.36,1) both;
 }
 
 body.presenter .p-empty { color: rgba(255,255,255,.5); font-size: clamp(16px, 1.6vw, 22px); }

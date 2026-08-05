@@ -97,6 +97,9 @@ router.get('/:id/results', async (req, res) => {
       .slice(0, 60);
     results = { type: 'open_text', total, responses };
   } else if (question.type === 'word_cloud') {
+    // Counted case-insensitively (so "Mumbai" and "mumbai" from different
+    // participants merge into one bubble instead of splitting the count),
+    // but displayed capitalized rather than forced lowercase.
     const freq = new Map();
     for (const v of votes) {
       const text = String(v.answer?.text || '').toLowerCase();
@@ -106,10 +109,11 @@ router.get('/:id/results', async (req, res) => {
         freq.set(w, (freq.get(w) || 0) + 1);
       }
     }
+    const capitalize = (w) => w.charAt(0).toUpperCase() + w.slice(1);
     const words = [...freq.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 60)
-      .map(([text, count]) => ({ text, count }));
+      .map(([text, count]) => ({ text: capitalize(text), count }));
     results = { type: 'word_cloud', total, words };
   } else if (question.type === 'ranking') {
     const items = Array.isArray(question.options?.items) ? question.options.items : [];

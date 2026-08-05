@@ -10,7 +10,7 @@ const codeBadge = document.getElementById('poll-code-badge');
 const params = new URLSearchParams(location.search);
 const code = normalizeCode(params.get('code'));
 
-if (code.length !== 6) {
+if (code.length < 4) {
   location.href = 'index.html';
 }
 const participant = getParticipant(code);
@@ -71,6 +71,7 @@ function renderChoiceQuestion(question, alreadyVoted) {
   const choices = question.options?.choices || [];
   const saved = alreadyVoted ? savedAnswer(question.id) : null;
   root.innerHTML = `
+    <div class="fade-in">
     <div class="q-eyebrow">${question.type === 'true_false' ? 'True or False' : 'Multiple Choice'}</div>
     <div class="q-prompt">${escapeHtml(question.prompt)}</div>
     <div class="options" role="group" aria-label="Answer options">
@@ -82,6 +83,7 @@ function renderChoiceQuestion(question, alreadyVoted) {
       `).join('')}
     </div>
     ${alreadyVoted ? '<p style="margin-top:16px; color:var(--success); font-weight:700; font-size:14px;">✓ Answer submitted — waiting for results…</p>' : ''}
+    </div>
   `;
   if (!alreadyVoted) {
     root.querySelectorAll('.option-btn').forEach((btn) => {
@@ -104,6 +106,7 @@ function renderRatingQuestion(question, alreadyVoted) {
   for (let v = min; v <= max; v++) values.push(v);
 
   root.innerHTML = `
+    <div class="fade-in">
     <div class="q-eyebrow">Rate it</div>
     <div class="q-prompt">${escapeHtml(question.prompt)}</div>
     <div class="rating-scale" role="group" aria-label="Rating">
@@ -111,6 +114,7 @@ function renderRatingQuestion(question, alreadyVoted) {
     </div>
     <div class="rating-labels"><span>${escapeHtml(lowLabel)}</span><span>${escapeHtml(highLabel)}</span></div>
     ${alreadyVoted ? '<p style="margin-top:16px; color:var(--success); font-weight:700; font-size:14px;">✓ Answer submitted — waiting for results…</p>' : ''}
+    </div>
   `;
   if (!alreadyVoted) {
     root.querySelectorAll('.rating-scale button').forEach((btn) => {
@@ -130,6 +134,7 @@ function renderTextQuestion(question, alreadyVoted) {
   const eyebrow = isWordCloud ? 'Word Cloud' : 'Open Question';
   const saved = alreadyVoted ? savedAnswer(question.id) : null;
   root.innerHTML = `
+    <div class="fade-in">
     <div class="q-eyebrow">${eyebrow}</div>
     <div class="q-prompt">${escapeHtml(question.prompt)}</div>
     <textarea class="textarea-answer" id="text-answer-input" maxlength="${maxLength}" placeholder="${placeholder}" ${alreadyVoted ? 'disabled' : ''} style="${isWordCloud ? 'min-height:60px;' : ''}">${saved ? escapeHtml(saved.text) : ''}</textarea>
@@ -137,6 +142,7 @@ function renderTextQuestion(question, alreadyVoted) {
     ${alreadyVoted
       ? '<p style="margin-top:8px; color:var(--success); font-weight:700; font-size:14px;">✓ Answer submitted — waiting for results…</p>'
       : '<button class="btn btn-primary" id="text-answer-submit" style="margin-top:8px;"><span class="btn-label">Submit</span></button>'}
+    </div>
   `;
   if (!alreadyVoted) {
     const textarea = document.getElementById('text-answer-input');
@@ -160,6 +166,7 @@ function renderPulseQuestion(question, alreadyVoted) {
   };
   const saved = alreadyVoted ? savedAnswer(question.id) : null;
   root.innerHTML = `
+    <div class="fade-in">
     <div class="q-eyebrow">Quick Reaction</div>
     <div class="q-prompt">${escapeHtml(question.prompt)}</div>
     <div class="pulse-row">
@@ -171,6 +178,7 @@ function renderPulseQuestion(question, alreadyVoted) {
       `).join('')}
     </div>
     ${alreadyVoted ? '<p style="margin-top:16px; color:var(--success); font-weight:700; font-size:14px; text-align:center;">✓ Thanks for sharing!</p>' : ''}
+    </div>
   `;
   if (!alreadyVoted) {
     root.querySelectorAll('.pulse-btn').forEach((btn) => {
@@ -189,11 +197,13 @@ function renderRankingQuestion(question, alreadyVoted) {
   let order = saved?.order || [...items];
 
   root.innerHTML = `
+    <div class="fade-in">
     <div class="q-eyebrow">Rank These</div>
     <div class="q-prompt">${escapeHtml(question.prompt)}</div>
     <p class="hint" style="margin-bottom:12px;">${alreadyVoted ? 'Your final order:' : 'Drag to reorder, best first.'}</p>
     <div class="ranking-list" id="ranking-list"></div>
     ${alreadyVoted ? '<p style="margin-top:16px; color:var(--success); font-weight:700; font-size:14px;">✓ Answer submitted — waiting for results…</p>' : '<button class="btn btn-primary" id="ranking-submit" style="margin-top:16px;"><span class="btn-label">Submit ranking</span></button>'}
+    </div>
   `;
 
   const list = document.getElementById('ranking-list');

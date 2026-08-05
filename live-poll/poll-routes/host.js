@@ -166,6 +166,36 @@ router.post('/sessions/:id/questions', async (req, res) => {
   res.status(201).json(questionRowToJson(result.rows[0]));
 });
 
+// PATCH /api/host/sessions/:id/questions/:qid — edit a question's prompt/
+// options/correct answer. Only while still pending (not yet shown live),
+// same rule as delete below — editing a question after votes have been
+// collected against it would silently corrupt those results.
+router.patch('/sessions/:id/questions/:qid', async (req, res) => {
+  const question = await db.get('SELECT * FROM poll_questions WHERE id = $1 AND session_id = $2', [
+    req.params.qid,
+    req.params.id,
+  ]);
+  if (!question) return res.status(404).json({ error: 'Question not found.' });
+  if (question.status !== 'pending') {
+    return res.status(409).json({ error: 'Only a question that has not gone live yet can be edited.' });
+  }
+
+  const { type, prompt, options, correctOption } = req.body || {};
+  if (type && !VALID_TYPES.includes(type)) {
+    return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
+  }
+  if (!String(prompt || '').trim()) {
+    return res.status(400).json({ error: 'prompt is required.' });
+  }
+
+  const result = await db.run(
+    `UPDATE poll_questions SET type = $1, prompt = $2, options = $3, correct_option = $4
+     WHERE id = $5 RETURNING *`,
+    [type || question.type, String(prompt).trim(), JSON.stringify(options || {}), correctOption || null, question.id]
+  );
+  res.json(questionRowToJson(result.rows[0]));
+});
+
 // DELETE /api/host/sessions/:id/questions/:qid — only while still pending
 // (not yet shown live), so a mid-session cleanup can't corrupt collected votes.
 router.delete('/sessions/:id/questions/:qid', async (req, res) => {

@@ -36,6 +36,7 @@ function renderJoinPanel(title, participantCount) {
   // "NFPCIRCLE2026") — scale the big display down so long codes still fit.
   const codeSizeClass = code.length > 10 ? 'len-long' : code.length > 6 ? 'len-med' : '';
   main.innerHTML = `
+    <div class="fade-in">
     <div class="p-title">${escapeHtml(title)}</div>
     <div class="p-join-panel">
       <div class="p-qr" id="p-qr"><img src="${API_BASE}/api/qr/${code}" alt="QR code to join"></div>
@@ -46,19 +47,22 @@ function renderJoinPanel(title, participantCount) {
       </div>
     </div>
     <div class="p-count"><strong>${participantCount}</strong> joined so far</div>
+    </div>
   `;
 }
 
 function renderIntermission(participantCount) {
   main.innerHTML = `
+    <div class="fade-in">
     <div class="p-title">Get ready…</div>
     <p class="p-empty">The next question is coming up.</p>
     <div class="p-count"><strong>${participantCount}</strong> in the room</div>
+    </div>
   `;
 }
 
 function renderEnded() {
-  main.innerHTML = `<div class="p-title">Thanks for participating!</div><p class="p-empty">This poll has ended.</p>`;
+  main.innerHTML = `<div class="fade-in"><div class="p-title">Thanks for participating!</div><p class="p-empty">This poll has ended.</p></div>`;
 }
 
 function barsMarkup(counts, total, correctOption) {

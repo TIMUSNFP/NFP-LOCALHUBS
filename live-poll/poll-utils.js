@@ -63,6 +63,7 @@ function questionRowToJson(row) {
     type: row.type,
     prompt: row.prompt,
     options: row.options,
+    correctOption: row.correct_option,
     status: row.status,
     revealed: row.revealed,
   };
@@ -73,6 +74,7 @@ function questionRowToJson(row) {
 // can't read the answer out of the network tab before a quiz question closes.
 function questionRowToPublicJson(row) {
   const json = questionRowToJson(row);
+  delete json.correctOption;
   return json;
 }
 
