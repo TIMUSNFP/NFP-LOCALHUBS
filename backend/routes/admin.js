@@ -635,24 +635,44 @@ router.post('/sync-sheets', async (req, res) => {
       rows = dbRows.map(r => {
         const hub = hubRowToJson(r);
         return [
-          hub.id, hub.fullName, hub.email, hub.mobile, hub.membership,
-          hub.city, hub.area, hub.address || '', hub.pincode || '',
-          hub.venueType, hub.capacity, r.participant_count ?? 0, hub.hostedBefore, hub.hostingFrequency || '',
+          hub.id           || '',
+          hub.fullName     || '',
+          hub.email        || '',
+          hub.mobile       || '',
+          hub.membership   || '',
+          hub.city         || '',
+          hub.area         || '',
+          hub.address      || '',
+          hub.pincode      || '',
+          hub.venueType    || '',
+          hub.capacity     || '',
+          Number(r.participant_count) || 0,
+          hub.hostedBefore || '',
+          hub.hostingFrequency || '',
           hub.pocRole === 'assign' ? 'Will assign someone else' : 'Self',
-          fmt(hub.submittedAt), hub.status,
+          fmt(hub.submittedAt),
+          hub.status       || '',
         ];
       });
     } else {
       const dbRows = await db.all(
         `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
-         FROM participants p JOIN hubs h ON h.id = p.hub_id ORDER BY p.registered_at ASC`
+         FROM participants p LEFT JOIN hubs h ON h.id = p.hub_id ORDER BY p.registered_at ASC`
       );
       rows = dbRows.map(row => {
-        const p = { ...participantRowToJson(row), hubLeader: row.hub_leader, hubCity: row.hub_city, hubArea: row.hub_area };
+        const p = participantRowToJson(row);
         return [
-          p.id, p.fullName, p.email, p.mobile, p.membership,
-          p.hubLeader, p.hubCity, p.hubArea, p.note || '',
-          fmt(p.registeredAt), p.status,
+          p.id        || '',
+          p.fullName  || '',
+          p.email     || '',
+          p.mobile    || '',
+          p.membership || '',
+          row.hub_leader || '',
+          row.hub_city   || '',
+          row.hub_area   || '',
+          p.note         || '',
+          fmt(p.registeredAt),
+          p.status    || '',
         ];
       });
     }
