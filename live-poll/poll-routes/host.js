@@ -123,14 +123,15 @@ router.get('/sessions/:id', async (req, res) => {
   const session = await db.get('SELECT * FROM poll_sessions WHERE id = $1', [req.params.id]);
   if (!session) return res.status(404).json({ error: 'Session not found.' });
 
-  const questions = await db.all(
-    'SELECT * FROM poll_questions WHERE session_id = $1 ORDER BY order_index ASC',
-    [session.id]
-  );
-  const { count } = await db.get(
-    'SELECT COUNT(*)::int AS count FROM poll_participants WHERE session_id = $1',
-    [session.id]
-  );
+  // Independent of each other — run together instead of one-after-another.
+  // This endpoint is re-fetched after every single host action (open, close,
+  // edit, move, ...), so its latency directly sets how snappy the console
+  // feels; halving the round-trips here was the single biggest win available.
+  const [questions, countRow] = await Promise.all([
+    db.all('SELECT * FROM poll_questions WHERE session_id = $1 ORDER BY order_index ASC', [session.id]),
+    db.get('SELECT COUNT(*)::int AS count FROM poll_participants WHERE session_id = $1', [session.id]),
+  ]);
+  const count = countRow.count;
 
   res.json({
     ...sessionRowToJson(session),
@@ -208,6 +209,35 @@ router.delete('/sessions/:id/questions/:qid', async (req, res) => {
     return res.status(409).json({ error: 'Only a question that has not gone live yet can be deleted.' });
   }
   await db.run('DELETE FROM poll_questions WHERE id = $1', [question.id]);
+  res.json({ ok: true });
+});
+
+// POST /api/host/sessions/:id/questions/:qid/move — body: { direction: 'up'|'down' }.
+// Swaps order_index with the adjacent question. Reordering is purely
+// presentational (which question the host opens next) so it's allowed
+// regardless of a question's status — unlike edit/delete, it can't corrupt
+// any vote already collected.
+router.post('/sessions/:id/questions/:qid/move', async (req, res) => {
+  const question = await db.get('SELECT * FROM poll_questions WHERE id = $1 AND session_id = $2', [
+    req.params.qid,
+    req.params.id,
+  ]);
+  if (!question) return res.status(404).json({ error: 'Question not found.' });
+
+  const direction = (req.body || {}).direction;
+  if (direction !== 'up' && direction !== 'down') {
+    return res.status(400).json({ error: "direction must be 'up' or 'down'." });
+  }
+
+  const neighbor = await db.get(
+    `SELECT * FROM poll_questions WHERE session_id = $1 AND order_index ${direction === 'up' ? '<' : '>'} $2
+     ORDER BY order_index ${direction === 'up' ? 'DESC' : 'ASC'} LIMIT 1`,
+    [question.session_id, question.order_index]
+  );
+  if (!neighbor) return res.status(409).json({ error: 'Already at the edge of the list.' });
+
+  await db.run('UPDATE poll_questions SET order_index = $1 WHERE id = $2', [neighbor.order_index, question.id]);
+  await db.run('UPDATE poll_questions SET order_index = $1 WHERE id = $2', [question.order_index, neighbor.id]);
   res.json({ ok: true });
 });
 

@@ -159,6 +159,12 @@ document.getElementById('change-code-btn').addEventListener('click', async () =>
 /* ── Session detail ───────────────────────────────────────────────── */
 let currentSessionId = null;
 let liveResultsTimer = null;
+// Cached copy of the last-fetched session. Add/edit/delete/move all return
+// enough from their own response to patch this locally and re-render
+// instantly — refreshDetail() (a real network round-trip) is reserved for
+// actions where the server can change more than what we already know
+// locally (open/close/next/end/start/restart close other questions, etc).
+let currentSessionDetail = null;
 
 function stopLiveResultsPolling() {
   clearInterval(liveResultsTimer);
@@ -173,7 +179,14 @@ async function openSession(id) {
 
 async function refreshDetail() {
   const { body: session } = await hostFetch(`/api/host/sessions/${currentSessionId}`);
+  currentSessionDetail = session;
   renderDetail(session);
+}
+
+// Re-renders from the cached session object — no network call. Used after
+// add/edit/delete/move, whose own response already tells us the new state.
+function renderLocal() {
+  if (currentSessionDetail) renderDetail(currentSessionDetail);
 }
 
 function renderDetail(session) {
@@ -256,21 +269,49 @@ const TYPE_LABELS = {
   word_cloud: 'Word Cloud', open_text: 'Open Question', quiz: 'Quiz', ranking: 'Ranking', pulse: 'Pulse Check',
 };
 
+// Short human-readable preview of a question's options, shown under the
+// prompt in the list so the host doesn't have to open each one to see them.
+function optionsPreview(q) {
+  if (q.type === 'multiple_choice' || q.type === 'true_false' || q.type === 'quiz' || q.type === 'pulse') {
+    const choices = q.options?.choices || [];
+    if (!choices.length) return '';
+    let text = choices.join(' · ');
+    if (q.type === 'quiz' && q.correctOption) text += ` (correct: ${q.correctOption})`;
+    return text;
+  }
+  if (q.type === 'ranking') {
+    return (q.options?.items || []).join(' · ');
+  }
+  if (q.type === 'rating') {
+    const min = q.options?.min ?? 1;
+    const max = q.options?.max ?? 5;
+    return `Scale ${min}–${max}${q.options?.lowLabel ? ` (${q.options.lowLabel} → ${q.options.highLabel || ''})` : ''}`;
+  }
+  return '';
+}
+
 function renderQuestionList(session) {
   const listEl = document.getElementById('question-list');
   if (!session.questions.length) {
     listEl.innerHTML = '<p class="hint">No questions yet — add one below.</p>';
     return;
   }
-  listEl.innerHTML = session.questions.map((q) => {
+  const sorted = [...session.questions].sort((a, b) => a.orderIndex - b.orderIndex);
+  listEl.innerHTML = sorted.map((q, i) => {
     const isLive = q.id === session.currentQuestionId;
     const canOpen = session.status === 'live' && !isLive;
+    const preview = optionsPreview(q);
     return `
-      <div class="q-row">
+      <div class="q-row" style="align-items:flex-start;">
+        <div class="q-reorder">
+          <button type="button" class="q-reorder-btn" data-move-up="${q.id}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">▲</button>
+          <button type="button" class="q-reorder-btn" data-move-down="${q.id}" ${i === sorted.length - 1 ? 'disabled' : ''} aria-label="Move down">▼</button>
+        </div>
         <span class="q-order">${q.orderIndex}</span>
         <div class="q-info">
           <div class="q-type-label">${TYPE_LABELS[q.type] || q.type}</div>
-          <div class="q-prompt-text">${escapeHtml(q.prompt)}</div>
+          <div class="q-prompt-text" style="white-space:normal;">${escapeHtml(q.prompt)}</div>
+          ${preview ? `<div class="q-options-preview">${escapeHtml(preview)}</div>` : ''}
         </div>
         <span class="q-badge ${isLive ? 'live' : q.status}">${isLive ? 'live now' : q.status}</span>
         ${canOpen ? `<button class="btn btn-outline btn-sm" data-open="${q.id}">${q.status === 'closed' ? 'Reopen' : 'Open'}</button>` : ''}
@@ -294,12 +335,49 @@ function renderQuestionList(session) {
       if (!confirm('Delete this question?')) return;
       try {
         await hostFetch(`/api/host/sessions/${session.id}/questions/${btn.dataset.delete}`, { method: 'DELETE' });
-        await refreshDetail();
+        currentSessionDetail.questions = currentSessionDetail.questions.filter((q) => q.id !== btn.dataset.delete);
+        renderLocal();
       } catch (err) {
         showToast(err.message);
       }
     });
   });
+  listEl.querySelectorAll('[data-move-up]').forEach((btn) => {
+    btn.addEventListener('click', () => moveQuestion(session.id, btn.dataset.moveUp, 'up'));
+  });
+  listEl.querySelectorAll('[data-move-down]').forEach((btn) => {
+    btn.addEventListener('click', () => moveQuestion(session.id, btn.dataset.moveDown, 'down'));
+  });
+}
+
+// Optimistic: swaps the two orderIndex values locally and re-renders
+// instantly, then persists in the background. Reorder is the action most
+// likely to get clicked rapidly (walking a long list into place), so this
+// is the one place where waiting for a round-trip per click matters most.
+async function moveQuestion(sessionId, questionId, direction) {
+  const sorted = [...currentSessionDetail.questions].sort((a, b) => a.orderIndex - b.orderIndex);
+  const i = sorted.findIndex((q) => q.id === questionId);
+  const j = direction === 'up' ? i - 1 : i + 1;
+  if (i === -1 || j < 0 || j >= sorted.length) return;
+
+  const a = sorted[i];
+  const b = sorted[j];
+  const originalA = a.orderIndex;
+  const originalB = b.orderIndex;
+  [a.orderIndex, b.orderIndex] = [b.orderIndex, a.orderIndex];
+  renderLocal();
+
+  try {
+    await hostFetch(`/api/host/sessions/${sessionId}/questions/${questionId}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ direction }),
+    });
+  } catch (err) {
+    a.orderIndex = originalA;
+    b.orderIndex = originalB;
+    renderLocal();
+    showToast(err.message);
+  }
 }
 
 /* ── Add question form ────────────────────────────────────────────── */
@@ -314,30 +392,41 @@ function choiceRowsMarkup(values) {
     </div>`).join('');
 }
 
-function renderTypeFields(type) {
+// prefill (optional) carries existing values in when editing a question, so
+// the fields build already-populated in a single pass — building them empty
+// first and overwriting afterward would attach the choice-row listeners
+// twice (each "+ Add option" click would then add two rows instead of one).
+function renderTypeFields(type, prefill) {
   if (type === 'multiple_choice' || type === 'quiz') {
+    const choices = prefill?.choices?.length ? prefill.choices : ['', ''];
     qTypeFields.innerHTML = `
-      <div class="field"><label>Answer options</label><div id="choice-rows">${choiceRowsMarkup(['', ''])}</div>
+      <div class="field"><label>Answer options</label><div id="choice-rows">${choiceRowsMarkup(choices)}</div>
       <button type="button" class="dyn-add-choice" id="add-choice">+ Add option</button></div>
       ${type === 'quiz' ? `<div class="field"><label for="correct-select">Correct answer</label><select id="correct-select"></select></div>` : ''}
     `;
     wireChoiceRows(type);
+    if (type === 'quiz' && prefill?.correctOption) {
+      const sel = document.getElementById('correct-select');
+      if (sel) sel.value = prefill.correctOption;
+    }
   } else if (type === 'true_false') {
     qTypeFields.innerHTML = `<div class="field"><label for="tf-correct">Correct answer (optional — leave blank if not a quiz)</label>
       <select id="tf-correct"><option value="">— none —</option><option value="True">True</option><option value="False">False</option></select></div>`;
+    if (prefill?.correctOption) document.getElementById('tf-correct').value = prefill.correctOption;
   } else if (type === 'rating') {
     qTypeFields.innerHTML = `
       <div style="display:flex; gap:10px;">
-        <div class="field"><label for="rate-min">Min</label><input id="rate-min" type="number" value="1"></div>
-        <div class="field"><label for="rate-max">Max</label><input id="rate-max" type="number" value="5"></div>
+        <div class="field"><label for="rate-min">Min</label><input id="rate-min" type="number" value="${prefill?.min ?? 1}"></div>
+        <div class="field"><label for="rate-max">Max</label><input id="rate-max" type="number" value="${prefill?.max ?? 5}"></div>
       </div>
       <div style="display:flex; gap:10px;">
-        <div class="field"><label for="rate-low">Low label</label><input id="rate-low" placeholder="e.g. Poor"></div>
-        <div class="field"><label for="rate-high">High label</label><input id="rate-high" placeholder="e.g. Excellent"></div>
+        <div class="field"><label for="rate-low">Low label</label><input id="rate-low" placeholder="e.g. Poor" value="${escapeHtml(prefill?.lowLabel || '')}"></div>
+        <div class="field"><label for="rate-high">High label</label><input id="rate-high" placeholder="e.g. Excellent" value="${escapeHtml(prefill?.highLabel || '')}"></div>
       </div>`;
   } else if (type === 'ranking') {
+    const items = prefill?.items?.length ? prefill.items : ['', ''];
     qTypeFields.innerHTML = `
-      <div class="field"><label>Items to rank</label><div id="choice-rows">${choiceRowsMarkup(['', ''])}</div>
+      <div class="field"><label>Items to rank</label><div id="choice-rows">${choiceRowsMarkup(items)}</div>
       <button type="button" class="dyn-add-choice" id="add-choice">+ Add item</button></div>`;
     wireChoiceRows(type);
   } else {
@@ -394,24 +483,15 @@ function enterEditMode(question) {
   qTypeSelect.value = question.type;
   qTypeSelect.disabled = true; // changing type mid-edit would orphan the options shape
   document.getElementById('q-prompt').value = question.prompt;
-  renderTypeFields(question.type);
-
-  if (question.type === 'multiple_choice' || question.type === 'quiz' || question.type === 'ranking') {
-    const values = question.options?.choices || question.options?.items || [];
-    document.getElementById('choice-rows').innerHTML = choiceRowsMarkup(values.length ? values : ['', '']);
-    wireChoiceRows(question.type);
-    if (question.type === 'quiz') {
-      const sel = document.getElementById('correct-select');
-      if (sel) sel.value = question.correctOption || '';
-    }
-  } else if (question.type === 'true_false') {
-    document.getElementById('tf-correct').value = question.correctOption || '';
-  } else if (question.type === 'rating') {
-    document.getElementById('rate-min').value = question.options?.min ?? 1;
-    document.getElementById('rate-max').value = question.options?.max ?? 5;
-    document.getElementById('rate-low').value = question.options?.lowLabel || '';
-    document.getElementById('rate-high').value = question.options?.highLabel || '';
-  }
+  renderTypeFields(question.type, {
+    choices: question.options?.choices,
+    items: question.options?.items,
+    correctOption: question.correctOption,
+    min: question.options?.min,
+    max: question.options?.max,
+    lowLabel: question.options?.lowLabel,
+    highLabel: question.options?.highLabel,
+  });
 
   addQuestionBtn.querySelector('.btn-label').textContent = 'Save changes';
   if (!document.getElementById('cancel-edit-btn')) {
@@ -470,21 +550,25 @@ document.getElementById('add-question-btn').addEventListener('click', async (e) 
   setBusy(e.currentTarget, true, busyLabel);
   try {
     if (isEditing) {
-      await hostFetch(`/api/host/sessions/${currentSessionId}/questions/${editingQuestionId}`, {
+      const { body: updated } = await hostFetch(`/api/host/sessions/${currentSessionId}/questions/${editingQuestionId}`, {
         method: 'PATCH',
         body: JSON.stringify({ type, prompt, options, correctOption }),
       });
+      const idx = currentSessionDetail.questions.findIndex((q) => q.id === updated.id);
+      if (idx !== -1) currentSessionDetail.questions[idx] = updated;
       exitEditMode();
+      renderLocal();
       showToast('Question updated.');
     } else {
-      await hostFetch(`/api/host/sessions/${currentSessionId}/questions`, {
+      const { body: created } = await hostFetch(`/api/host/sessions/${currentSessionId}/questions`, {
         method: 'POST',
         body: JSON.stringify({ type, prompt, options, correctOption }),
       });
+      currentSessionDetail.questions.push(created);
       document.getElementById('q-prompt').value = '';
       renderTypeFields(type);
+      renderLocal();
     }
-    await refreshDetail();
   } catch (err) {
     setBanner(banner, err.message);
   } finally {
@@ -511,7 +595,7 @@ function hostResultsMarkup(question, results) {
   if (question.type === 'open_text') {
     const responses = results.responses || [];
     return responses.length
-      ? `<div style="max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">${responses.map((r) => `<div style="padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px;">${escapeHtml(r)}</div>`).join('')}</div>`
+      ? `<div style="max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">${responses.map((r) => `<div style="padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px;">${escapeHtml(r.text)}<div style="margin-top:4px; font-size:11px; font-weight:700; color:var(--primary);">${escapeHtml(r.name)}</div></div>`).join('')}</div>`
       : '<p class="hint">No answers yet.</p>';
   }
   if (question.type === 'word_cloud') {

@@ -668,4 +668,12 @@ body.presenter .p-open-text-card {
     font-size: clamp(14px, 1.1vw, 18px);
     line-height: 1.4;
 }
+body.presenter .p-open-text-name {
+    margin-top: 8px;
+    font-size: clamp(11px, .9vw, 14px);
+    font-weight: 700;
+    color: var(--primary-light);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
 

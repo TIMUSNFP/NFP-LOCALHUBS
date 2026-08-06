@@ -102,7 +102,7 @@ function renderQuestionResults(question, results) {
   } else if (question.type === 'open_text') {
     const responses = results.responses || [];
     body = responses.length
-      ? `<div class="p-open-text">${responses.map((r) => `<div class="p-open-text-card">${escapeHtml(r)}</div>`).join('')}</div>`
+      ? `<div class="p-open-text">${responses.map((r) => `<div class="p-open-text-card">${escapeHtml(r.text)}<div class="p-open-text-name">${escapeHtml(r.name)}</div></div>`).join('')}</div>`
       : `<p class="p-empty">Waiting for answers…</p>`;
   } else if (question.type === 'word_cloud') {
     const words = results.words || [];

@@ -90,9 +90,20 @@ router.get('/:id/results', async (req, res) => {
     // than reduced to word frequency (that's what word_cloud is for).
     // Capped so a 700-person burst doesn't blow up the payload; the host CSV
     // export still has every single response regardless of this cap.
-    const responses = votes
-      .map((v) => String(v.answer?.text || '').trim())
-      .filter(Boolean)
+    // Deliberately its own query (separate from the shared `votes` used by
+    // every other type above/below) so joining in participant name here
+    // can't affect any other question type's results shape.
+    const namedVotes = await db.all(
+      `SELECT v.answer, p.full_name
+       FROM poll_votes v
+       JOIN poll_participants p ON p.id = v.participant_id
+       WHERE v.question_id = $1
+       ORDER BY v.submitted_at ASC`,
+      [id]
+    );
+    const responses = namedVotes
+      .map((v) => ({ text: String(v.answer?.text || '').trim(), name: v.full_name || 'Anonymous' }))
+      .filter((r) => r.text)
       .reverse()
       .slice(0, 60);
     results = { type: 'open_text', total, responses };
