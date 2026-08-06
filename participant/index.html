@@ -374,19 +374,14 @@
     </div>
     <!-- Shown instead of the map/form whenever an admin closes Circle registrations -->
     <div class="reg-closed-screen" id="participantClosedScreen" style="display:none;">
-        <div class="rcs-card">
-            <div class="rcs-badge"><span class="rcs-badge-icon">&#10003;</span></div>
-            <span class="rcs-eyebrow">NFP Circles &mdash; 5th August Edition</span>
-            <h1 class="rcs-title">Thank You for Being Part of It!</h1>
-            <p class="rcs-sub">Circle registrations for this edition are now closed. It was incredible seeing our community come together in the spirit of &ldquo;Independent, Not Alone.&rdquo; If you registered, your Circle Host will reach out on WhatsApp soon.</p>
-            <div class="rcs-savedate">
-                <span class="rcs-savedate-icon">&#128197;</span>
-                <div>
-                    <span class="rcs-savedate-label">Save the Date &mdash; Next NFP Circle</span>
-                    <span class="rcs-savedate-date">28th October 2026</span>
-                </div>
-            </div>
-            <button class="btn-primary btn-lg" onclick="showSection('landing')">Back to Home</button>
+        <header class="rcs-header">
+            <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="rcs-logo" onclick="showSection('landing')">
+            <span class="rcs-pill">28 OCT 2026</span>
+        </header>
+        <div class="rcs-main">
+            <h1 class="rcs-title fade-in">Thanks for participating!</h1>
+            <p class="rcs-sub fade-in">Circle registrations for this edition have closed. See you at the next NFP Circle &mdash; 28th October 2026.</p>
+            <button class="rcs-back fade-in" onclick="showSection('landing')">&larr; Back to Home</button>
         </div>
     </div>
 

@@ -615,19 +615,14 @@
     </div>
     <!-- Shown instead of the application form whenever an admin closes Hub Leader applications -->
     <div class="reg-closed-screen" id="hubClosedScreen" style="display:none;">
-        <div class="rcs-card">
-            <div class="rcs-badge"><span class="rcs-badge-icon">&#127942;</span></div>
-            <span class="rcs-eyebrow">NFP Circles &mdash; 5th August Edition</span>
-            <h1 class="rcs-title">Thank You for Stepping Up to Lead!</h1>
-            <p class="rcs-sub">Circle Host applications for this edition are now closed. Because leaders like you opened your doors, Circles came alive in cities across India. If you applied or hosted, our team will be in touch with next steps &mdash; and we'd love to have you host again.</p>
-            <div class="rcs-savedate">
-                <span class="rcs-savedate-icon">&#128197;</span>
-                <div>
-                    <span class="rcs-savedate-label">Save the Date &mdash; Next NFP Circle</span>
-                    <span class="rcs-savedate-date">28th October 2026</span>
-                </div>
-            </div>
-            <button class="btn-primary btn-lg" onclick="showSection('landing')">Back to Home</button>
+        <header class="rcs-header">
+            <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="rcs-logo" onclick="showSection('landing')">
+            <span class="rcs-pill">28 OCT 2026</span>
+        </header>
+        <div class="rcs-main">
+            <h1 class="rcs-title fade-in">Thanks for leading the way!</h1>
+            <p class="rcs-sub fade-in">Circle Host applications for this edition have closed. We'll be in touch with next steps &mdash; see you at the next NFP Circle on 28th October 2026.</p>
+            <button class="rcs-back fade-in" onclick="showSection('landing')">&larr; Back to Home</button>
         </div>
     </div>
     <div class="reg-wrapper" id="hubOpenUI">
