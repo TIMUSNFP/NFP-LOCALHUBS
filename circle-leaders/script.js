@@ -323,8 +323,10 @@ async function loadHubFormState() {
         const res = await fetch(`${API_BASE}/api/settings`);
         if (res.ok) { const s = await res.json(); hubFormOpen = s.hubFormOpen !== false; }
     } catch (e) { /* assume open if settings can't be read */ }
-    const banner = document.getElementById('hubClosedBanner');
-    if (banner) banner.style.display = hubFormOpen ? 'none' : 'block';
+    const closedScreen = document.getElementById('hubClosedScreen');
+    const openUI = document.getElementById('hubOpenUI');
+    if (closedScreen) closedScreen.style.display = hubFormOpen ? 'none' : 'flex';
+    if (openUI) openUI.style.display = hubFormOpen ? '' : 'none';
     updateHubSubmitGate();
 }
 

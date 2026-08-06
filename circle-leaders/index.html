@@ -613,10 +613,24 @@
     <div class="page-topbar">
         <button class="btn-back" onclick="showSection('landing')">&larr; Back to Home</button>
     </div>
-    <div id="hubClosedBanner" style="display:none;max-width:760px;margin:16px auto 0;padding:14px 18px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:10px;text-align:center;font-weight:600;line-height:1.5;">
-        🚫 Hub Leader applications are currently closed. Please check back later.
+    <!-- Shown instead of the application form whenever an admin closes Hub Leader applications -->
+    <div class="reg-closed-screen" id="hubClosedScreen" style="display:none;">
+        <div class="rcs-card">
+            <div class="rcs-badge"><span class="rcs-badge-icon">&#127942;</span></div>
+            <span class="rcs-eyebrow">NFP Circles &mdash; 5th August Edition</span>
+            <h1 class="rcs-title">Thank You for Stepping Up to Lead!</h1>
+            <p class="rcs-sub">Circle Host applications for this edition are now closed. Because leaders like you opened your doors, Circles came alive in cities across India. If you applied or hosted, our team will be in touch with next steps &mdash; and we'd love to have you host again.</p>
+            <div class="rcs-savedate">
+                <span class="rcs-savedate-icon">&#128197;</span>
+                <div>
+                    <span class="rcs-savedate-label">Save the Date &mdash; Next NFP Circle</span>
+                    <span class="rcs-savedate-date">28th October 2026</span>
+                </div>
+            </div>
+            <button class="btn-primary btn-lg" onclick="showSection('landing')">Back to Home</button>
+        </div>
     </div>
-    <div class="reg-wrapper">
+    <div class="reg-wrapper" id="hubOpenUI">
         <div class="reg-sidebar">
             <div class="rs-logo">
                 <img src="Images/NetworkFP Logo.png" alt="NetworkFP" class="logo-img logo-img-sidebar">

@@ -1033,8 +1033,10 @@ async function loadParticipantFormState() {
         const res = await fetch(`${API_BASE}/api/settings`);
         if (res.ok) { const s = await res.json(); participantFormOpen = s.participantFormOpen !== false; }
     } catch (e) { /* assume open if settings can't be read */ }
-    const banner = document.getElementById('participantClosedBanner');
-    if (banner) banner.style.display = participantFormOpen ? 'none' : 'block';
+    const closedScreen = document.getElementById('participantClosedScreen');
+    const openUI = document.getElementById('participantOpenUI');
+    if (closedScreen) closedScreen.style.display = participantFormOpen ? 'none' : 'flex';
+    if (openUI) openUI.style.display = participantFormOpen ? '' : 'none';
     updateParticipantSubmitGate();
 }
 

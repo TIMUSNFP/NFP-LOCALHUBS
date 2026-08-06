@@ -372,10 +372,25 @@
         <button class="btn-back" onclick="showSection('landing')">&larr; Back to Home</button>
         <span class="mode-chip participant-chip">Find a Circle</span>
     </div>
-    <div id="participantClosedBanner" style="display:none;max-width:760px;margin:16px auto 0;padding:14px 18px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:10px;text-align:center;font-weight:600;line-height:1.5;">
-        Circle registrations are currently closed. You can still browse Circles, but joining is temporarily disabled.
+    <!-- Shown instead of the map/form whenever an admin closes Circle registrations -->
+    <div class="reg-closed-screen" id="participantClosedScreen" style="display:none;">
+        <div class="rcs-card">
+            <div class="rcs-badge"><span class="rcs-badge-icon">&#10003;</span></div>
+            <span class="rcs-eyebrow">NFP Circles &mdash; 5th August Edition</span>
+            <h1 class="rcs-title">Thank You for Being Part of It!</h1>
+            <p class="rcs-sub">Circle registrations for this edition are now closed. It was incredible seeing our community come together in the spirit of &ldquo;Independent, Not Alone.&rdquo; If you registered, your Circle Host will reach out on WhatsApp soon.</p>
+            <div class="rcs-savedate">
+                <span class="rcs-savedate-icon">&#128197;</span>
+                <div>
+                    <span class="rcs-savedate-label">Save the Date &mdash; Next NFP Circle</span>
+                    <span class="rcs-savedate-date">28th October 2026</span>
+                </div>
+            </div>
+            <button class="btn-primary btn-lg" onclick="showSection('landing')">Back to Home</button>
+        </div>
     </div>
 
+    <div id="participantOpenUI">
     <div class="ppage-header">
         <div class="container">
             <div class="ppage-title-row">
@@ -493,6 +508,7 @@
             </div>
         </div>
     </div>
+    </div><!-- /#participantOpenUI -->
 </section>
 
 <!-- ══════════════════ MEET OUR PARTICIPANTS ══════════════════ -->
