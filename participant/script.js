@@ -59,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bindMobileInputs();
     renderHeroMapPins();
     loadParticipantFormState();
-    initLeadersMarquee();
 });
 
 function handleNavbarScroll() {
@@ -462,47 +461,6 @@ async function fetchHubs() {
         showToast('Could not load Circles. Please check your connection and try again.', 'error');
         return [];
     }
-}
-
-// ═══════════════════ CIRCLE LEADERS MARQUEE ═══════════════════
-// No photos — just real approved Circle Leader names (from the same
-// fetchHubs() the map uses) rendered as initials avatars. That sidesteps
-// the "images blank for a second" problem entirely: there's nothing to
-// download and decode, so nothing can render blank while it loads.
-const LEADER_AVATAR_COLORS = ['#FF5000', '#1C1C1C', '#0F766E', '#7C3AED', '#B45309', '#0369A1'];
-
-function initialsFor(name) {
-    const clean = name.replace(/\(.*?\)/g, '').trim();
-    const parts = clean.split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return '?';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-async function initLeadersMarquee() {
-    const section = document.getElementById('circleLeadersShowcase');
-    const track = document.getElementById('leadersMarqueeTrack');
-    if (!section || !track) return;
-
-    const hubs = await fetchHubs();
-    const names = hubs
-        .filter(h => h.status === 'Approved' && h.fullName)
-        .map(h => h.fullName.replace(/\(.*?\)/g, '').trim())
-        .filter(Boolean)
-        .slice(0, 24);
-
-    if (names.length === 0) return; // section stays hidden — nothing real to show yet
-
-    const chips = names.map((name, i) => `
-        <div class="lh-leader-chip">
-            <div class="lh-leader-avatar" style="background:${LEADER_AVATAR_COLORS[i % LEADER_AVATAR_COLORS.length]}">${initialsFor(name)}</div>
-            <span class="lh-leader-name">${name}</span>
-        </div>
-    `).join('');
-
-    // Duplicated back-to-back so the translateX(-50%) loop in CSS is seamless.
-    track.innerHTML = chips + chips;
-    section.style.display = '';
 }
 
 async function refreshMapMarkers() {
