@@ -153,7 +153,7 @@ async function sendHubApproved(hub) {
       <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
       <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
       <p><strong>Capacity:</strong> ${hub.capacity || '—'}</p>
-      <p><strong>Event Date:</strong> 5 Aug 2026, 4:00 PM – 7:30 PM</p>
+      <p><strong>Event Date:</strong> 28 Sept 2026, 4:00 PM – 7:30 PM</p>
     </div>
     <p>Your circle is now live and visible to participants who can register with you.</p>
     <p class="section-heading">What to Expect Next?</p>
@@ -162,7 +162,7 @@ async function sendHubApproved(hub) {
       <li>Get added to the official Circle Leaders Group for all communications.</li>
       <li>Get notified when your circle is full, and know your participants.</li>
       <li>Join the all Circle Leads briefing call — 10 days prior to the event.</li>
-      <li>Get ready to host your circle in your city on 5 Aug 2026, 4:00 PM – 7:30 PM.</li>
+      <li>Get ready to host your circle in your city on 28 Sept 2026, 4:00 PM – 7:30 PM.</li>
     </ol>
     <div class="btn-wrap">
       <a class="btn" href="${HUB_LEADERS_WHATSAPP_URL}">Join the Hub Leaders WhatsApp Group</a>
@@ -225,10 +225,10 @@ async function sendParticipantConfirmed(participant, hub) {
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${hub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(hub)}</p>
-      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
     </div>
     <p>Your Circle Lead &amp; the NFP Team will be in touch with further steps.</p>
-    <p>You'll soon receive the complete agenda for what's happening on 5th Aug. Till then, stay tuned!</p>
+    <p>You'll soon receive the complete agenda for what's happening on 28th Sept. Till then, stay tuned!</p>
     <p class="section-heading">Your NFP Circle Experience:</p>
     <ul class="next-steps" style="list-style:none;padding-left:0">
       <li>1️⃣ Build Your Team</li>
@@ -319,11 +319,11 @@ async function sendHubRosterUpdate(hub, participants) {
   const html = wrap(`
     <div class="badge">📋 Your Circle Roster</div>
     <h2>Hi ${hub.full_name}, here's who's joining your Circle!</h2>
-    <p>As your NFP Circle Meet on 5th Aug approaches, here's the latest list of participants confirmed for your circle at ${formatHubAddress(hub)}.</p>
+    <p>As your NFP Circle Meet on 28th Sept approaches, here's the latest list of participants confirmed for your circle at ${formatHubAddress(hub)}.</p>
     ${tableHtml}
     ${noteHtml}
     <div class="info-box">
-      <p><strong>Date &amp; Time:</strong> 5th Aug 2026, Wed | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> 28th Sept 2026, Mon | 4:00 PM to 7:30 PM</p>
       <p><strong>Venue:</strong> ${formatHubAddress(hub)}</p>
     </div>
     <p class="section-heading">What to do next</p>
@@ -402,7 +402,7 @@ async function sendParticipantTransferred(participant, oldHub, newHub) {
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${newHub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(newHub)}</p>
-      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
     </div>
     <p>No action is needed from you — your registration is already confirmed with your new Circle Leader.</p>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
@@ -435,7 +435,7 @@ async function sendParticipantEventReminder(participant, hub) {
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${hub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(hub)}</p>
-      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 3:30 PM to 7:00 PM</p>
+      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 3:30 PM to 7:00 PM</p>
     </div>
     <p class="section-heading">Here's what's on the agenda</p>
     ${scheduleImageHtml}
@@ -479,7 +479,7 @@ async function sendParticipantCircleCombined(participant, oldHub, newHub) {
       <p><strong>Circle Leader:</strong> ${newHub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(newHub)}</p>
       <p><strong>Venue Type:</strong> ${newHub.venue_type || '—'}</p>
-      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
     </div>
     <p>Your registration is already confirmed with your new Circle Leader — just show up at the address above.</p>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
@@ -533,7 +533,7 @@ async function sendParticipantCircleMergeReverted(participant, fromHub, toHub) {
       <p><strong>Circle Leader:</strong> ${toHub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(toHub)}</p>
       <p><strong>Venue Type:</strong> ${toHub.venue_type || '—'}</p>
-      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
     </div>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
   `);
@@ -575,7 +575,7 @@ function crmUnsubscribeUrl(contactId) {
 
 const DEFAULT_CRM_INTRO = `
   <p>Registrations for NFP Circles in your city close <strong>today at 4:00 PM</strong> — after that,
-  we won't be able to accommodate any more sign-ups for the 5th August meetup.</p>
+  we won't be able to accommodate any more sign-ups for the 28th September meetup.</p>
   <p>NFP Circles are small, in-person peer-learning meetups made specifically for NFP Members —
   a few hours to connect with peers in your city, discuss real challenges, and walk away with
   practical ideas you can use right away.</p>
@@ -602,7 +602,7 @@ function buildCircleCrmEmailHtml(contact, hubs, campaign) {
       <p><strong>Circle Leader:</strong> ${escHtml(hub.full_name || hub.fullName || '—')}</p>
       <p><strong>Area:</strong> ${escHtml(hub.area || '—')}</p>
       <p><strong>Venue Type:</strong> ${escHtml(hub.venue_type || hub.venueType || '—')}</p>
-      <p><strong>Date &amp; Time:</strong> 5th Aug, Wed | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
     </div>
   `).join('');
 
