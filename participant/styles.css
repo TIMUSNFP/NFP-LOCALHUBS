@@ -1370,7 +1370,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .lh-hero-inner {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 0.92fr 1.08fr;
     align-items: stretch;
 }
 .lh-hero-content {
@@ -1380,7 +1380,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 40px clamp(24px, 5vw, 56px) 40px clamp(48px, 8vw, 96px);
+    padding: 40px clamp(16px, 3vw, 40px) 40px clamp(56px, 9vw, 120px);
 }
 .launch-banner {
     display: inline-flex;
@@ -1525,7 +1525,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
        below the fold. Deriving the width cap from the vertical budget too
        (nav height + this wrapper's padding) guarantees the whole hero,
        stats included, always fits without scrolling. */
-    max-width: min(480px, calc((100vh - var(--nav-height) - 112px) / 1.5));
+    max-width: min(580px, calc((100vh - var(--nav-height) - 112px) / 1.5));
     padding-bottom: 40px; /* room for the counter pill below the map */
 }
 .india-map-inner {
