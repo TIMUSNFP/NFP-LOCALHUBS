@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NFP Circles — Map Pin Tool (internal use only)</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        background: #f7f7f7;
+        color: #1c1c1c;
+        display: flex;
+        min-height: 100vh;
+    }
+    /* ── Map column ── */
+    .map-col {
+        flex: 1;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 32px;
+        overflow: auto;
+    }
+    .map-stage {
+        position: relative;
+        width: 460px;
+        flex-shrink: 0;
+        background: #fbf3ea; /* --hero-cream, matches the live hero so this preview is representative */
+        border: 1px solid #e8e8e8;
+        border-radius: 12px;
+        cursor: crosshair;
+        user-select: none;
+    }
+    .map-stage img {
+        width: 100%;
+        display: block;
+        pointer-events: none;
+    }
+    .pin {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        cursor: grab;
+        z-index: 2;
+    }
+    .pin.dragging { cursor: grabbing; z-index: 3; }
+    .pin-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #FF5000;
+        border: 2px solid #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,.35);
+    }
+    .pin.selected .pin-dot {
+        outline: 2px solid #1c1c1c;
+        outline-offset: 2px;
+    }
+    .pin-label {
+        position: absolute;
+        top: 50%;
+        left: 16px;
+        transform: translateY(-50%);
+        font-size: 10px;
+        font-weight: 700;
+        white-space: nowrap;
+        background: rgba(255,255,255,.9);
+        padding: 1px 5px;
+        border-radius: 4px;
+        pointer-events: none;
+    }
+    .hint {
+        max-width: 460px;
+        margin: 0 auto 14px;
+        font-size: 13px;
+        color: #6b6b6b;
+        line-height: 1.5;
+    }
+    /* ── Sidebar ── */
+    .sidebar {
+        width: 420px;
+        flex-shrink: 0;
+        background: #fff;
+        border-left: 1px solid #e8e8e8;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+    }
+    .sidebar-header {
+        padding: 18px 20px;
+        border-bottom: 1px solid #e8e8e8;
+    }
+    .sidebar-header h1 {
+        font-size: 16px;
+        margin: 0 0 4px;
+    }
+    .sidebar-header p {
+        font-size: 12px;
+        color: #6b6b6b;
+        margin: 0;
+        line-height: 1.5;
+    }
+    .pin-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 12px;
+    }
+    .pin-row {
+        display: grid;
+        grid-template-columns: 1fr 56px 56px 46px 30px 54px 24px;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 4px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 12px;
+    }
+    .pin-row.selected { background: #fff5f0; }
+    .pin-row input[type="text"],
+    .pin-row input[type="number"] {
+        width: 100%;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 3px 5px;
+        font-size: 12px;
+        font-family: inherit;
+    }
+    .pin-row select {
+        width: 100%;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        font-size: 11px;
+        padding: 2px;
+    }
+    .pin-row button {
+        border: none;
+        background: none;
+        color: #dc2626;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px;
+    }
+    .col-head {
+        display: grid;
+        grid-template-columns: 1fr 56px 56px 46px 30px 54px 24px;
+        gap: 6px;
+        padding: 0 4px 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #9b9b9b;
+    }
+    .sidebar-actions {
+        padding: 14px 20px 20px;
+        border-top: 1px solid #e8e8e8;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .btn {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-primary { background: #FF5000; color: #fff; }
+    .btn-outline { background: #fff; border: 1.5px solid #e0e0e0; color: #1c1c1c; }
+    textarea#output {
+        width: 100%;
+        height: 160px;
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 11px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 10px;
+        resize: vertical;
+    }
+    .copied-msg, .save-msg {
+        font-size: 12px;
+        font-weight: 600;
+        display: none;
+    }
+    .copied-msg { color: #16A34A; }
+    .save-msg.ok { color: #16A34A; display: block; }
+    .save-msg.err { color: #dc2626; display: block; }
+    .save-msg.info { color: #6b6b6b; display: block; }
+</style>
+</head>
+<body>
+
+<div class="map-col">
+    <div>
+        <p class="hint">
+            <strong>Click</strong> anywhere on the map to drop a new pin (you'll be asked for a
+            city name). <strong>Drag</strong> an existing pin to reposition it. Click a pin to
+            select it and edit its details in the list on the right. When you're done, hit
+            <strong>"Copy JS array"</strong> and paste the result over the <code>HUB_CITIES</code>
+            array in <code>participant/script.js</code>.
+        </p>
+        <div class="map-stage" id="mapStage">
+            <img src="Images/MapChart_Map.png" alt="India Map" id="mapImg" draggable="false">
+        </div>
+    </div>
+</div>
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h1>Hero Map — Pin Editor</h1>
+        <p>Internal tool, not part of the public site. Positions are stored as plain
+           x%/y% of the map image — no lat/lng, no projection math.</p>
+    </div>
+    <div class="col-head">
+        <span>Name</span><span>X%</span><span>Y%</span><span>Delay</span><span>Big</span><span>Label</span><span></span>
+    </div>
+    <div class="pin-list" id="pinList"></div>
+    <div class="sidebar-actions">
+        <button class="btn btn-outline" id="addBtn">+ Add city (top of list, then drag into place)</button>
+        <button class="btn btn-primary" id="saveBtn">💾 Save to script.js</button>
+        <span class="save-msg" id="saveMsg"></span>
+        <button class="btn btn-outline" id="copyBtn">Copy JS array instead</button>
+        <span class="copied-msg" id="copiedMsg">Copied to clipboard ✓</span>
+        <textarea id="output" readonly></textarea>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+// Pre-populated with the current, live positions from participant/script.js —
+// start from here and just nudge/add/remove rather than re-placing all 15.
+let cities = [
+    { name:'Chandigarh', x:32.52, y:31.37, delay:1.6, lg:false, lbl:'right' },
+    { name:'Delhi NCR', x:31.92, y:36.66, delay:0.0, lg:true, lbl:'right' },
+    { name:'Jaipur', x:28.13, y:42.99, delay:0.5, lg:false, lbl:'left' },
+    { name:'Lucknow', x:44.07, y:41.83, delay:0.9, lg:false, lbl:'right' },
+    { name:'Ahmedabad', x:13.38, y:52.87, delay:0.3, lg:false, lbl:'left' },
+    { name:'Bhopal', x:30.52, y:52.87, delay:1.8, lg:false, lbl:'right' },
+    { name:'Kolkata', x:70.58, y:52.87, delay:0.8, lg:true, lbl:'left' },
+    { name:'Nagpur', x:36.5, y:59.04, delay:1.2, lg:false, lbl:'right' },
+    { name:'Mumbai', x:14.38, y:65.23, delay:0.4, lg:true, lbl:'left' },
+    { name:'Pune', x:18.57, y:65.64, delay:0.7, lg:false, lbl:'right' },
+    { name:'Hyderabad', x:37.1, y:68.24, delay:1.0, lg:true, lbl:'left' },
+    { name:'Vizag', x:53.24, y:68.24, delay:2.0, lg:false, lbl:'left' },
+    { name:'Bengaluru', x:33.11, y:81.71, delay:0.6, lg:true, lbl:'left' },
+    { name:'Chennai', x:42.68, y:81.0, delay:0.2, lg:true, lbl:'right' },
+    { name:'Kochi', x:27.0, y:86.29, delay:1.4, lg:false, lbl:'left' },
+];
+
+let selectedIndex = null;
+
+const stage = document.getElementById('mapStage');
+const pinList = document.getElementById('pinList');
+
+function render() {
+    // pins on the map
+    stage.querySelectorAll('.pin').forEach(el => el.remove());
+    cities.forEach((c, i) => {
+        const pin = document.createElement('div');
+        pin.className = 'pin' + (i === selectedIndex ? ' selected' : '');
+        pin.style.left = c.x + '%';
+        pin.style.top = c.y + '%';
+        pin.dataset.index = i;
+        pin.innerHTML = `<div class="pin-dot"></div><div class="pin-label">${escapeHtml(c.name)}</div>`;
+        pin.addEventListener('mousedown', onPinMouseDown);
+        stage.appendChild(pin);
+    });
+
+    // sidebar rows
+    pinList.innerHTML = '';
+    cities.forEach((c, i) => {
+        const row = document.createElement('div');
+        row.className = 'pin-row' + (i === selectedIndex ? ' selected' : '');
+        row.innerHTML = `
+            <input type="text" value="${escapeAttr(c.name)}" data-field="name" data-i="${i}">
+            <input type="number" step="0.01" value="${c.x}" data-field="x" data-i="${i}">
+            <input type="number" step="0.01" value="${c.y}" data-field="y" data-i="${i}">
+            <input type="number" step="0.1" value="${c.delay}" data-field="delay" data-i="${i}">
+            <input type="checkbox" ${c.lg ? 'checked' : ''} data-field="lg" data-i="${i}">
+            <select data-field="lbl" data-i="${i}">
+                <option value="left" ${c.lbl === 'left' ? 'selected' : ''}>left</option>
+                <option value="right" ${c.lbl === 'right' ? 'selected' : ''}>right</option>
+            </select>
+            <button data-remove="${i}" title="Delete">&times;</button>
+        `;
+        row.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON') {
+                selectedIndex = i;
+                render();
+            }
+        });
+        pinList.appendChild(row);
+    });
+
+    pinList.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('change', onFieldChange);
+        el.addEventListener('click', (e) => { selectedIndex = +e.target.dataset.i; });
+    });
+    pinList.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            cities.splice(+btn.dataset.remove, 1);
+            selectedIndex = null;
+            render();
+        });
+    });
+
+    updateOutput();
+}
+
+function onFieldChange(e) {
+    const i = +e.target.dataset.i;
+    const field = e.target.dataset.field;
+    if (field === 'lg') {
+        cities[i][field] = e.target.checked;
+    } else if (field === 'x' || field === 'y' || field === 'delay') {
+        cities[i][field] = parseFloat(e.target.value) || 0;
+    } else {
+        cities[i][field] = e.target.value;
+    }
+    render();
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+// ── Click-to-add / drag-to-move ──
+let dragIndex = null;
+
+function stagePercentFromEvent(e) {
+    const rect = stage.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, (e.clientX - rect.left) / rect.width * 100));
+    const y = Math.max(0, Math.min(100, (e.clientY - rect.top) / rect.height * 100));
+    return { x: +x.toFixed(2), y: +y.toFixed(2) };
+}
+
+stage.addEventListener('click', (e) => {
+    if (dragIndex !== null) return; // a drag just ended, don't also add a pin
+    if (e.target.closest('.pin')) return;
+    const { x, y } = stagePercentFromEvent(e);
+    const name = prompt('City name?', 'New City');
+    if (!name) return;
+    cities.push({ name, x, y, delay: 0, lg: false, lbl: x > 50 ? 'left' : 'right' });
+    selectedIndex = cities.length - 1;
+    render();
+});
+
+function onPinMouseDown(e) {
+    e.stopPropagation();
+    const pin = e.currentTarget;
+    dragIndex = +pin.dataset.index;
+    selectedIndex = dragIndex;
+    pin.classList.add('dragging');
+
+    function onMove(ev) {
+        const { x, y } = stagePercentFromEvent(ev);
+        cities[dragIndex].x = x;
+        cities[dragIndex].y = y;
+        pin.style.left = x + '%';
+        pin.style.top = y + '%';
+    }
+    function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        pin.classList.remove('dragging');
+        render();
+        // swallow the click that follows mouseup so the stage's click
+        // handler doesn't also add a brand-new pin at the drop point
+        setTimeout(() => { dragIndex = null; }, 0);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+    const name = prompt('City name?', 'New City');
+    if (!name) return;
+    cities.unshift({ name, x: 50, y: 50, delay: 0, lg: false, lbl: 'right' });
+    selectedIndex = 0;
+    render();
+});
+
+function updateOutput() {
+    const lines = cities.map(c =>
+        `    { name:'${c.name.replace(/'/g, "\\'")}', x:${c.x}, y:${c.y}, delay:${c.delay}, lg:${c.lg}, lbl:'${c.lbl}' },`
+    );
+    document.getElementById('output').value = 'const HUB_CITIES = [\n' + lines.join('\n') + '\n];';
+}
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+    const text = document.getElementById('output').value;
+    const msg = document.getElementById('copiedMsg');
+    const done = () => { msg.style.display = 'inline'; setTimeout(() => msg.style.display = 'none', 1800); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => {
+            document.getElementById('output').select();
+            document.execCommand('copy');
+            done();
+        });
+    } else {
+        document.getElementById('output').select();
+        document.execCommand('copy');
+        done();
+    }
+});
+
+// ── Save directly to participant/script.js — Chrome/Edge only (File System
+// Access API). The browser has no way to run `git`, so this only updates the
+// file on disk; committing/pushing to GitHub still happens separately.
+// Firefox/Safari don't support this API at all — "Copy JS array" above
+// always works as the fallback there.
+let scriptFileHandle = null;
+const saveBtn = document.getElementById('saveBtn');
+const saveMsg = document.getElementById('saveMsg');
+
+function showSaveMsg(text, kind) {
+    saveMsg.textContent = text;
+    saveMsg.className = 'save-msg' + (kind ? ' ' + kind : '');
+    if (kind === 'ok') setTimeout(() => { saveMsg.className = 'save-msg'; }, 4000);
+}
+
+if (!window.showOpenFilePicker) {
+    saveBtn.disabled = true;
+    saveBtn.title = 'Direct save needs Chrome or Edge — use "Copy JS array" instead in this browser';
+    saveBtn.style.opacity = '.5';
+    saveBtn.style.cursor = 'not-allowed';
+}
+
+saveBtn.addEventListener('click', async () => {
+    if (!window.showOpenFilePicker) return;
+    try {
+        if (!scriptFileHandle) {
+            showSaveMsg('Pick participant/script.js (first time only)…', 'info');
+            [scriptFileHandle] = await window.showOpenFilePicker({
+                types: [{ description: 'JavaScript', accept: { 'text/javascript': ['.js'] } }],
+                multiple: false,
+            });
+            if (scriptFileHandle.name !== 'script.js') {
+                const proceed = confirm(`You picked "${scriptFileHandle.name}", not "script.js". Continue anyway?`);
+                if (!proceed) { scriptFileHandle = null; showSaveMsg('', ''); return; }
+            }
+        }
+
+        const file = await scriptFileHandle.getFile();
+        const original = await file.text();
+
+        const arrayText = 'const HUB_CITIES = [\n' + cities.map(c =>
+            `    { name:'${c.name.replace(/'/g, "\\'")}', x:${c.x}, y:${c.y}, delay:${c.delay}, lg:${c.lg}, lbl:'${c.lbl}' },`
+        ).join('\n') + '\n];';
+
+        const pattern = /const HUB_CITIES = \[[\s\S]*?\n\];/;
+        if (!pattern.test(original)) {
+            showSaveMsg('Could not find "const HUB_CITIES = [...]" in that file — did you pick the right one?', 'err');
+            return;
+        }
+        const updated = original.replace(pattern, arrayText);
+
+        const writable = await scriptFileHandle.createWritable();
+        await writable.write(updated);
+        await writable.close();
+
+        showSaveMsg('Saved — refresh the local site to see it. Ask Claude to push when ready. ✓', 'ok');
+    } catch (err) {
+        if (err && err.name === 'AbortError') { showSaveMsg('', ''); return; } // picker cancelled
+        console.error(err);
+        showSaveMsg('Save failed: ' + (err && err.message ? err.message : err), 'err');
+    }
+});
+
+render();
+</script>
+</body>
+</html>

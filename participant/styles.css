@@ -74,6 +74,29 @@
     --search-h:      82px;   /* height of the sticky location search bar */
     --sidebar-w:     260px;
     --transition:    0.25s ease;
+
+    /* Financial Wellbeing design-system tokens, ported verbatim (see
+       FINANCIAL-WELLBEING-DESIGN-SYSTEM.md §1) and layered onto the tokens
+       above rather than replacing them. */
+    --brand-cream:   #efe7dc;   /* section washes, card fills — never a UI chrome color */
+    --brand-mint:    #d7e7df;   /* small accent blocks only — never a full background */
+    --brand-slate:   #6a7d8b;   /* captions/footnotes where a cooler secondary tone reads better than --muted */
+
+    /* "Local Hubs" landing-page brand aliases — kept as aliases (not a second
+       :root) so every existing var(--brand...) reference below still works. */
+    --brand:          #FF5000;
+    --brand-dark:     #d94400;
+    --brand-light:    #ff6a20;
+    --brand-ultra:    #fff0e8;
+
+    /* The hero + quote-block dark backdrop, deduplicated from two separate
+       hardcoded gradients into one pair of tokens. */
+    --hero-dark-1: #0d0818;
+    --hero-dark-2: #1a0f2e;
+
+    /* Warm ivory used for the hero's content panel — deliberately not pure
+       white, paired against a solid --brand orange panel on the same row. */
+    --hero-cream: #fbf3ea;
 }
 
 /* === RESET === */
@@ -157,7 +180,7 @@ ul { list-style: none; }
 .nav-cta { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .btn-admin-nav {
     padding: 8px 14px;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     font-size: 13px;
     font-weight: 600;
     color: var(--muted);
@@ -194,11 +217,17 @@ ul { list-style: none; }
 .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 /* === BUTTONS === */
+/* Two button variants only, both fully pill-shaped (design system §3):
+   solid orange .btn-primary for the one primary action, and a ghost/outline
+   variant for everything secondary. */
 .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--primary);
     color: var(--white);
     padding: 10px 22px;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     font-size: 14px;
     font-weight: 600;
     transition: all var(--transition);
@@ -207,17 +236,20 @@ ul { list-style: none; }
 .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
     color: var(--primary);
     border: 2px solid var(--primary);
     padding: 10px 22px;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     font-size: 14px;
     font-weight: 600;
     transition: all var(--transition);
 }
 .btn-outline:hover { background: var(--secondary); }
-.btn-lg { padding: 14px 28px; font-size: 16px; border-radius: var(--radius-md); }
+.btn-lg { padding: 14px 28px; font-size: 16px; }
 .full-w { width: 100%; justify-content: center; }
 
 .btn-back {
@@ -228,7 +260,7 @@ ul { list-style: none; }
     border: 1px solid var(--border);
     color: var(--text);
     padding: 8px 16px;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     font-size: 14px;
     font-weight: 500;
     transition: all var(--transition);
@@ -332,7 +364,7 @@ ul { list-style: none; }
 .form-input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(224,91,37,.12);
+    box-shadow: 0 0 0 3px rgba(255,80,0,.12);
 }
 .form-input.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,.1); }
 .form-input::placeholder { color: var(--light-text); }
@@ -726,6 +758,19 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* ══════════════════════════════════════════════════════
    PARTICIPANT PAGE — HEADER
 ══════════════════════════════════════════════════════ */
+/* Eyebrow label used on the dark .ppage-header bands (design system §2) —
+   was referenced in the markup/media queries but never actually defined,
+   so it rendered as invisible dark-on-dark text. */
+.section-tag {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--primary-light);
+    margin-bottom: 14px;
+}
+
 #participantReg { background: var(--bg); padding-top: var(--nav-height); }
 #participantReg .page-topbar {
     display: flex;
@@ -789,7 +834,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--white);
     border: none;
     padding: 12px 20px;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -858,7 +903,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .hub-map {
     height: 100%;
     width: 100%;
-    background: #E8F0E8;
+    background: var(--brand-mint);
     z-index: 1;
 }
 .map-count-badge {
@@ -957,7 +1002,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: white;
     border: none;
     padding: 10px;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -1102,7 +1147,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .participants-table thead th {
     text-align: left;
     padding: 14px 18px;
-    background: var(--secondary);
+    background: var(--brand-cream);
     color: var(--dark);
     font-weight: 700;
     font-size: 13px;
@@ -1159,7 +1204,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     position: relative;
 }
 .hub-card-item:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-.hub-card-item.selected { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224,91,37,.15); background: var(--secondary); }
+.hub-card-item.selected { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,80,0,.15); background: var(--secondary); }
 .hci-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
 .hci-name { font-size: 14px; font-weight: 700; color: var(--dark); }
 .hci-city { font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -1186,7 +1231,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: white;
     border: none;
     padding: 9px;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -1239,7 +1284,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .shc-detail { font-size: 13px; color: rgba(255,255,255,.65); margin-bottom: 10px; }
 .shc-tags { display: flex; gap: 8px; flex-wrap: wrap; }
 .shc-tag { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); font-size: 12px; padding: 3px 10px; border-radius: 100px; font-weight: 500; }
-.shc-change { margin-top: 12px; background: none; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.7); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; transition: all var(--transition); }
+.shc-change { margin-top: 12px; background: none; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.7); padding: 6px 12px; border-radius: 999px; font-size: 12px; cursor: pointer; transition: all var(--transition); }
 .shc-change:hover { background: rgba(255,255,255,.1); color: white; }
 .rfp-form-body { padding: 24px; }
 .rfp-form-body h3 { font-size: 18px; font-weight: 800; color: var(--dark); margin-bottom: 4px; }
@@ -1270,14 +1315,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
    LOCAL HUBS REDESIGN — NEW LANDING PAGE STYLES
    Brand: #FF5000 | Community-first, Inspirational
 ══════════════════════════════════════════════════════ */
-
-/* === BRAND OVERRIDES === */
-:root {
-    --brand:          #FF5000;
-    --brand-dark:     #d94400;
-    --brand-light:    #ff6a20;
-    --brand-ultra:    #fff0e8;
-}
 
 /* === SHARED SECTION LAYOUT === */
 .container {
@@ -1321,51 +1358,29 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* ══════════════════════════════════════════════════════
    SECTION 1 — HERO
 ══════════════════════════════════════════════════════ */
+/* Split color-block hero (v3): a warm ivory content panel beside a solid
+   brand-orange panel carrying the map — real color, not a white wash, built
+   from Brand Kit assets (the mountain-peak motif from the logo's interior
+   glyph, and the brand's own watercolor texture) rather than generic shapes. */
 .lh-hero {
     position: relative;
-    min-height: 100vh;
-    background: #0d0818;
-    display: flex;
-    flex-direction: column;
+    background: var(--hero-cream);
     overflow: hidden;
     padding-top: var(--nav-height);
 }
-.lh-hero-bg {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-}
-.lh-hero-glow {
-    display: none;
-}
-.lh-glow-1 {
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(255,80,0,0.22) 0%, transparent 70%);
-    top: -100px; left: -100px;
-}
-.lh-glow-2 {
-    width: 500px; height: 500px;
-    background: radial-gradient(circle, rgba(255,80,0,0.12) 0%, transparent 70%);
-    bottom: 50px; right: -80px;
-}
-.lh-glow-3 {
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(120,40,200,0.12) 0%, transparent 70%);
-    top: 40%; left: 40%;
-}
 .lh-hero-inner {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    gap: 60px;
-    padding: 80px 24px 60px;
-    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
 }
 .lh-hero-content {
-    flex: 1;
-    min-width: 0;
+    position: relative;
+    z-index: 1;
+    background: var(--hero-cream);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 72px clamp(24px, 5vw, 64px) 72px clamp(24px, 6vw, 88px);
 }
 .launch-banner {
     display: inline-flex;
@@ -1379,6 +1394,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 600;
     margin-bottom: 22px;
     box-shadow: 0 4px 16px rgba(255,80,0,0.35);
+    align-self: flex-start;
 }
 .launch-banner-icon { font-size: 16px; line-height: 1; }
 .launch-banner-text strong { font-weight: 800; }
@@ -1393,8 +1409,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 24px;
+    color: var(--primary);
+    margin-bottom: 20px;
 }
 .lh-eyebrow-dot {
     width: 8px; height: 8px;
@@ -1407,9 +1423,9 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     50%       { opacity: 0.5; }
 }
 .lh-hero-title {
-    font-size: clamp(42px, 6vw, 76px);
+    font-size: clamp(38px, 4.6vw, 62px);
     font-weight: 700;
-    color: #ffffff;
+    color: var(--dark);
     line-height: 1.1;
     letter-spacing: -1.5px;
     margin-bottom: 14px;
@@ -1420,25 +1436,25 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-hero-mission {
     font-family: 'The Youngest Serif', Georgia, serif;
     font-style: italic;
-    font-size: clamp(26px, 3.2vw, 38px);
+    font-size: clamp(22px, 2.6vw, 30px);
     font-weight: 400;
-    color: rgba(255,255,255,0.92);
+    color: var(--brand-dark);
     margin-bottom: 16px;
     letter-spacing: 0;
     line-height: 1.3;
 }
 .lh-hero-sub {
     font-size: 16px;
-    color: rgba(255,255,255,0.6);
+    color: var(--muted);
     line-height: 1.7;
-    max-width: 520px;
+    max-width: 480px;
     margin-bottom: 36px;
 }
 .lh-hero-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
-    margin-bottom: 48px;
+    margin-bottom: 40px;
 }
 .lh-cta-primary {
     background: var(--brand) !important;
@@ -1456,38 +1472,58 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     align-items: center;
     gap: 28px;
     flex-wrap: wrap;
+    padding-top: 26px;
+    border-top: 1px solid rgba(28,28,28,0.1);
 }
 .lh-stat { text-align: left; }
 .lh-stat-num {
     display: block;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--dark);
     letter-spacing: -0.5px;
 }
 .lh-stat-lbl {
     display: block;
     font-size: 12px;
-    color: rgba(255,255,255,0.45);
+    color: var(--muted);
     font-weight: 500;
     margin-top: 2px;
 }
 .lh-stat-divider {
     width: 1px;
-    height: 36px;
-    background: rgba(255,255,255,0.12);
+    height: 32px;
+    background: rgba(28,28,28,0.12);
     flex-shrink: 0;
 }
 
-/* India Map */
+/* Right-hand side — same flat warm cream as the content side, no texture
+   or pattern overlay (one continuous, plain section background). */
 .lh-hero-map {
-    flex-shrink: 0;
-    width: 500px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 56px clamp(24px, 4vw, 48px);
+    overflow: hidden;
 }
 
+/* India Map — no card box: the PNG's own background is transparent, so the
+   map sits directly on the hero's cream background with no seam. The pin
+   layer (#heroMapPins) and the map image share the unpadded .india-map-inner
+   wrapper so the percentage-based pin coordinates from latlngToPercent()
+   line up with the image exactly. */
 .india-map-container {
     position: relative;
+    z-index: 1;
     display: block;
+    width: 100%;
+    max-width: 420px;
+    padding-bottom: 40px; /* room for the counter pill below the map */
+}
+.india-map-inner {
+    position: relative;
     width: 100%;
 }
 #heroMapPins {
@@ -1499,9 +1535,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .india-map-img {
     width: 100%;
     display: block;
-    filter: invert(1) sepia(0.15) hue-rotate(255deg) brightness(0.78);
-    opacity: 0.82;
-    mix-blend-mode: screen;
 }
 .map-pin {
     position: absolute;
@@ -1511,7 +1544,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .map-pin-dot {
     width: 6px;
     height: 6px;
-    background: #ff4500;
+    background: var(--brand);
     border-radius: 50%;
     position: relative;
     z-index: 2;
@@ -1524,7 +1557,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     height: 14px;
     margin: -7px 0 0 -7px;
     border-radius: 50%;
-    border: 1.5px solid #ff4500;
+    border: 1.5px solid var(--brand);
     animation: mapPulse 2.8s ease-out infinite;
     pointer-events: none;
 }
@@ -1542,33 +1575,37 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     transform: translateY(-50%);
     font-size: 8.5px;
     font-weight: 700;
-    color: rgba(255,255,255,0.82);
+    color: var(--dark);
     white-space: nowrap;
     letter-spacing: 0.3px;
     pointer-events: none;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    /* Same white as the map card itself, so the label reads cleanly over
+       state border lines instead of a text-shadow hack. */
+    background: var(--white);
+    padding: 1px 5px;
+    border-radius: 4px;
 }
 .map-pin-label.lbl-right { left: 12px; }
 .map-pin-label.lbl-left  { right: 12px; text-align: right; }
 .map-counter-pill {
     position: absolute;
-    bottom: 3%;
+    bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(255,80,0,0.15);
-    border: 1px solid rgba(255,80,0,0.45);
+    background: var(--white);
+    border: 1px solid rgba(255,80,0,0.35);
+    box-shadow: var(--shadow-md);
     border-radius: 20px;
-    padding: 5px 18px;
+    padding: 6px 18px;
     font-size: 11px;
     font-weight: 700;
     color: var(--brand);
     white-space: nowrap;
     letter-spacing: 0.5px;
     font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    text-shadow: none;
 }
 
-/* Scroll Hint */
+/* Scroll Hint — full-width strip below the two color panels */
 .lh-hero-scroll-hint {
     position: relative;
     z-index: 1;
@@ -1576,29 +1613,35 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    padding: 20px;
+    padding: 16px 20px 28px;
     cursor: pointer;
-    color: rgba(255,255,255,0.35);
+    color: var(--light-text);
     font-size: 12px;
     font-weight: 500;
     letter-spacing: 1px;
     text-transform: uppercase;
     transition: color 0.2s;
+    background: var(--hero-cream);
 }
-.lh-hero-scroll-hint:hover { color: rgba(255,255,255,0.7); }
+.lh-hero-scroll-hint:hover { color: var(--primary); }
 .lh-scroll-arrow {
     width: 32px; height: 32px;
     border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(28,28,28,0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
+    color: var(--muted);
     animation: scrollBounce 2s ease infinite;
 }
 @keyframes scrollBounce {
     0%, 100% { transform: translateY(0); }
     50%       { transform: translateY(6px); }
+}
+@media (max-width: 1024px) {
+    .lh-hero-inner { grid-template-columns: 1fr; }
+    .lh-hero-map { padding: 40px 24px; }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1614,17 +1657,16 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     gap: 20px;
 }
 .lh-what-card {
-    background: #fafafa;
+    background: var(--white);
     border: 1.5px solid var(--border);
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     padding: 32px 22px;
     text-align: center;
     transition: all 0.25s ease;
     cursor: default;
 }
 .lh-what-card:hover {
-    background: var(--brand-ultra);
-    border-color: rgba(255,80,0,0.25);
+    border-color: var(--brand);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
@@ -1651,7 +1693,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 ══════════════════════════════════════════════════════ */
 .lh-why-section {
     padding: 96px 0;
-    background: #f9f9f9;
+    background: rgba(239,231,220,0.4);
 }
 .lh-why-layout {
     display: grid;
@@ -1704,7 +1746,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* Why Visual */
 .lh-why-visual { position: sticky; top: 110px; }
 .lh-quote-block {
-    background: linear-gradient(135deg, #0d0818 0%, #1a0f2e 100%);
+    background: linear-gradient(135deg, var(--hero-dark-1) 0%, var(--hero-dark-2) 100%);
     border-radius: 20px;
     padding: 36px 36px 32px;
     margin-bottom: 20px;
@@ -1781,7 +1823,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 ══════════════════════════════════════════════════════ */
 .lh-for-section {
     padding: 96px 0;
-    background: linear-gradient(135deg, #fff5f0 0%, #fff 40%, #f0f5ff 100%);
+    background: rgba(239,231,220,0.4);
 }
 .lh-for-cards {
     display: grid;
@@ -1875,111 +1917,13 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .lh-community-hero-sub strong { color: var(--brand); }
 
-/* Gallery Carousel */
-.lh-gallery-carousel {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    margin-bottom: 48px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
-}
-.lh-gallery-track {
-    display: flex;
-    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform;
-}
-.lh-gallery-slide {
-    min-width: 100%;
-    height: 440px;
-    flex-shrink: 0;
-    position: relative;
-}
-.lh-gallery-slide-label {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to bottom, rgba(10, 5, 20, 0.78) 0%, rgba(10, 5, 20, 0) 100%);
-    padding: 18px 24px 40px;
-    z-index: 3;
-}
-.lh-gallery-slide-label span {
-    font-size: 14px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.95);
-    background: rgba(224, 91, 37, 0.25);
-    border: 1px solid rgba(224, 91, 37, 0.5);
-    padding: 5px 14px;
-    border-radius: 100px;
-    display: inline-block;
-}
-.lh-gallery-img {
-    position: absolute;
-    inset: 0;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-color: #f5f4f0;
-}
-.lh-gallery-img::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, transparent 35%);
-    z-index: 1;
-}
-.lh-gallery-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.9);
-    border: none;
-    font-size: 18px;
-    color: var(--dark);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    transition: all 0.2s;
-    z-index: 10;
-}
-.lh-gallery-btn:hover { background: var(--brand); color: #fff; transform: translateY(-50%) scale(1.08); }
-.lh-gallery-prev { left: 16px; }
-.lh-gallery-next { right: 16px; }
-.lh-gallery-dots {
-    position: absolute;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 8px;
-    z-index: 10;
-}
-.lh-gallery-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(255,255,255,0.4);
-    cursor: pointer;
-    transition: all 0.25s;
-    padding: 0;
-}
-.lh-gallery-dot.active {
-    background: var(--brand);
-    width: 24px;
-    border-radius: 4px;
-}
-
 /* Community Values */
 .lh-community-values {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0;
-    background: #fafafa;
+    background: rgba(239,231,220,0.5);
     border: 1.5px solid var(--border);
     border-radius: 16px;
     padding: 28px 32px;
@@ -2005,12 +1949,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
    MOBILE RESPONSIVE — NEW SECTIONS
 ══════════════════════════════════════════════════════ */
 @media (max-width: 1024px) {
-    .lh-hero-inner { flex-direction: column; padding: 60px 24px 40px; text-align: center; gap: 40px; }
-    .lh-hero-content { max-width: 600px; }
+    .lh-hero-content { text-align: center; align-items: center; }
     .lh-hero-sub { max-width: 100%; }
     .lh-hero-actions { justify-content: center; }
     .lh-hero-stats { justify-content: center; }
-    .lh-hero-map { width: 100%; max-width: 460px; }
     .lh-what-grid { grid-template-columns: repeat(3, 1fr); }
     .lh-why-layout { grid-template-columns: 1fr; gap: 48px; }
     .lh-why-visual { position: static; }
@@ -2019,7 +1961,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 @media (max-width: 768px) {
     .lh-hero-title { letter-spacing: -1px; }
     .lh-what-grid { grid-template-columns: repeat(2, 1fr); }
-    .lh-gallery-slide { height: 280px; }
     .lh-why-stats { flex-direction: column; }
     .lh-why-stat-divider { width: 60px; height: 1px; }
     .lh-community-values { gap: 0; padding: 20px 16px; }
@@ -2042,14 +1983,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     .lh-what-grid { grid-template-columns: 1fr; }
     .lh-hero-stats { flex-direction: column; gap: 12px; }
     .lh-stat-divider { width: 60px; height: 1px; }
-    .lh-hero-map { max-width: 300px; }
-    .lh-gallery-slide { height: 240px; }
+    .india-map-container { max-width: 280px; }
     .container { padding: 0 16px; }
-}
-
-/* Gallery image neutral fallback */
-.lh-gallery-img {
-    background-color: #f5f4f0;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2075,7 +2010,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     width: 100%;
     height: 260px;
     object-fit: contain;
-    background-color: #f5f4f0;
+    background-color: rgba(239,231,220,0.35);
     border-radius: 12px;
     display: block;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -2092,115 +2027,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     .lh-edition-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
     .lh-edition-grid img { height: 150px; }
 }
-
-/* ══════════════════════════════════════════════════════
-   SECTION 4C — TESTIMONIALS MARQUEE
-══════════════════════════════════════════════════════ */
-.lh-testimonials-section {
-    padding: 96px 0;
-    background: #fafaf9;
-    overflow: hidden;
-}
-.lh-testimonials-section .lh-section-header {
-    margin-bottom: 0;
-}
-.lh-marquee-wrap {
-    margin-top: 52px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-.lh-marquee-row {
-    overflow: hidden;
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
-    mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
-}
-.lh-marquee-track {
-    display: flex;
-    gap: 20px;
-    width: max-content;
-}
-.lh-marquee-track.lh-marquee-ltr { animation: lh-marquee-ltr 50s linear infinite; }
-.lh-marquee-track.lh-marquee-rtl { animation: lh-marquee-rtl 50s linear infinite; }
-.lh-marquee-row:hover .lh-marquee-track { animation-play-state: paused; }
-@keyframes lh-marquee-ltr {
-    from { transform: translateX(-50%); }
-    to   { transform: translateX(0); }
-}
-@keyframes lh-marquee-rtl {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce) {
-    .lh-marquee-track.lh-marquee-ltr,
-    .lh-marquee-track.lh-marquee-rtl { animation: none; }
-}
-.lh-mq-card {
-    flex: 0 0 340px;
-    width: 340px;
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 16px;
-    padding: 24px 26px;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-.lh-mq-card:hover {
-    border-color: rgba(255,80,0,0.25);
-    box-shadow: var(--shadow-md);
-}
-.lh-tcard-stars {
-    color: #FFB800;
-    font-size: 14px;
-    letter-spacing: 3px;
-    margin-bottom: 14px;
-}
-.lh-mq-quote {
-    font-size: 14.5px;
-    color: var(--text);
-    line-height: 1.65;
-    margin-bottom: 20px;
-    min-height: 70px;
-}
-.lh-tcard-author {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.lh-tcard-avatar {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.lh-tcard-info strong {
-    display: block;
-    font-size: 14px;
-    color: var(--dark);
-    font-weight: 700;
-    margin-bottom: 2px;
-}
-.lh-tcard-info span {
-    font-size: 12px;
-    color: var(--muted);
-}
-
-/* ── Responsive for testimonials/marquee ── */
-@media (max-width: 640px) {
-    .lh-testimonials-section { padding: 72px 0; }
-    .lh-mq-card { flex: 0 0 280px; width: 280px; padding: 20px 22px; }
-    .lh-marquee-track.lh-marquee-ltr,
-    .lh-marquee-track.lh-marquee-rtl { animation-duration: 34s; }
-}
-@media (max-width: 900px) {
-    .lh-mq-card { flex: 0 0 300px; width: 300px; }
-}
-
 
 /* Disabled primary button (declaration not yet accepted) */
 .btn-primary:disabled,
