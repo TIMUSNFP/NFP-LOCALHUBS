@@ -864,7 +864,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: flex;
     align-items: center;
     gap: 60px;
-    padding: 80px 24px 60px;
+    padding: 48px 24px 40px;
     flex: 1;
 }
 .lh-hero-content {
@@ -881,7 +881,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     box-shadow: 0 2px 6px rgba(255,80,0,0.18);
 }
 .launch-banner-icon { font-size: 16px; line-height: 1; }
@@ -898,7 +898,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     letter-spacing: 2px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.6);
-    margin-bottom: 24px;
+    margin-bottom: 14px;
 }
 .lh-eyebrow-dot {
     width: 8px; height: 8px;
@@ -911,12 +911,12 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     50%       { opacity: 0.5; }
 }
 .lh-hero-title {
-    font-size: clamp(42px, 6vw, 76px);
+    font-size: clamp(38px, 5vw, 64px);
     font-weight: 700;
     color: #ffffff;
     line-height: 1.1;
     letter-spacing: -1.5px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
 }
 .lh-hero-accent {
     color: var(--brand);
@@ -924,10 +924,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-hero-mission {
     font-family: 'The Youngest Serif', Georgia, serif;
     font-style: italic;
-    font-size: clamp(26px, 3.2vw, 38px);
+    font-size: clamp(22px, 2.8vw, 32px);
     font-weight: 400;
     color: rgba(255,255,255,0.92);
-    margin-bottom: 16px;
+    margin-bottom: 10px;
     letter-spacing: 0;
     line-height: 1.3;
 }
@@ -936,13 +936,13 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: rgba(255,255,255,0.6);
     line-height: 1.7;
     max-width: 520px;
-    margin-bottom: 36px;
+    margin-bottom: 20px;
 }
 .lh-hero-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
-    margin-bottom: 48px;
+    margin-bottom: 24px;
 }
 .lh-cta-primary {
     background: var(--brand) !important;
@@ -986,7 +986,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* India Map */
 .lh-hero-map {
     flex-shrink: 0;
-    width: 500px;
+    /* Capped by the vertical budget (nav height + hero-inner's own
+       padding), not just a fixed pixel width, so short browser windows
+       shrink the map instead of pushing the stats row below the fold. */
+    width: min(500px, calc((100vh - var(--nav-height) - 100px) / 1.5));
 }
 
 .india-map-container {
