@@ -59,23 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindMobileInputs();
     renderHeroMapPins();
     loadParticipantFormState();
-
-    if (!sessionStorage.getItem('scheduleShown')) {
-        openScheduleModal();
-        sessionStorage.setItem('scheduleShown', '1');
-    }
 });
-
-// ═══════════════════ SCHEDULE POPUP ═══════════════════
-function openScheduleModal() {
-    const overlay = document.getElementById('scheduleOverlay');
-    if (overlay) overlay.classList.add('visible');
-}
-
-function closeScheduleModal() {
-    const overlay = document.getElementById('scheduleOverlay');
-    if (overlay) overlay.classList.remove('visible');
-}
 
 function handleNavbarScroll() {
     const navbar = document.getElementById('navbar');

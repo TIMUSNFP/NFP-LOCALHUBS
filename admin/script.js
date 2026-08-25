@@ -1223,7 +1223,7 @@ function viewDetails(id) {
 // ═══════════════════ HUB EDIT MODE ═══════════════════
 const CAPACITY_OPTIONS = Array.from({ length: 11 }, (_, i) => `${i + 5} People`);
 const MEMBERSHIP_OPTIONS = ['QPFP Certificant', 'NFP Member', 'Both NFP ProMember & QPFP Certificant'];
-const HOSTING_FREQUENCY_OPTIONS = ['Only host on 5 August', 'Once a Quarter', 'Open to Either'];
+const HOSTING_FREQUENCY_OPTIONS = ['Only host on 28 September', 'Once a Quarter', 'Open to Either'];
 
 function optionsHtml(options, current) {
     return options.map(o => `<option value="${escHtml(o)}" ${o === current ? 'selected' : ''}>${escHtml(o)}</option>`).join('');

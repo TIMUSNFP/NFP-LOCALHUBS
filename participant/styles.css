@@ -1380,7 +1380,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 72px clamp(24px, 5vw, 64px) 72px clamp(24px, 6vw, 88px);
+    padding: 40px clamp(24px, 5vw, 56px);
 }
 .launch-banner {
     display: inline-flex;
@@ -1389,11 +1389,11 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     background: linear-gradient(135deg, #FF5000, #ff7a33);
     color: #fff;
     padding: 10px 18px;
-    border-radius: 100px;
+    border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
     margin-bottom: 22px;
-    box-shadow: 0 4px 16px rgba(255,80,0,0.35);
+    box-shadow: 0 2px 6px rgba(255,80,0,0.18);
     align-self: flex-start;
 }
 .launch-banner-icon { font-size: 16px; line-height: 1; }
@@ -1410,7 +1410,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--primary);
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 .lh-eyebrow-dot {
     width: 8px; height: 8px;
@@ -1428,7 +1428,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--dark);
     line-height: 1.1;
     letter-spacing: -1.5px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
 }
 .lh-hero-accent {
     color: var(--brand);
@@ -1439,7 +1439,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-size: clamp(22px, 2.6vw, 30px);
     font-weight: 400;
     color: var(--brand-dark);
-    margin-bottom: 16px;
+    margin-bottom: 10px;
     letter-spacing: 0;
     line-height: 1.3;
 }
@@ -1448,13 +1448,13 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--muted);
     line-height: 1.7;
     max-width: 480px;
-    margin-bottom: 36px;
+    margin-bottom: 20px;
 }
 .lh-hero-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
-    margin-bottom: 40px;
+    margin-bottom: 24px;
 }
 .lh-cta-primary {
     background: var(--brand) !important;
@@ -1472,7 +1472,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     align-items: center;
     gap: 28px;
     flex-wrap: wrap;
-    padding-top: 26px;
+    padding-top: 18px;
     border-top: 1px solid rgba(28,28,28,0.1);
 }
 .lh-stat { text-align: left; }
@@ -1505,7 +1505,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 56px clamp(24px, 4vw, 48px);
+    padding: 24px clamp(16px, 2vw, 24px);
     overflow: hidden;
 }
 
@@ -1519,7 +1519,13 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     z-index: 1;
     display: block;
     width: 100%;
-    max-width: 420px;
+    /* Capped by width normally, but the map image's own aspect ratio is
+       tall (~1.5x its width), so on short viewports a wide fixed max-width
+       can push the hero taller than the screen and hide the stats row
+       below the fold. Deriving the width cap from the vertical budget too
+       (nav height + this wrapper's padding) guarantees the whole hero,
+       stats included, always fits without scrolling. */
+    max-width: min(480px, calc((100vh - var(--nav-height) - 112px) / 1.5));
     padding-bottom: 40px; /* room for the counter pill below the map */
 }
 .india-map-inner {
@@ -2074,56 +2080,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     from { transform: scale(0.94); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
 }
-
-.schedule-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 3100;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.25s ease;
-}
-.schedule-overlay.visible { opacity: 1; visibility: visible; }
-.schedule-modal {
-    position: relative;
-    max-width: 720px;
-    width: 100%;
-    max-height: 90vh;
-    animation: successModalPop 0.3s ease;
-}
-.schedule-img {
-    width: 100%;
-    height: auto;
-    max-height: 90vh;
-    object-fit: contain;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-xl);
-    display: block;
-}
-.schedule-close {
-    position: absolute;
-    top: -14px;
-    right: -14px;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--white);
-    border: none;
-    color: var(--dark);
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-    box-shadow: var(--shadow-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.schedule-close:hover { background: var(--secondary); }
 
 /* ══════════════════════════════════════════════════════
    REGISTRATION CLOSED — THANK YOU SCREEN
