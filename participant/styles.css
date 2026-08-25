@@ -158,7 +158,7 @@ ul { list-style: none; }
 /* Logo image sizes */
 .logo-img { display: block; object-fit: contain; }
 .logo-img-nav     { height: 72px; width: auto; }
-.logo-img-footer  { height: 108px; width: auto; background: var(--white); padding: 8px 14px; border-radius: 10px; margin-bottom: 4px; }
+.logo-img-footer  { height: 44px; width: auto; margin-bottom: 16px; }
 .logo-img-sidebar { height: 76px; width: auto; background: var(--white); padding: 6px 12px; border-radius: 8px; }
 .logo-img-login   { height: 112px; width: auto; margin: 0 auto 4px; }
 .nav-menu {
