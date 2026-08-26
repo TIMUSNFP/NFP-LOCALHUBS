@@ -29,6 +29,9 @@ let selectedParticipantIds = new Set(); // bulk-select state for the Participant
 let pendingBulkActionP     = null;      // { ids, status } awaiting confirm-modal approval
 let editionsList     = [1];  // every known edition, from GET /api/admin/editions
 let editionDetails   = {};   // { [edition]: { themeTitle, themeTagline, eventDate, eventTimeStart, eventTimeEnd } }
+let analyticsViewEdition = null; // null until first Analytics load, then defaults to the active edition (not "All") — independent of the Applications/Registrations "Viewing" filters
+let analyticsHubs = [];
+let analyticsParticipants = [];
 let hubViewEdition    = null; // edition currently shown on the Applications tab (null until loaded)
 let partViewEdition   = null; // edition currently shown on the Registrations tab (null until loaded)
 
@@ -311,6 +314,13 @@ function renderEditionControls() {
     if (hubSel) hubSel.innerHTML = viewOptions(hubViewEdition);
     const partSel = document.getElementById('partEditionFilter');
     if (partSel) partSel.innerHTML = viewOptions(partViewEdition);
+    // Analytics defaults to the active edition specifically (not "All
+    // Editions") the first time it's shown — set once here, not re-defaulted
+    // on every settings refresh, so a deliberate switch to another edition
+    // or to "All Editions" sticks for the rest of the session.
+    if (analyticsViewEdition === null) analyticsViewEdition = formSettings.activeEdition;
+    const analyticsSel = document.getElementById('analyticsEditionFilter');
+    if (analyticsSel) analyticsSel.innerHTML = viewOptions(analyticsViewEdition);
     const startBtn = document.getElementById('startEditionBtn');
     if (startBtn) startBtn.textContent = `Start Edition ${formSettings.activeEdition + 1}`;
 }
@@ -328,6 +338,38 @@ async function onPartEditionFilterChange(value) {
     await loadParticipants();
     updateParticipantStats();
     applyParticipantFilters();
+}
+
+// Analytics reads from its own analyticsHubs/analyticsParticipants — kept
+// separate from allHubs/allParticipants (the Applications/Registrations
+// tabs' own data) so switching what those two tabs are viewing never changes
+// what Analytics is showing, and vice versa.
+async function loadAnalyticsHubs() {
+    try {
+        const qs = analyticsViewEdition != null ? `?edition=${analyticsViewEdition}` : '';
+        const res = await adminFetch(`${API_BASE}/api/admin/hubs${qs}`);
+        if (!res.ok) { showToast('Failed to load analytics data.', 'error'); return; }
+        analyticsHubs = await res.json();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+}
+
+async function loadAnalyticsParticipants() {
+    try {
+        const qs = analyticsViewEdition != null ? `?edition=${analyticsViewEdition}` : '';
+        const res = await adminFetch(`${API_BASE}/api/admin/participants${qs}`);
+        if (!res.ok) { showToast('Failed to load analytics data.', 'error'); return; }
+        analyticsParticipants = await res.json();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+}
+
+async function onAnalyticsEditionFilterChange(value) {
+    analyticsViewEdition = value === '' ? null : parseInt(value, 10);
+    await Promise.all([loadAnalyticsHubs(), loadAnalyticsParticipants()]);
+    renderAnalytics();
 }
 
 // ═══════════════════ START NEW EDITION / EDIT EDITION DETAILS ═══════════════════
@@ -516,6 +558,7 @@ async function updateDashboard() {
     updateParticipantStats();
     applyParticipantFilters();
     if (document.getElementById('tabAnalytics') && !document.getElementById('tabAnalytics').classList.contains('hidden')) {
+        await Promise.all([loadAnalyticsHubs(), loadAnalyticsParticipants()]);
         renderAnalytics();
     }
 }
@@ -576,7 +619,7 @@ async function showAdminTab(tab, linkEl) {
         applyFilters();
     }
     if (tab === 'analytics') {
-        await Promise.all([loadHubs(), loadParticipants()]);
+        await Promise.all([loadAnalyticsHubs(), loadAnalyticsParticipants()]);
         renderAnalytics();
     }
     if (tab === 'participants') {
@@ -1735,16 +1778,16 @@ function filterByAnalyticsRange(items, dateField) {
 }
 
 function renderAnalytics() {
-    if (!allHubs.length) return;
     // "Flow" charts (activity that happened within the selected window) respect the
     // date-range filter. "State" charts (what's true right now — capacity, fill rate,
     // which circles are empty) always reflect the full current dataset, since filtering
     // e.g. "Circles with No Participants" to the last 7 days would hide older empty
-    // circles instead of showing the real current gap.
-    const hubs  = filterByAnalyticsRange(allHubs, 'submittedAt');
-    const parts = filterByAnalyticsRange(allParticipants, 'registeredAt');
-    const hubsAll  = allHubs;
-    const partsAll = allParticipants;
+    // circles instead of showing the real current gap. Reads from analyticsHubs/
+    // analyticsParticipants (its own edition-scoped fetch), not allHubs/allParticipants.
+    const hubs  = filterByAnalyticsRange(analyticsHubs, 'submittedAt');
+    const parts = filterByAnalyticsRange(analyticsParticipants, 'registeredAt');
+    const hubsAll  = analyticsHubs;
+    const partsAll = analyticsParticipants;
 
     // Hub Leader Insights
     renderDonut(hubs);

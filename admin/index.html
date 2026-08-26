@@ -226,6 +226,10 @@
                         <button class="ast-btn" data-section="participants" onclick="showAnalyticsSection('participants', this)">Participant Insights</button>
                         <button class="ast-btn" data-section="combined" onclick="showAnalyticsSection('combined', this)">Combined Insights</button>
                     </div>
+                    <label class="edition-control" title="Which edition's data these charts reflect">
+                        <span class="edition-control-label">Edition</span>
+                        <select id="analyticsEditionFilter" class="edition-select" onchange="onAnalyticsEditionFilterChange(this.value)" aria-label="Analytics edition filter"></select>
+                    </label>
                     <span class="analytics-range-label">Date Range</span>
                     <div class="filter-chips">
                         <button class="chip" data-range="7" onclick="setAnalyticsRange(7, this)">Last 7 Days</button>
