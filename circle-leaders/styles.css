@@ -134,7 +134,7 @@ ul { list-style: none; }
 .logo-img { display: block; object-fit: contain; }
 .logo-img-nav     { height: 72px; width: auto; }
 .logo-img-footer  { height: 44px; width: auto; margin-bottom: 16px; }
-.logo-img-sidebar { height: 76px; width: auto; background: var(--white); padding: 6px 12px; border-radius: 8px; }
+.logo-img-sidebar { height: 56px; width: auto; }
 .logo-img-login   { height: 112px; width: auto; margin: 0 auto 4px; }
 .nav-menu {
     display: flex;
@@ -314,35 +314,36 @@ ul { list-style: none; }
     min-height: calc(100vh - var(--nav-height) - 57px);
 }
 .reg-sidebar {
-    background: var(--dark);
+    background: var(--white);
+    border-right: 1px solid var(--border);
     padding: 48px 32px;
-    color: var(--white);
+    color: var(--dark);
     position: sticky;
     top: calc(var(--nav-height) + 57px);
     height: calc(100vh - var(--nav-height) - 57px);
     overflow-y: auto;
 }
 .rs-logo { font-size: 22px; font-weight: 800; margin-bottom: 24px; }
-.rs-logo .logo-network { color: var(--white); }
+.rs-logo .logo-network { color: var(--dark); }
 .reg-sidebar h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
-.reg-sidebar > p { font-size: 14px; color: rgba(255,255,255,.6); line-height: 1.65; margin-bottom: 40px; }
+.reg-sidebar > p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 40px; }
 .rs-checklist { display: flex; flex-direction: column; gap: 0; }
 .rs-check {
     display: flex;
     align-items: center;
     gap: 12px;
     font-size: 14px;
-    color: rgba(255,255,255,.5);
+    color: var(--light-text);
     font-weight: 500;
     transition: all var(--transition);
 }
-.rs-check.active { color: var(--white); }
+.rs-check.active { color: var(--dark); }
 .rs-check.done { color: var(--success); }
 .rsc-num {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,.2);
+    border: 2px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -356,20 +357,21 @@ ul { list-style: none; }
 .rs-line {
     width: 2px;
     height: 32px;
-    background: rgba(255,255,255,.1);
+    background: var(--border);
     margin-left: 15px;
 }
 .rs-line.active { background: var(--primary); }
 .rs-note {
     margin-top: 40px;
     padding: 16px;
-    background: rgba(255,255,255,.06);
+    background: var(--bg);
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     font-size: 13px;
-    color: rgba(255,255,255,.6);
+    color: var(--muted);
     line-height: 1.6;
 }
-.rs-note strong { color: var(--white); display: block; margin-bottom: 4px; }
+.rs-note strong { color: var(--dark); display: block; margin-bottom: 4px; }
 
 .reg-form-area {
     padding: 48px;
@@ -781,6 +783,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     --brand-dark:     #d94400;
     --brand-light:    #ff6a20;
     --brand-ultra:    #fff0e8;
+    --hero-cream:     #fbf3ea;
 }
 
 /* === SHARED SECTION LAYOUT === */
@@ -828,7 +831,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-hero {
     position: relative;
     min-height: 100vh;
-    background: #0d0818;
+    background: var(--hero-cream);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -898,7 +901,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
+    color: var(--primary);
     margin-bottom: 14px;
 }
 .lh-eyebrow-dot {
@@ -914,7 +917,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-hero-title {
     font-size: clamp(38px, 5vw, 64px);
     font-weight: 700;
-    color: #ffffff;
+    color: var(--dark);
     line-height: 1.1;
     letter-spacing: -1.5px;
     margin-bottom: 10px;
@@ -927,14 +930,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-style: italic;
     font-size: clamp(22px, 2.8vw, 32px);
     font-weight: 400;
-    color: rgba(255,255,255,0.92);
+    color: var(--brand-dark);
     margin-bottom: 10px;
     letter-spacing: 0;
     line-height: 1.3;
 }
 .lh-hero-sub {
     font-size: 16px;
-    color: rgba(255,255,255,0.6);
+    color: var(--muted);
     line-height: 1.7;
     max-width: 520px;
     margin-bottom: 20px;
@@ -967,20 +970,20 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: block;
     font-size: 26px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--dark);
     letter-spacing: -0.5px;
 }
 .lh-stat-lbl {
     display: block;
     font-size: 12px;
-    color: rgba(255,255,255,0.45);
+    color: var(--muted);
     font-weight: 500;
     margin-top: 2px;
 }
 .lh-stat-divider {
     width: 1px;
     height: 36px;
-    background: rgba(255,255,255,0.12);
+    background: rgba(28,28,28,0.12);
     flex-shrink: 0;
 }
 
@@ -1007,9 +1010,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .india-map-img {
     width: 100%;
     display: block;
-    filter: invert(1) sepia(0.15) hue-rotate(255deg) brightness(0.78);
-    opacity: 0.82;
-    mix-blend-mode: screen;
 }
 .map-pin {
     position: absolute;
@@ -1050,11 +1050,13 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     transform: translateY(-50%);
     font-size: 8.5px;
     font-weight: 700;
-    color: rgba(255,255,255,0.82);
+    color: var(--dark);
     white-space: nowrap;
     letter-spacing: 0.3px;
     pointer-events: none;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    background: var(--white);
+    padding: 1px 5px;
+    border-radius: 4px;
 }
 .map-pin-label.lbl-right { left: 12px; }
 .map-pin-label.lbl-left  { right: 12px; text-align: right; }
@@ -1063,8 +1065,9 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     bottom: 3%;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(255,80,0,0.15);
-    border: 1px solid rgba(255,80,0,0.45);
+    background: var(--white);
+    border: 1px solid rgba(255,80,0,0.35);
+    box-shadow: var(--shadow-md);
     border-radius: 20px;
     padding: 5px 18px;
     font-size: 11px;
@@ -1073,7 +1076,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     white-space: nowrap;
     letter-spacing: 0.5px;
     font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    text-shadow: none;
 }
 
 /* Scroll Hint */
@@ -1086,22 +1088,23 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     gap: 8px;
     padding: 20px;
     cursor: pointer;
-    color: rgba(255,255,255,0.35);
+    color: var(--light-text);
     font-size: 12px;
     font-weight: 500;
     letter-spacing: 1px;
     text-transform: uppercase;
     transition: color 0.2s;
 }
-.lh-hero-scroll-hint:hover { color: rgba(255,255,255,0.7); }
+.lh-hero-scroll-hint:hover { color: var(--primary); }
 .lh-scroll-arrow {
     width: 32px; height: 32px;
     border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(28,28,28,0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
+    color: var(--muted);
     animation: scrollBounce 2s ease infinite;
 }
 @keyframes scrollBounce {
@@ -1212,7 +1215,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* Why Visual */
 .lh-why-visual { position: sticky; top: 110px; }
 .lh-quote-block {
-    background: linear-gradient(135deg, #0d0818 0%, #1a0f2e 100%);
+    background: var(--brand-ultra);
     border-radius: 20px;
     padding: 36px 36px 32px;
     margin-bottom: 20px;
@@ -1238,7 +1241,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-family: 'The Youngest Serif', Georgia, serif;
     font-size: 17px;
     font-weight: 400;
-    color: rgba(255,255,255,0.92);
+    color: var(--dark);
     line-height: 1.78;
     letter-spacing: 0.15px;
     margin-bottom: 22px;
@@ -1248,7 +1251,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-quote-footer {
     font-family: 'Lato', sans-serif;
     font-size: 13px;
-    color: rgba(255,255,255,0.45);
+    color: var(--muted);
     font-weight: 400;
     letter-spacing: 0.4px;
     position: relative;
@@ -1538,7 +1541,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     transform: translateY(-2px);
 }
 .lh-means-card-accent {
-    background: linear-gradient(135deg, #0d0818 0%, #1e1240 100%);
+    background: var(--brand-ultra);
     border-color: rgba(255,80,0,0.3);
 }
 .lh-means-card-accent:hover { border-color: var(--brand); }
@@ -1553,7 +1556,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     letter-spacing: -2px;
     pointer-events: none;
 }
-.lh-means-card-accent .lh-means-num { color: rgba(255,255,255,0.04); }
 .lh-means-icon {
     font-size: 36px;
     margin-bottom: 16px;
@@ -1571,8 +1573,6 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--muted);
     line-height: 1.65;
 }
-.lh-means-card-accent h3 { color: #ffffff; }
-.lh-means-card-accent p { color: rgba(255,255,255,0.6); }
 
 /* ══════════════════════════════════════════════════════
    SECTION 7 — WHERE HUBS CREATED
@@ -1724,7 +1724,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-leader-section {
     position: relative;
     padding: 96px 0;
-    background: #0d0818;
+    background: #ffffff;
     overflow: hidden;
 }
 .lh-leader-bg {
@@ -1736,11 +1736,11 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: none;
 }
 .lh-tag-light {
-    background: rgba(255,80,0,0.2);
-    color: #ff9060;
+    background: var(--brand-ultra);
+    color: var(--brand);
 }
-.lh-title-light { color: #ffffff; }
-.lh-sub-light { color: rgba(255,255,255,0.6); }
+.lh-title-light { color: var(--dark); }
+.lh-sub-light { color: var(--muted); }
 
 .lh-leader-eligibility { margin-bottom: 28px; }
 .lh-elig-heading {
@@ -1749,7 +1749,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 700;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.4);
+    color: var(--light-text);
     margin-bottom: 14px;
 }
 .lh-elig-cards {
@@ -1758,15 +1758,15 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     gap: 10px;
 }
 .lh-elig-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--bg);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 14px 16px;
     text-align: center;
     transition: all 0.25s;
 }
 .lh-elig-card:hover {
-    background: rgba(255,80,0,0.08);
+    background: rgba(255,80,0,0.06);
     border-color: rgba(255,80,0,0.3);
     transform: translateY(-2px);
 }
@@ -1781,12 +1781,12 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-elig-card h4 {
     font-size: 13px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--dark);
     margin-bottom: 5px;
 }
 .lh-elig-card p {
     font-size: 11.5px;
-    color: rgba(255,255,255,0.5);
+    color: var(--muted);
     line-height: 1.5;
 }
 
@@ -1856,7 +1856,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .lh-leader-cta-copy {
     font-size: 18px;
-    color: rgba(255,255,255,0.75);
+    color: var(--text);
     margin-bottom: 20px;
     font-weight: 500;
 }
@@ -1873,7 +1873,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .lh-apply-note {
     font-size: 13px;
-    color: rgba(255,255,255,0.35);
+    color: var(--light-text);
     margin-top: 14px;
 }
 
@@ -1883,7 +1883,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-final-cta {
     position: relative;
     padding: 100px 0;
-    background: linear-gradient(135deg, #0d0818 0%, #1a0d35 50%, #0d0818 100%);
+    background: var(--secondary);
     overflow: hidden;
     text-align: center;
 }
@@ -1918,14 +1918,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-final-title {
     font-size: clamp(32px, 5vw, 54px);
     font-weight: 700;
-    color: #ffffff;
+    color: var(--dark);
     line-height: 1.12;
     letter-spacing: -1px;
     margin-bottom: 20px;
 }
 .lh-final-desc {
     font-size: 17px;
-    color: rgba(255,255,255,0.6);
+    color: var(--muted);
     line-height: 1.75;
     margin-bottom: 40px;
 }
