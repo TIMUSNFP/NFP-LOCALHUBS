@@ -290,11 +290,18 @@ async function loadEditions() {
     }
 }
 
+// Single view-filter dropdown, shared shape for both tabs. The currently
+// active edition is marked inline (" — Active") instead of living in its own
+// control — the only way to change the active edition is Start New Edition
+// below, never by picking a value here.
 function renderEditionControls() {
     const viewOptions = (selected) => {
         const allOpt = `<option value="" ${selected === null ? 'selected' : ''}>All Editions</option>`;
         const eds = editionsList
-            .map(e => `<option value="${e}" ${e === selected ? 'selected' : ''}>Edition ${e}</option>`)
+            .map(e => {
+                const label = `Edition ${e}${e === formSettings.activeEdition ? ' — Active' : ''}`;
+                return `<option value="${e}" ${e === selected ? 'selected' : ''}>${label}</option>`;
+            })
             .join('');
         return allOpt + eds;
     };
@@ -302,12 +309,8 @@ function renderEditionControls() {
     if (hubSel) hubSel.innerHTML = viewOptions(hubViewEdition);
     const partSel = document.getElementById('partEditionFilter');
     if (partSel) partSel.innerHTML = viewOptions(partViewEdition);
-    const activeSel = document.getElementById('activeEditionSelect');
-    if (activeSel) {
-        activeSel.innerHTML = editionsList
-            .map(e => `<option value="${e}" ${e === formSettings.activeEdition ? 'selected' : ''}>Edition ${e}</option>`)
-            .join('');
-    }
+    const startBtn = document.getElementById('startEditionBtn');
+    if (startBtn) startBtn.textContent = `Start Edition ${formSettings.activeEdition + 1}`;
 }
 
 async function onHubEditionFilterChange(value) {
@@ -325,27 +328,35 @@ async function onPartEditionFilterChange(value) {
     applyParticipantFilters();
 }
 
-function onActiveEditionChange(value) {
-    const next = parseInt(value, 10);
-    if (next === formSettings.activeEdition) return;
+// ═══════════════════ START NEW EDITION ═══════════════════
+// Deliberately does nothing but advance the active edition — it does NOT
+// carry any circles or participants forward. Circle leaders who want to
+// continue are moved individually (or via bulk-select) with the existing
+// "Move to Next Edition" action once you've confirmed which of them are
+// actually still in — carrying everyone automatically would drag along
+// leaders who've dropped out.
+function confirmStartNewEdition() {
+    const next = formSettings.activeEdition + 1;
     openConfirmModal(
-        'Change Active Edition',
-        `Set <strong>Edition ${next}</strong> as the active edition? New public applications and registrations will be tagged with this edition going forward. This does not change what you're currently viewing above.`,
-        '🔄',
-        async () => {
-            closeConfirmModal();
-            const ok = await patchSettings({ activeEdition: next });
-            if (ok) {
-                showToast(`Active edition is now Edition ${next}.`, 'success');
-                await loadEditions();
-            } else {
-                renderEditionControls();
-            }
-        },
-        'Set Active',
+        `Start Edition ${next}`,
+        `Start <strong>Edition ${next}</strong>? New public applications and registrations will be tagged with Edition ${next} going forward. ` +
+        `<strong>Nothing carries over automatically</strong> — every existing circle stays in Edition ${formSettings.activeEdition} until you individually move it forward with "Move to Next Edition." ` +
+        `Until you move at least one circle, the public site will show no Circles to join for the new edition.`,
+        '🚀',
+        executeStartNewEdition,
+        `Start Edition ${next}`,
         false
     );
-    renderEditionControls(); // revert the select visually until the change is confirmed
+}
+
+async function executeStartNewEdition() {
+    const next = formSettings.activeEdition + 1;
+    closeConfirmModal();
+    const ok = await patchSettings({ activeEdition: next });
+    if (ok) {
+        showToast(`Edition ${next} is now active.`, 'success');
+        await loadEditions();
+    }
 }
 
 // ═══════════════════ DATA LOADING ═══════════════════

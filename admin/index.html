@@ -174,10 +174,7 @@
                             <span class="edition-control-label">Viewing</span>
                             <select id="hubEditionFilter" class="edition-select" onchange="onHubEditionFilterChange(this.value)" aria-label="Viewing edition"></select>
                         </label>
-                        <label class="edition-control" title="Edition new public applications get tagged with">
-                            <span class="edition-control-label">Active Edition</span>
-                            <select id="activeEditionSelect" class="edition-select" onchange="onActiveEditionChange(this.value)" aria-label="Active edition for new submissions"></select>
-                        </label>
+                        <button class="btn-export btn-start-edition" id="startEditionBtn" onclick="confirmStartNewEdition()" title="Advance the active edition — new public applications and registrations start landing here. Nothing carries over automatically.">Start New Edition</button>
                         <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:0;min-width:auto">Applications</button>
                     </div>
                 </div>
