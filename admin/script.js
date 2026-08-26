@@ -273,42 +273,52 @@ function toggleParticipantForm() {
 // The edition view-filter (which edition you're browsing) and the active
 // edition (what new public submissions get tagged with) are deliberately
 // separate controls — switching what you're looking at must never change
-// where new sign-ups land.
+// where new sign-ups land. The view-filter defaults to "All Editions" (not
+// the active edition) — right after moving to a new edition, hardly anything
+// has been carried into it yet, and defaulting the view there would make an
+// admin's existing applications/registrations look like they vanished.
 async function loadEditions() {
+    renderEditionControls(); // paint immediately with whatever we already have, so the selects are never left empty
     try {
         const res = await adminFetch(`${API_BASE}/api/admin/editions`);
         if (!res.ok) return;
         const data = await res.json();
-        editionsList = data.editions && data.editions.length ? data.editions : [1];
-        if (hubViewEdition === null) hubViewEdition = data.active;
-        if (partViewEdition === null) partViewEdition = data.active;
+        editionsList = data.editions && data.editions.length ? data.editions : editionsList;
         renderEditionControls();
     } catch (e) {
-        if (e.message !== 'Unauthorized') { /* non-critical — dropdowns just stay empty */ }
+        if (e.message !== 'Unauthorized') { /* non-critical — dropdowns keep showing their last-known options */ }
     }
 }
 
 function renderEditionControls() {
-    const options = (selected) => editionsList
-        .map(e => `<option value="${e}" ${e === selected ? 'selected' : ''}>Edition ${e}</option>`)
-        .join('');
+    const viewOptions = (selected) => {
+        const allOpt = `<option value="" ${selected === null ? 'selected' : ''}>All Editions</option>`;
+        const eds = editionsList
+            .map(e => `<option value="${e}" ${e === selected ? 'selected' : ''}>Edition ${e}</option>`)
+            .join('');
+        return allOpt + eds;
+    };
     const hubSel = document.getElementById('hubEditionFilter');
-    if (hubSel) hubSel.innerHTML = options(hubViewEdition);
+    if (hubSel) hubSel.innerHTML = viewOptions(hubViewEdition);
     const partSel = document.getElementById('partEditionFilter');
-    if (partSel) partSel.innerHTML = options(partViewEdition);
+    if (partSel) partSel.innerHTML = viewOptions(partViewEdition);
     const activeSel = document.getElementById('activeEditionSelect');
-    if (activeSel) activeSel.innerHTML = options(formSettings.activeEdition);
+    if (activeSel) {
+        activeSel.innerHTML = editionsList
+            .map(e => `<option value="${e}" ${e === formSettings.activeEdition ? 'selected' : ''}>Edition ${e}</option>`)
+            .join('');
+    }
 }
 
 async function onHubEditionFilterChange(value) {
-    hubViewEdition = parseInt(value, 10);
+    hubViewEdition = value === '' ? null : parseInt(value, 10);
     clearHubSelection();
     await loadHubs();
     refreshHubViews();
 }
 
 async function onPartEditionFilterChange(value) {
-    partViewEdition = parseInt(value, 10);
+    partViewEdition = value === '' ? null : parseInt(value, 10);
     clearParticipantSelection();
     await loadParticipants();
     updateParticipantStats();
