@@ -2,6 +2,7 @@
 const express = require('express');
 const db = require('../db');
 const { generateHubId, hubRowToJson, combinedLeaderName } = require('../utils');
+const { readFormSettings } = require('./settings');
 
 const router = express.Router();
 
@@ -22,8 +23,8 @@ router.post('/', async (req, res) => {
   const body = req.body || {};
 
   // Reject if admin has closed Hub Leader applications.
-  const setting = await db.get("SELECT value FROM settings WHERE key = 'hub_form_open'");
-  if (setting && setting.value === 'false') {
+  const { hubFormOpen, activeEdition } = await readFormSettings();
+  if (!hubFormOpen) {
     return res.status(403).json({ error: 'Hub Leader applications are currently closed.' });
   }
 
@@ -33,12 +34,14 @@ router.post('/', async (req, res) => {
     }
   }
 
-  // Block duplicate applications: one Circle Host registration per email/mobile.
+  // Block duplicate applications: one Circle Host registration per email/mobile,
+  // scoped to the current edition — a leader from a past edition either gets
+  // carried forward by the admin, or is free to apply again fresh.
   const emailIn = String(body.email).trim();
   const mobileIn = String(body.mobile).trim();
   const dupe = await db.get(
-    'SELECT id FROM hubs WHERE lower(email) = lower($1) OR mobile = $2',
-    [emailIn, mobileIn]
+    'SELECT id FROM hubs WHERE (lower(email) = lower($1) OR mobile = $2) AND edition = $3',
+    [emailIn, mobileIn, activeEdition]
   );
   if (dupe) {
     return res.status(409).json({
@@ -75,19 +78,21 @@ router.post('/', async (req, res) => {
     poc_role: body.pocRole || 'self',
     lat: null,
     lng: null,
+    edition: activeEdition,
   };
 
   await db.run(
     `INSERT INTO hubs (
       id, submitted_at, last_updated, status, full_name, email, mobile, membership,
-      city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, poc_role, lat, lng
+      city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, poc_role, lat, lng, edition
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
     )`,
     [
       hub.id, hub.submitted_at, hub.last_updated, hub.status, hub.full_name, hub.email,
       hub.mobile, hub.membership, hub.city, hub.area, hub.address, hub.pincode,
       hub.venue_type, hub.capacity, hub.hosted_before, hub.hosting_frequency, hub.poc_role, hub.lat, hub.lng,
+      hub.edition,
     ]
   );
 
@@ -113,28 +118,41 @@ router.get('/check', async (req, res) => {
   res.json(result);
 });
 
-// GET /api/hubs?status=Approved,Pending — list hubs, optionally filtered by status.
+// GET /api/hubs?status=Approved,Pending&edition=2 — list hubs, optionally filtered
+// by status and/or edition. Edition defaults to the active edition so the public
+// circle-finder only ever shows the current edition's circles; pass edition=all
+// to bypass that default (not currently used by the frontend, but keeps this
+// endpoint from silently hiding data for any future/internal caller).
 router.get('/', async (req, res) => {
   const { status } = req.query;
-  let rows;
-
-  if (status) {
-    const statuses = String(status)
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (statuses.length === 0) {
-      rows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
-    } else {
-      const placeholders = statuses.map((_, i) => `$${i + 1}`).join(',');
-      rows = await db.all(
-        `SELECT * FROM hubs WHERE status IN (${placeholders}) ORDER BY submitted_at DESC`,
-        statuses
-      );
-    }
+  let { edition } = req.query;
+  if (edition === undefined) {
+    ({ activeEdition: edition } = await readFormSettings());
+  } else if (edition === 'all') {
+    edition = null;
   } else {
-    rows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
+    edition = parseInt(edition, 10);
   }
+
+  let rows;
+  const statuses = status
+    ? String(status).split(',').map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const conditions = [];
+  const params = [];
+  if (statuses.length) {
+    const placeholders = statuses.map((_, i) => `$${params.length + i + 1}`).join(',');
+    conditions.push(`status IN (${placeholders})`);
+    params.push(...statuses);
+  }
+  if (Number.isInteger(edition)) {
+    params.push(edition);
+    conditions.push(`edition = $${params.length}`);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  rows = await db.all(`SELECT * FROM hubs ${where} ORDER BY submitted_at DESC`, params);
 
   const counts = await db.all(
     "SELECT hub_id, COUNT(*) as cnt FROM participants WHERE status != 'Cancelled' GROUP BY hub_id"

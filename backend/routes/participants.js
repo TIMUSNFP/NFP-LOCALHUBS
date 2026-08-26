@@ -2,6 +2,7 @@
 const express = require('express');
 const db = require('../db');
 const { generateParticipantId, combinedLeaderName } = require('../utils');
+const { readFormSettings } = require('./settings');
 
 const router = express.Router();
 
@@ -28,14 +29,16 @@ router.get('/check', async (req, res) => {
 // "Meet Our Participants" tab. Only safe fields (no email/mobile/note),
 // excludes Cancelled registrations.
 router.get('/public', async (req, res) => {
-  const rows = await db.all(`
-    SELECT p.full_name, p.membership, p.status,
-           h.id AS hub_id, h.full_name AS hub_leader, h.city AS hub_city
-    FROM participants p
-    JOIN hubs h ON h.id = p.hub_id
-    WHERE p.status != 'Cancelled'
-    ORDER BY p.registered_at DESC
-  `);
+  const { activeEdition } = await readFormSettings();
+  const rows = await db.all(
+    `SELECT p.full_name, p.membership, p.status,
+            h.id AS hub_id, h.full_name AS hub_leader, h.city AS hub_city
+     FROM participants p
+     JOIN hubs h ON h.id = p.hub_id
+     WHERE p.status != 'Cancelled' AND p.edition = $1
+     ORDER BY p.registered_at DESC`,
+    [activeEdition]
+  );
 
   // Circles absorbed into a surviving one via Combine — so a participant whose
   // circle was closed still recognizes it in the combined name, same as the
@@ -85,12 +88,16 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'This hub is not open for registration yet.' });
   }
 
-  // Block duplicate registrations: one participant registration per email/mobile.
+  const { activeEdition } = await readFormSettings();
+
+  // Block duplicate registrations: one participant registration per email/mobile,
+  // scoped to the current edition — participants register fresh each edition, so
+  // an email/mobile used in a past edition must not block re-registration now.
   const emailIn = String(body.email).trim();
   const mobileIn = String(body.mobile).trim();
   const dupe = await db.get(
-    'SELECT id FROM participants WHERE lower(email) = lower($1) OR mobile = $2',
-    [emailIn, mobileIn]
+    'SELECT id FROM participants WHERE (lower(email) = lower($1) OR mobile = $2) AND edition = $3',
+    [emailIn, mobileIn, activeEdition]
   );
   if (dupe) {
     return res.status(409).json({
@@ -132,14 +139,16 @@ router.post('/', async (req, res) => {
     membership: body.membership,
     note: body.note ? String(body.note).trim() : null,
     hub_id: hub.id,
+    edition: activeEdition,
   };
 
   await db.run(
-    `INSERT INTO participants (id, registered_at, status, full_name, email, mobile, membership, note, hub_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    `INSERT INTO participants (id, registered_at, status, full_name, email, mobile, membership, note, hub_id, edition)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       participant.id, participant.registered_at, participant.status, participant.full_name,
       participant.email, participant.mobile, participant.membership, participant.note, participant.hub_id,
+      participant.edition,
     ]
   );
 
@@ -157,6 +166,7 @@ router.post('/', async (req, res) => {
     hubCity: hub.city,
     hubArea: hub.area,
     hubVenue: hub.venue_type,
+    edition: participant.edition,
   });
 });
 

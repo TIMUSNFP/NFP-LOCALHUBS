@@ -184,6 +184,31 @@ async function sendHubApproved(hub) {
   });
 }
 
+// ─── Hub Carried Over To Next Edition ──────────────────────────────────────────
+
+async function sendHubCarriedToNextEdition(hub) {
+  const html = wrap(`
+    <div class="badge">✓ You're All Set for the Next Edition</div>
+    <h2>Great news, ${hub.full_name}!</h2>
+    <p>Since you were an approved Circle Leader last edition, we've carried your circle forward to the next edition of NFP Circles — <strong>no re-application needed</strong>.</p>
+    <div class="info-box">
+      <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
+      <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
+      <p><strong>Capacity:</strong> ${hub.capacity || '—'}</p>
+    </div>
+    <p>Your circle is live again and open for participants to register. Since registrations reset each edition, participants — including anyone who joined you last time — will need to register again for this edition.</p>
+    <p>We'll be in touch with the schedule and further details as the date approaches.</p>
+    <p>If you have any questions, please reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>Thank you for continuing to be part of the NFP community!</p>
+  `);
+
+  await send({
+    to: hub.email,
+    subject: `You're set for the next edition of NFP Circles, ${hub.full_name}!`,
+    html,
+  });
+}
+
 // ─── Hub Rejected ─────────────────────────────────────────────────────────────
 
 async function sendHubRejected(hub) {
@@ -646,6 +671,7 @@ async function sendCrmCampaignEmail(contact, hubs, campaign) {
 
 module.exports = {
   sendHubApproved,
+  sendHubCarriedToNextEdition,
   sendHubRejected,
   sendParticipantConfirmed,
   sendParticipantCancelled,

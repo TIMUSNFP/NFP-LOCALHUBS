@@ -170,6 +170,14 @@
                         <button class="btn-export btn-sheets" id="sendUnsentRosterBtn" onclick="sendUnsentApprovedRosters()"><svg class="icon"><use href="#icon-clipboard"></use></svg> Send Roster to Never-Sent</button>
                         <button class="btn-export btn-sheets" id="sendAllRosterBtn" onclick="sendAllApprovedRosters()"><svg class="icon"><use href="#icon-clipboard"></use></svg> Send Roster to All Approved</button>
                         <button class="btn-export btn-sheets" id="syncHubsBtn" onclick="syncToSheets('hubs')"><svg class="icon"><use href="#icon-sheet"></use></svg> Sync to Sheets</button>
+                        <label class="edition-control" title="Which edition's applications you're viewing">
+                            <span class="edition-control-label">Viewing</span>
+                            <select id="hubEditionFilter" class="edition-select" onchange="onHubEditionFilterChange(this.value)" aria-label="Viewing edition"></select>
+                        </label>
+                        <label class="edition-control" title="Edition new public applications get tagged with">
+                            <span class="edition-control-label">Active Edition</span>
+                            <select id="activeEditionSelect" class="edition-select" onchange="onActiveEditionChange(this.value)" aria-label="Active edition for new submissions"></select>
+                        </label>
                         <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:0;min-width:auto">Applications</button>
                     </div>
                 </div>
@@ -180,6 +188,7 @@
                         <button class="act-btn act-reject" onclick="bulkUpdateHubs('Rejected')">Reject Selected</button>
                         <button class="act-btn act-reset" onclick="bulkUpdateHubs('Pending')">Reset Selected</button>
                         <button class="act-btn act-view" onclick="bulkSendHubRoster()">Send Roster to Selected</button>
+                        <button class="act-btn act-view" onclick="bulkMoveToNextEdition()">Move Selected to Next Edition</button>
                         <button class="act-btn bulk-clear" onclick="clearHubSelection()">Clear</button>
                     </div>
                 </div>
@@ -426,6 +435,10 @@
                         <button class="btn-export btn-sheets" id="sendAllEventReminderBtn" onclick="sendAllParticipantEventReminders()"><svg class="icon"><use href="#icon-clock"></use></svg> Send Event Reminder to All Confirmed</button>
                         <button class="btn-export" onclick="exportParticipantsCSV()"><svg class="icon"><use href="#icon-download"></use></svg> Export CSV</button>
                         <button class="btn-export btn-sheets" id="syncParticipantsBtn" onclick="syncToSheets('participants')"><svg class="icon"><use href="#icon-sheet"></use></svg> Sync to Sheets</button>
+                        <label class="edition-control" title="Which edition's registrations you're viewing">
+                            <span class="edition-control-label">Viewing</span>
+                            <select id="partEditionFilter" class="edition-select" onchange="onPartEditionFilterChange(this.value)" aria-label="Viewing edition"></select>
+                        </label>
                         <button class="btn-export form-toggle" id="participantFormToggle" onclick="toggleParticipantForm()" style="margin-left:0;min-width:auto">Registrations</button>
                     </div>
                 </div>

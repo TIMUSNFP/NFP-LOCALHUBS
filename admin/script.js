@@ -27,6 +27,9 @@ let selectedHubIds   = new Set(); // bulk-select state for the Applications tabl
 let pendingBulkAction = null;     // { ids, status } awaiting confirm-modal approval
 let selectedParticipantIds = new Set(); // bulk-select state for the Participants table
 let pendingBulkActionP     = null;      // { ids, status } awaiting confirm-modal approval
+let editionsList     = [1];  // every known edition, from GET /api/admin/editions
+let hubViewEdition    = null; // edition currently shown on the Applications tab (null until loaded)
+let partViewEdition   = null; // edition currently shown on the Registrations tab (null until loaded)
 
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -185,7 +188,7 @@ function togglePassword() {
 }
 
 // ═══════════════════ FORM OPEN/CLOSE SETTINGS ═══════════════════
-let formSettings = { hubFormOpen: true, participantFormOpen: true };
+let formSettings = { hubFormOpen: true, participantFormOpen: true, activeEdition: 1 };
 
 async function loadSettings() {
     try {
@@ -266,10 +269,80 @@ function toggleParticipantForm() {
     );
 }
 
+// ═══════════════════ EDITIONS ═══════════════════
+// The edition view-filter (which edition you're browsing) and the active
+// edition (what new public submissions get tagged with) are deliberately
+// separate controls — switching what you're looking at must never change
+// where new sign-ups land.
+async function loadEditions() {
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/editions`);
+        if (!res.ok) return;
+        const data = await res.json();
+        editionsList = data.editions && data.editions.length ? data.editions : [1];
+        if (hubViewEdition === null) hubViewEdition = data.active;
+        if (partViewEdition === null) partViewEdition = data.active;
+        renderEditionControls();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') { /* non-critical — dropdowns just stay empty */ }
+    }
+}
+
+function renderEditionControls() {
+    const options = (selected) => editionsList
+        .map(e => `<option value="${e}" ${e === selected ? 'selected' : ''}>Edition ${e}</option>`)
+        .join('');
+    const hubSel = document.getElementById('hubEditionFilter');
+    if (hubSel) hubSel.innerHTML = options(hubViewEdition);
+    const partSel = document.getElementById('partEditionFilter');
+    if (partSel) partSel.innerHTML = options(partViewEdition);
+    const activeSel = document.getElementById('activeEditionSelect');
+    if (activeSel) activeSel.innerHTML = options(formSettings.activeEdition);
+}
+
+async function onHubEditionFilterChange(value) {
+    hubViewEdition = parseInt(value, 10);
+    clearHubSelection();
+    await loadHubs();
+    refreshHubViews();
+}
+
+async function onPartEditionFilterChange(value) {
+    partViewEdition = parseInt(value, 10);
+    clearParticipantSelection();
+    await loadParticipants();
+    updateParticipantStats();
+    applyParticipantFilters();
+}
+
+function onActiveEditionChange(value) {
+    const next = parseInt(value, 10);
+    if (next === formSettings.activeEdition) return;
+    openConfirmModal(
+        'Change Active Edition',
+        `Set <strong>Edition ${next}</strong> as the active edition? New public applications and registrations will be tagged with this edition going forward. This does not change what you're currently viewing above.`,
+        '🔄',
+        async () => {
+            closeConfirmModal();
+            const ok = await patchSettings({ activeEdition: next });
+            if (ok) {
+                showToast(`Active edition is now Edition ${next}.`, 'success');
+                await loadEditions();
+            } else {
+                renderEditionControls();
+            }
+        },
+        'Set Active',
+        false
+    );
+    renderEditionControls(); // revert the select visually until the change is confirmed
+}
+
 // ═══════════════════ DATA LOADING ═══════════════════
 async function loadHubs() {
     try {
-        const res = await adminFetch(`${API_BASE}/api/admin/hubs`);
+        const qs = hubViewEdition != null ? `?edition=${hubViewEdition}` : '';
+        const res = await adminFetch(`${API_BASE}/api/admin/hubs${qs}`);
         if (!res.ok) { showToast('Failed to load applications.', 'error'); return; }
         allHubs = await res.json();
     } catch (e) {
@@ -279,7 +352,8 @@ async function loadHubs() {
 
 async function loadParticipants() {
     try {
-        const res = await adminFetch(`${API_BASE}/api/admin/participants`);
+        const qs = partViewEdition != null ? `?edition=${partViewEdition}` : '';
+        const res = await adminFetch(`${API_BASE}/api/admin/participants${qs}`);
         if (!res.ok) { showToast('Failed to load participants.', 'error'); return; }
         allParticipants = await res.json();
     } catch (e) {
@@ -289,7 +363,8 @@ async function loadParticipants() {
 
 // ═══════════════════ ADMIN DASHBOARD ═══════════════════
 async function updateDashboard() {
-    loadSettings();
+    await loadSettings();
+    await loadEditions();
     await Promise.all([loadHubs(), loadParticipants()]);
     updateStats();
     applyFilters();
@@ -707,7 +782,7 @@ function renderTable(regs) {
             <td>${r.hostedBefore === 'Yes' ? '<svg class="icon" style="color:var(--success)"><use href="#icon-check"></use></svg> Yes' : '<svg class="icon" style="color:var(--danger)"><use href="#icon-x"></use></svg> No'}</td>
             <td>${escHtml(r.hostingFrequency || '—')}</td>
             <td>${formatDate(r.submittedAt)}</td>
-            <td>${statusBadge(r.status)}${mergedIntoLabel(r)}${combinedFromLabel(r)}</td>
+            <td>${statusBadge(r.status)}${mergedIntoLabel(r)}${combinedFromLabel(r)}${carriedOverLabel(r)}</td>
             <td>
                 <div class="action-btns">
                     ${r.status !== 'Approved' && r.status !== 'Merged'
@@ -724,6 +799,9 @@ function renderTable(regs) {
                         : ''}
                     ${r.status === 'Approved'
                         ? `<button class="act-btn act-view" onclick="openCombineHubModal('${escHtml(r.id)}')">Combine</button>`
+                        : ''}
+                    ${r.status === 'Approved' && !r.carriedOverToHubId
+                        ? `<button class="act-btn act-view" onclick="confirmMoveToNextEdition('${escHtml(r.id)}')">Move to Next Edition</button>`
                         : ''}
                     ${r.status === 'Merged'
                         ? `<button class="act-btn act-reset" onclick="confirmRevertMerge('${escHtml(r.id)}')">Undo Merge</button>`
@@ -766,6 +844,14 @@ function combinedFromLabel(hub) {
     if (!absorbed.length) return '';
     const names = absorbed.map(h => escHtml(h.fullName)).join(', ');
     return `<div style="font-size:11px;color:var(--info);margin-top:2px">&#129309; Combined with: ${names}</div>`;
+}
+
+// For a hub already carried forward via Move to Next Edition — the target hub
+// may not be in the currently-viewed edition's allHubs list, hence the fallback.
+function carriedOverLabel(hub) {
+    if (!hub.carriedOverToHubId) return '';
+    const target = allHubs.find(h => h.id === hub.carriedOverToHubId);
+    return `<div style="font-size:11px;color:var(--info);margin-top:2px">&rarr; Edition ${target ? escHtml(String(target.edition)) : 'N'}</div>`;
 }
 
 // ═══════════════════ ADMIN ACTIONS (HUBS) ═══════════════════
@@ -2954,6 +3040,88 @@ async function executeRevertMerge() {
     }
     closeConfirmModal();
     pendingRegId = null;
+}
+
+// ═══════════════════ MOVE TO NEXT EDITION ═══════════════════
+function confirmMoveToNextEdition(id) {
+    const hub = allHubs.find(h => String(h.id) === String(id));
+    if (!hub) return;
+    pendingRegId = id;
+    openConfirmModal(
+        'Move to Next Edition',
+        `Carry <strong>${escHtml(hub.fullName)}'s</strong> Circle forward to Edition ${formSettings.activeEdition}? ` +
+        `They'll be pre-approved with no re-application needed. Participants still register fresh for the new edition.`,
+        '➡️',
+        executeMoveToNextEdition,
+        'Move to Next Edition'
+    );
+}
+
+async function executeMoveToNextEdition() {
+    if (!pendingRegId) return;
+    const id = pendingRegId;
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/move-to-next-edition`, { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showToast(data.error || 'Could not move this circle to the next edition.', 'error');
+        } else {
+            showToast(`Moved — ${escHtml(data.newHub.fullName)}'s Circle is now set up for Edition ${data.newHub.edition}.`, 'success');
+            await loadEditions();
+            await loadHubs();
+            refreshHubViews();
+        }
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+    closeConfirmModal();
+    pendingRegId = null;
+}
+
+function bulkMoveToNextEdition() {
+    const eligible = [...selectedHubIds].filter(id => {
+        const h = allHubs.find(x => String(x.id) === String(id));
+        return h && h.status === 'Approved' && !h.carriedOverToHubId;
+    });
+    if (eligible.length === 0) {
+        showToast('No eligible circles selected — only Approved circles not yet moved can advance.', 'warning');
+        return;
+    }
+    const count = eligible.length;
+    pendingBulkAction = { ids: eligible };
+    openConfirmModal(
+        `Move ${count} Circle${count > 1 ? 's' : ''} to Next Edition`,
+        `Carry <strong>${count}</strong> selected Circle Leader${count > 1 ? 's' : ''} forward to Edition ${formSettings.activeEdition}? ` +
+        `They'll be pre-approved with no re-application needed.`,
+        '➡️',
+        executeBulkMoveToNextEdition,
+        'Move Selected'
+    );
+}
+
+async function executeBulkMoveToNextEdition() {
+    if (!pendingBulkAction) return;
+    const { ids } = pendingBulkAction;
+    closeConfirmModal();
+    pendingBulkAction = null;
+
+    let successCount = 0;
+    for (const id of ids) {
+        try {
+            const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/move-to-next-edition`, { method: 'POST' });
+            if (res.ok) successCount++;
+        } catch (e) { /* continue with the rest */ }
+    }
+    clearHubSelection();
+    await loadEditions();
+    await loadHubs();
+    refreshHubViews();
+
+    if (successCount === ids.length) {
+        showToast(`${successCount} circle${successCount > 1 ? 's' : ''} moved to the next edition!`, 'success');
+    } else {
+        showToast(`${successCount}/${ids.length} moved — some failed, please check and retry.`, 'warning');
+    }
 }
 
 function exportParticipantsCSV() {

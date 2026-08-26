@@ -4,8 +4,9 @@ const db = require('../db');
 
 const router = express.Router();
 
-// Reads the settings table into a { hubFormOpen, participantFormOpen } shape.
-// Anything other than the literal 'false' is treated as open (fail-open).
+// Reads the settings table into a { hubFormOpen, participantFormOpen, activeEdition }
+// shape. Anything other than the literal 'false' is treated as open (fail-open).
+// activeEdition defaults to 1 if never set (matches the DB column's own DEFAULT 1).
 async function readFormSettings() {
   const rows = await db.all('SELECT key, value FROM settings');
   const map = {};
@@ -15,6 +16,7 @@ async function readFormSettings() {
   return {
     hubFormOpen: map.hub_form_open !== 'false',
     participantFormOpen: map.participant_form_open !== 'false',
+    activeEdition: parseInt(map.active_edition || '1', 10),
   };
 }
 

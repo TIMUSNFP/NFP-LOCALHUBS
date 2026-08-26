@@ -3,11 +3,12 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-const { hubRowToJson, participantRowToJson, geocodeHub, generateHubMergeId } = require('../utils');
+const { hubRowToJson, participantRowToJson, geocodeHub, generateHubMergeId, generateHubId } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
 const { readFormSettings } = require('./settings');
 const {
   sendHubApproved,
+  sendHubCarriedToNextEdition,
   sendHubRejected,
   sendParticipantConfirmed,
   sendParticipantCancelled,
@@ -88,27 +89,33 @@ router.get('/settings', async (req, res) => {
   res.json(await readFormSettings());
 });
 
-// PATCH /api/admin/settings — open or close the public forms.
-// Body: { hubFormOpen?: boolean, participantFormOpen?: boolean }
+// PATCH /api/admin/settings — open or close the public forms, or change which
+// edition new public submissions get tagged with.
+// Body: { hubFormOpen?: boolean, participantFormOpen?: boolean, activeEdition?: number }
 router.patch('/settings', async (req, res) => {
-  const { hubFormOpen, participantFormOpen } = req.body || {};
+  const { hubFormOpen, participantFormOpen, activeEdition } = req.body || {};
 
   const upsert = (key, val) =>
     db.run(
       `INSERT INTO settings (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      [key, val ? 'true' : 'false']
+      [key, val]
     );
 
-  if (typeof hubFormOpen === 'boolean') await upsert('hub_form_open', hubFormOpen);
-  if (typeof participantFormOpen === 'boolean') await upsert('participant_form_open', participantFormOpen);
+  if (typeof hubFormOpen === 'boolean') await upsert('hub_form_open', hubFormOpen ? 'true' : 'false');
+  if (typeof participantFormOpen === 'boolean') await upsert('participant_form_open', participantFormOpen ? 'true' : 'false');
+  if (Number.isInteger(activeEdition) && activeEdition > 0) await upsert('active_edition', String(activeEdition));
 
   res.json(await readFormSettings());
 });
 
-// GET /api/admin/hubs — all hubs regardless of status.
+// GET /api/admin/hubs — all hubs regardless of status. Optional ?edition=N scopes
+// to one edition; omitted returns every edition (admin can always see everything).
 router.get('/hubs', async (req, res) => {
-  const rows = await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
+  const edition = parseInt(req.query.edition, 10);
+  const rows = Number.isInteger(edition)
+    ? await db.all('SELECT * FROM hubs WHERE edition = $1 ORDER BY submitted_at DESC', [edition])
+    : await db.all('SELECT * FROM hubs ORDER BY submitted_at DESC');
   res.json(rows.map(hubRowToJson));
 });
 
@@ -247,13 +254,26 @@ router.patch('/hubs/:id', async (req, res) => {
 });
 
 // GET /api/admin/participants — all participants, joined with hub fields.
+// Optional ?edition=N scopes to one edition (matching the participant's own
+// edition, not the hub's — a participant always belongs to whichever edition
+// they registered for).
 router.get('/participants', async (req, res) => {
-  const rows = await db.all(
-    `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
-     FROM participants p
-     JOIN hubs h ON h.id = p.hub_id
-     ORDER BY p.registered_at DESC`
-  );
+  const edition = parseInt(req.query.edition, 10);
+  const rows = Number.isInteger(edition)
+    ? await db.all(
+        `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
+         FROM participants p
+         JOIN hubs h ON h.id = p.hub_id
+         WHERE p.edition = $1
+         ORDER BY p.registered_at DESC`,
+        [edition]
+      )
+    : await db.all(
+        `SELECT p.*, h.full_name AS hub_leader, h.city AS hub_city, h.area AS hub_area, h.venue_type AS hub_venue
+         FROM participants p
+         JOIN hubs h ON h.id = p.hub_id
+         ORDER BY p.registered_at DESC`
+      );
 
   res.json(
     rows.map((row) => ({
@@ -586,6 +606,89 @@ router.post('/hubs/:id/revert-merge', async (req, res) => {
     restoredParticipants: restoredCount,
     skippedParticipants: skippedCount,
     hub: hubRowToJson(updatedHub),
+  });
+});
+
+// POST /api/admin/hubs/:id/move-to-next-edition — carry an already-vetted Circle
+// Leader forward into the next edition without making them re-apply. :id is the
+// source hub (must be Approved and not already carried over). Creates a brand
+// new hub row for the target edition, pre-approved, copying the reusable profile
+// fields (leader identity, location, venue) but starting with zero participants —
+// participants register fresh each edition, this action is leaders-only. Lineage
+// is recorded both ways via carried_over_from_hub_id / carried_over_to_hub_id
+// (mirrors merged_into_hub_id on the Combine Circles path above) so the admin UI
+// can show "→ Edition N" on the source row instead of the action button.
+router.post('/hubs/:id/move-to-next-edition', async (req, res) => {
+  const sourceHubId = req.params.id;
+
+  const sourceHub = await db.get('SELECT * FROM hubs WHERE id = $1', [sourceHubId]);
+  if (!sourceHub) return res.status(404).json({ error: 'Circle not found.' });
+  if (sourceHub.status !== 'Approved') {
+    return res.status(400).json({ error: 'Only an Approved circle can be moved to the next edition.' });
+  }
+  if (sourceHub.carried_over_to_hub_id) {
+    return res.status(400).json({ error: 'This circle has already been moved to a later edition.' });
+  }
+
+  const { activeEdition } = await readFormSettings();
+  const targetEdition = (req.body && req.body.targetEdition) || activeEdition;
+  if (targetEdition <= sourceHub.edition) {
+    return res.status(400).json({ error: 'Target edition must be later than the circle\'s current edition.' });
+  }
+
+  const newHubId = generateHubId();
+  const now = new Date().toISOString();
+
+  await db.run(
+    `INSERT INTO hubs (
+      id, submitted_at, last_updated, status, full_name, email, mobile, membership,
+      city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency,
+      poc_role, lat, lng, edition, carried_over_from_hub_id
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+    )`,
+    [
+      newHubId, now, null, 'Approved', sourceHub.full_name, sourceHub.email, sourceHub.mobile,
+      sourceHub.membership, sourceHub.city, sourceHub.area, sourceHub.address, sourceHub.pincode,
+      sourceHub.venue_type, sourceHub.capacity, sourceHub.hosted_before, sourceHub.hosting_frequency,
+      sourceHub.poc_role, sourceHub.lat, sourceHub.lng, targetEdition, sourceHubId,
+    ]
+  );
+
+  await db.run(
+    `UPDATE hubs SET carried_over_to_hub_id = $1, last_updated = $2 WHERE id = $3`,
+    [newHubId, now, sourceHubId]
+  );
+
+  // Let the Circle Leader know they're set for the new edition — non-blocking,
+  // errors are swallowed in mailer, same as every other admin action here.
+  sendHubCarriedToNextEdition(sourceHub);
+
+  const updatedSourceHub = await db.get('SELECT * FROM hubs WHERE id = $1', [sourceHubId]);
+  const newHub = await db.get('SELECT * FROM hubs WHERE id = $1', [newHubId]);
+  res.json({
+    sourceHub: hubRowToJson(updatedSourceHub),
+    newHub: hubRowToJson(newHub),
+  });
+});
+
+// GET /api/admin/editions — every edition that has at least one hub or
+// participant row, plus (activeEdition + 1) always included so the admin can
+// always see "the next edition" as a selectable option even before anyone's
+// been moved into it yet.
+router.get('/editions', async (req, res) => {
+  const rows = await db.all(
+    `SELECT edition FROM hubs
+     UNION
+     SELECT edition FROM participants`
+  );
+  const { activeEdition } = await readFormSettings();
+  const editions = new Set(rows.map(r => Number(r.edition)));
+  editions.add(activeEdition);
+  editions.add(activeEdition + 1);
+  res.json({
+    editions: Array.from(editions).sort((a, b) => a - b),
+    active: activeEdition,
   });
 });
 

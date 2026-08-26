@@ -84,6 +84,9 @@ function hubRowToJson(row) {
     changeNotifiedAt: row.change_notified_at,
     mergedIntoHubId: row.merged_into_hub_id || null,
     mergedAt: row.merged_at || null,
+    edition: row.edition,
+    carriedOverFromHubId: row.carried_over_from_hub_id || null,
+    carriedOverToHubId: row.carried_over_to_hub_id || null,
   };
 }
 
@@ -102,6 +105,7 @@ function participantRowToJson(row) {
     hubId: row.hub_id,
     confirmationSentAt: row.confirmation_sent_at,
     eventReminderSentAt: row.event_reminder_sent_at,
+    edition: row.edition,
   };
 }
 
