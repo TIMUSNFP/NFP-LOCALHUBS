@@ -567,6 +567,23 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     border-radius: var(--radius-pill);
     flex-shrink: 0;
 }
+/* Action-button clusters (Send Roster/Confirmation/Reminder, Sync, Export…)
+   scroll horizontally as one row instead of wrapping or overflowing the
+   filter bar — there can be up to 6 of these on the Registrations tab. */
+.action-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+    scrollbar-width: thin;
+}
+.action-btn-row::-webkit-scrollbar { height: 6px; }
+.action-btn-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-pill); }
+.action-btn-row .btn-export { white-space: nowrap; }
 /* Form open/close toggle sits to the right as a clear status control. */
 .filter-bar .form-toggle {
     margin-left: auto;

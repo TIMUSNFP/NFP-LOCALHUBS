@@ -165,7 +165,7 @@
                         <button class="chip" data-filter="Rejected" onclick="setFilter('Rejected', this)">Rejected</button>
                         <button class="chip" data-filter="Merged" onclick="setFilter('Merged', this)">Merged</button>
                     </div>
-                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                    <div class="action-btn-row">
                         <button class="btn-export" onclick="exportCSV()"><svg class="icon"><use href="#icon-download"></use></svg> Export CSV</button>
                         <button class="btn-export btn-sheets" id="sendUnsentRosterBtn" onclick="sendUnsentApprovedRosters()"><svg class="icon"><use href="#icon-clipboard"></use></svg> Send Roster to Never-Sent</button>
                         <button class="btn-export btn-sheets" id="sendAllRosterBtn" onclick="sendAllApprovedRosters()"><svg class="icon"><use href="#icon-clipboard"></use></svg> Send Roster to All Approved</button>
@@ -419,7 +419,7 @@
                         <button class="chip" data-pfilter="Confirmed" onclick="setPFilter('Confirmed', this)">Confirmed</button>
                         <button class="chip" data-pfilter="Cancelled" onclick="setPFilter('Cancelled', this)">Cancelled</button>
                     </div>
-                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                    <div class="action-btn-row">
                         <button class="btn-export btn-sheets" id="sendUnsentConfirmationBtn" onclick="sendUnsentParticipantConfirmations()"><svg class="icon"><use href="#icon-clipboard"></use></svg> Send Confirmation to Never-Sent</button>
                         <button class="btn-export btn-sheets" id="sendAllConfirmationBtn" onclick="sendAllParticipantConfirmations()"><svg class="icon"><use href="#icon-clipboard"></use></svg> Send Confirmation to All Confirmed</button>
                         <button class="btn-export btn-sheets" id="sendUnsentEventReminderBtn" onclick="sendUnsentParticipantEventReminders()"><svg class="icon"><use href="#icon-clock"></use></svg> Send Event Reminder to Never-Sent</button>
@@ -495,7 +495,7 @@
                         <input type="text" id="crmSearchInput" class="search-input" placeholder="Search by name, email, or city..." oninput="applyCrmContactFilters()">
                         <button class="search-clear" id="crmSearchClear" onclick="clearCrmContactSearch()" title="Clear" aria-label="Clear search"><svg class="icon"><use href="#icon-x"></use></svg></button>
                     </div>
-                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                    <div class="action-btn-row">
                         <button class="btn-export btn-sheets" onclick="openCrmImportModal()"><svg class="icon"><use href="#icon-upload"></use></svg> Import Contacts</button>
                     </div>
                 </div>
@@ -525,7 +525,7 @@
                     <div style="font-size:14px;color:var(--muted)">
                         City-targeted outreach emails to CRM contacts about open Circles near them.
                     </div>
-                    <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap">
+                    <div class="action-btn-row">
                         <button class="btn-primary" style="width:auto;padding:10px 20px" onclick="openCrmCampaignModal()">+ New Campaign</button>
                     </div>
                 </div>
