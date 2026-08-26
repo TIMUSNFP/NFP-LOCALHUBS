@@ -355,7 +355,18 @@ async function executeStartNewEdition() {
     const ok = await patchSettings({ activeEdition: next });
     if (ok) {
         showToast(`Edition ${next} is now active.`, 'success');
+        // Switch both tabs' view to the freshly-started (empty) edition, so the
+        // table visibly clears instead of still showing the outgoing edition's
+        // data under "All Editions." Switch back manually to move leaders forward.
+        hubViewEdition = next;
+        partViewEdition = next;
+        clearHubSelection();
+        clearParticipantSelection();
         await loadEditions();
+        await Promise.all([loadHubs(), loadParticipants()]);
+        refreshHubViews();
+        updateParticipantStats();
+        applyParticipantFilters();
     }
 }
 
@@ -383,9 +394,20 @@ async function loadParticipants() {
 }
 
 // ═══════════════════ ADMIN DASHBOARD ═══════════════════
+// updateDashboard() re-runs after nearly every admin action (delete, send
+// roster, approve, etc), not just on initial load — so loadEditions() is only
+// fetched once per session here. The DB connection pool is deliberately tiny
+// (see backend/db.js), and firing an extra query on every single click was
+// enough to start timing it out. Actions that actually change the set of
+// known editions (Move to Next Edition, Start New Edition) already refresh
+// it explicitly themselves.
+let editionsLoadedOnce = false;
 async function updateDashboard() {
     await loadSettings();
-    await loadEditions();
+    if (!editionsLoadedOnce) {
+        await loadEditions();
+        editionsLoadedOnce = true;
+    }
     await Promise.all([loadHubs(), loadParticipants()]);
     updateStats();
     applyFilters();
