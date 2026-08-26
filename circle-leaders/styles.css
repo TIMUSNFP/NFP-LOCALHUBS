@@ -830,10 +830,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 ══════════════════════════════════════════════════════ */
 .lh-hero {
     position: relative;
-    min-height: 100vh;
     background: var(--hero-cream);
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
     padding-top: var(--nav-height);
 }
@@ -862,18 +859,18 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     top: 40%; left: 40%;
 }
 .lh-hero-inner {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    gap: 60px;
-    padding: 48px 24px 40px;
-    flex: 1;
+    display: grid;
+    grid-template-columns: 0.92fr 1.08fr;
+    align-items: stretch;
 }
 .lh-hero-content {
-    flex: 1;
-    min-width: 0;
-    padding-left: clamp(40px, 6vw, 88px);
+    position: relative;
+    z-index: 1;
+    background: var(--hero-cream);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px clamp(16px, 3vw, 40px) 40px clamp(56px, 9vw, 120px);
 }
 .launch-banner {
     display: inline-flex;
@@ -989,17 +986,28 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 
 /* India Map */
 .lh-hero-map {
-    flex-shrink: 0;
-    /* Capped by the vertical budget (nav height + hero-inner's own
-       padding), not just a fixed pixel width, so short browser windows
-       shrink the map instead of pushing the stats row below the fold. */
-    width: min(600px, calc((100vh - var(--nav-height) - 100px) / 1.5));
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px clamp(16px, 2vw, 24px);
+    overflow: hidden;
 }
 
 .india-map-container {
     position: relative;
+    z-index: 1;
     display: block;
     width: 100%;
+    /* Capped by width normally, but the map image's own aspect ratio is
+       tall (~1.5x its width), so on short viewports a wide fixed max-width
+       can push the hero taller than the screen and hide the stats row
+       below the fold. Deriving the width cap from the vertical budget too
+       (nav height + this wrapper's padding) guarantees the whole hero,
+       stats included, always fits without scrolling. */
+    max-width: min(580px, calc((100vh - var(--nav-height) - 112px) / 1.5));
+    padding-bottom: 40px; /* room for the counter pill below the map */
 }
 #heroMapPins {
     position: absolute;
@@ -1062,7 +1070,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .map-pin-label.lbl-left  { right: 12px; text-align: right; }
 .map-counter-pill {
     position: absolute;
-    bottom: 3%;
+    bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
     background: var(--white);
@@ -1956,12 +1964,12 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
    MOBILE RESPONSIVE — NEW SECTIONS
 ══════════════════════════════════════════════════════ */
 @media (max-width: 1024px) {
-    .lh-hero-inner { flex-direction: column; padding: 60px 24px 40px; text-align: center; gap: 40px; }
-    .lh-hero-content { max-width: 600px; }
+    .lh-hero-inner { grid-template-columns: 1fr; }
+    .lh-hero-map { padding: 40px 24px; }
+    .lh-hero-content { text-align: center; align-items: center; }
     .lh-hero-sub { max-width: 100%; }
     .lh-hero-actions { justify-content: center; }
     .lh-hero-stats { justify-content: center; }
-    .lh-hero-map { width: 100%; max-width: 460px; }
     .lh-what-grid { grid-template-columns: repeat(3, 1fr); }
     .lh-why-layout { grid-template-columns: 1fr; gap: 48px; }
     .lh-why-visual { position: static; }
@@ -2002,7 +2010,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     .lh-what-grid { grid-template-columns: 1fr; }
     .lh-hero-stats { flex-direction: column; gap: 12px; }
     .lh-stat-divider { width: 60px; height: 1px; }
-    .lh-hero-map { max-width: 300px; }
+    .india-map-container { max-width: 280px; }
     .lh-gallery-slide { height: 240px; }
     .lh-city-grid { justify-content: center; }
     .container { padding: 0 16px; }

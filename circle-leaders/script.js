@@ -12,45 +12,35 @@
 // backend on another port, set this to e.g. 'http://localhost:4000'.
 const API_BASE = '';
 
-// ═══════════════════ HERO MAP — CITY DATA & PROJECTION ═══════════════════
-// MapChart_Map.png calibration anchored on the Kolkata star marker (88.36°E → x≈68.8%)
-// and Saurashtra western tip (68.2°E → x≈8.1%); Kanyakumari tip (8.08°N → y≈92.7%):
-//   lngLeft  68.0°E  → xLeft   7.5%   |   lngRight 97.4°E → xRight 96.0%
-//   latTop   37.0°N  → yTop    4.0%   |   latBottom 8.0°N → yBottom 87.0%
-//   scale_x = (96.0−7.5)/(97.4−68.0) = 3.01 %/°   scale_y = (87−4)/(37−8) = 2.86 %/°
-const _M = { lngL:68.0, xL:7.5, lngR:97.4, xR:96.0, latT:37.0, yT:4.0, latB:8.0, yB:87.0 };
-
-function latlngToPercent(lat, lng) {
-    const x = _M.xL + (lng - _M.lngL) / (_M.lngR - _M.lngL) * (_M.xR - _M.xL);
-    const y = _M.yT + (_M.latT - lat) / (_M.latT - _M.latB) * (_M.yB - _M.yT);
-    return { x: +x.toFixed(2), y: +y.toFixed(2) };
-}
-
+// ═══════════════════ HERO MAP — CITY PIN POSITIONS ═══════════════════
+// Positions are direct x/y percentages of the map image (Images/MapChart_Map.png),
+// NOT lat/lng run through a projection — that indirection was fragile (every
+// time the map image got replaced, all 15 pins needed hand recalibration).
+// Same image and coordinates as the participant site, for a matching map.
 const HUB_CITIES = [
-    { name:'Chandigarh' , lat:28.35, lng:77.26, delay:1.6, lg:false, lbl:'right'  },
-    { name:'Delhi NCR'  , lat:26.42, lng:77.08, delay:0.0, lg:true , lbl:'right'  },
-    { name:'Jaipur'     , lat:24.11, lng:75.94, delay:0.5, lg:false, lbl:'left'  },
-    { name:'Lucknow'    , lat:24.53, lng:80.74, delay:0.9, lg:false, lbl:'right'  },
-    { name:'Ahmedabad'  , lat:20.50, lng:71.50, delay:0.3, lg:false, lbl:'left'  },
-    { name:'Bhopal'     , lat:20.50, lng:76.66, delay:1.8, lg:false, lbl:'right'  },
-    { name:'Kolkata'    , lat:20.50, lng:88.72, delay:0.8, lg:true , lbl:'left'  },
-    { name:'Nagpur'     , lat:18.25, lng:78.46, delay:1.2, lg:false, lbl:'right'  },
-    { name:'Mumbai'     , lat:15.99, lng:71.80, delay:0.4, lg:true , lbl:'left'  },
-    { name:'Pune'       , lat:15.84, lng:73.06, delay:0.7, lg:false, lbl:'right'  },
-    { name:'Hyderabad'  , lat:14.89, lng:78.64, delay:1.0, lg:true , lbl:'left'  },
-    { name:'Vizag'      , lat:14.89, lng:83.50, delay:2.0, lg:false, lbl:'left'  },
-    { name:'Bengaluru'  , lat: 9.97, lng:77.44, delay:0.6, lg:true , lbl:'left'  },
-    { name:'Chennai'    , lat:10.23, lng:80.32, delay:0.2, lg:true , lbl:'right'  },
-    { name:'Kochi'      , lat: 6.83, lng:75.52, delay:1.4, lg:false, lbl:'left'  }
+    { name:'Chandigarh', x:34.57, y:24.03, delay:1.6, lg:false, lbl:'right' },
+    { name:'Delhi NCR', x:36.74, y:30.99, delay:0, lg:true, lbl:'right' },
+    { name:'Jaipur', x:30.22, y:36.36, delay:0.5, lg:false, lbl:'left' },
+    { name:'Lucknow', x:49.57, y:36.65, delay:0.9, lg:false, lbl:'right' },
+    { name:'Ahmedabad', x:19.13, y:46.23, delay:0.3, lg:false, lbl:'left' },
+    { name:'Bhopal', x:38.04, y:45.21, delay:1.8, lg:false, lbl:'right' },
+    { name:'Kolkata', x:71.74, y:46.52, delay:0.8, lg:true, lbl:'left' },
+    { name:'Nagpur', x:43.7, y:52.32, delay:1.2, lg:false, lbl:'right' },
+    { name:'Mumbai', x:18.04, y:56.53, delay:0.4, lg:true, lbl:'left' },
+    { name:'Pune', x:21.3, y:58.85, delay:0.7, lg:false, lbl:'right' },
+    { name:'Hyderabad', x:37.1, y:68.24, delay:1, lg:true, lbl:'left' },
+    { name:'Vizag', x:53.7, y:61.17, delay:2, lg:false, lbl:'left' },
+    { name:'Bengaluru', x:33.04, y:72.2, delay:0.6, lg:true, lbl:'left' },
+    { name:'Chennai', x:43.48, y:74.52, delay:0.2, lg:true, lbl:'right' },
+    { name:'Kochi', x:28.26, y:81.05, delay:1.4, lg:false, lbl:'left' },
 ];
 
 function renderHeroMapPins() {
     const container = document.getElementById('heroMapPins');
     if (!container) return;
     container.innerHTML = HUB_CITIES.map(c => {
-        const { x, y } = latlngToPercent(c.lat, c.lng);
         const dot = c.lg ? 'map-pin-dot map-pin-dot--lg' : 'map-pin-dot';
-        return `<div class="map-pin" style="left:${x}%;top:${y}%">` +
+        return `<div class="map-pin" style="left:${c.x}%;top:${c.y}%">` +
                `<div class="map-pin-pulse" style="animation-delay:${c.delay}s"></div>` +
                `<div class="${dot}"></div>` +
                `<span class="map-pin-label lbl-${c.lbl}">${c.name}</span>` +
