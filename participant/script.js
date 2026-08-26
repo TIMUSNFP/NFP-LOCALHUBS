@@ -411,6 +411,21 @@ let selectedHubId   = null;
 let allApprovedHubs = [];
 let filteredHubs    = [];
 
+const INDIA_BOUNDS = [[8, 68], [37, 97.5]];
+
+// fitBounds() itself is unreliable here — it consistently under-zooms by a
+// full level versus what its own getBoundsZoom() reports as the correct fit
+// (verified: fitBounds -> zoom 4, getBoundsZoom -> zoom 5 for the same bounds
+// and padding), which is what caused the map to show most of Asia instead of
+// framing India. Computing the zoom via getBoundsZoom() and driving the view
+// with setView() directly sidesteps that discrepancy.
+function fitIndiaView(map, animate) {
+    const center = L.latLngBounds(INDIA_BOUNDS).getCenter();
+    const zoom = map.getBoundsZoom(INDIA_BOUNDS, false, [16, 16]);
+    if (animate) map.flyTo(center, zoom, { duration: 1.2 });
+    else map.setView(center, zoom);
+}
+
 function initMap() {
     if (!window.L) { console.warn('Leaflet not loaded'); return; }
 
@@ -421,8 +436,6 @@ function initMap() {
     }
 
     leafletMap = L.map('hubMap', {
-        center:          [20.5937, 78.9629],
-        zoom:            5,
         zoomControl:     true,
         scrollWheelZoom: false,
     });
@@ -432,10 +445,22 @@ function initMap() {
         maxZoom: 18,
     }).addTo(leafletMap);
 
+    // Leaflet caches the container size at map-creation time; since the map is
+    // created right as its parent section is switched from display:none to
+    // visible, that cached size can be stale (0 or a leftover value). invalidateSize()
+    // forces it to re-measure the real, current container before framing the view.
+    leafletMap.invalidateSize();
+    fitIndiaView(leafletMap, false);
+
     refreshMapMarkers();
 
-    // Fix size after container becomes visible
-    setTimeout(() => leafletMap.invalidateSize(), 300);
+    // Re-measure and re-frame after the container has fully settled — a late
+    // layout shift could otherwise leave the initial framing sized against a
+    // stale (e.g. zero) container.
+    setTimeout(() => {
+        leafletMap.invalidateSize();
+        fitIndiaView(leafletMap, false);
+    }, 300);
 }
 
 function createHubPinIcon(isSelected, isPending) {
@@ -730,7 +755,7 @@ function deselectHub() {
 }
 
 function resetMapView() {
-    if (leafletMap) leafletMap.flyTo([20.5937, 78.9629], 5, { duration: 1.2 });
+    if (leafletMap) fitIndiaView(leafletMap, true);
     const searchEl = document.getElementById('hubCitySearch');
     if (searchEl) searchEl.value = '';
     const cityFilterEl = document.getElementById('hubCityFilter');
