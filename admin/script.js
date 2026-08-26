@@ -175,7 +175,13 @@ function checkAdminSession() {
 
 function togglePassword() {
     const passEl = document.getElementById('adminPassword');
-    passEl.type = passEl.type === 'password' ? 'text' : 'password';
+    const showing = passEl.type === 'password';
+    passEl.type = showing ? 'text' : 'password';
+    const btn = document.getElementById('pwToggleBtn');
+    if (btn) {
+        btn.querySelector('use').setAttribute('href', showing ? '#icon-eye-off' : '#icon-eye');
+        btn.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+    }
 }
 
 // ═══════════════════ FORM OPEN/CLOSE SETTINGS ═══════════════════
@@ -192,18 +198,18 @@ function renderFormToggles() {
     const hb = document.getElementById('hubFormToggle');
     if (hb) {
         hb.innerHTML = formSettings.hubFormOpen
-            ? '🟢 Applications Open — Close Form'
-            : '🔴 Applications Closed — Open Form';
-        hb.style.background = formSettings.hubFormOpen ? '' : '#DC2626';
-        hb.style.color = formSettings.hubFormOpen ? '' : '#fff';
+            ? '<span class="icon-dot on"></span> Applications Open — Close Form'
+            : '<span class="icon-dot off"></span> Applications Closed — Open Form';
+        hb.style.background = formSettings.hubFormOpen ? '' : 'var(--danger)';
+        hb.style.color = formSettings.hubFormOpen ? '' : 'var(--white)';
     }
     const pb = document.getElementById('participantFormToggle');
     if (pb) {
         pb.innerHTML = formSettings.participantFormOpen
-            ? '🟢 Registrations Open — Close Form'
-            : '🔴 Registrations Closed — Open Form';
-        pb.style.background = formSettings.participantFormOpen ? '' : '#DC2626';
-        pb.style.color = formSettings.participantFormOpen ? '' : '#fff';
+            ? '<span class="icon-dot on"></span> Registrations Open — Close Form'
+            : '<span class="icon-dot off"></span> Registrations Closed — Open Form';
+        pb.style.background = formSettings.participantFormOpen ? '' : 'var(--danger)';
+        pb.style.color = formSettings.participantFormOpen ? '' : 'var(--white)';
     }
 }
 
@@ -686,7 +692,7 @@ function renderTable(regs) {
     tbody.innerHTML = regs.map(r => `
         <tr data-id="${escHtml(r.id)}">
             <td style="width:40px;position:sticky;left:0px;background:#fff;z-index:2" class="td-checkbox-col">
-                <input type="checkbox" class="hub-row-checkbox" value="${escHtml(r.id)}" ${selectedHubIds.has(r.id) ? 'checked' : ''} onchange="toggleHubSelection('${escHtml(r.id)}', this.checked)">
+                <input type="checkbox" class="hub-row-checkbox" value="${escHtml(r.id)}" ${selectedHubIds.has(r.id) ? 'checked' : ''} onchange="toggleHubSelection('${escHtml(r.id)}', this.checked)" aria-label="Select ${escHtml(r.fullName || r.id)}">
             </td>
             <td class="td-id"    style="min-width:180px;position:sticky;left:40px;  background:#fff;z-index:2">${escHtml(r.id)}</td>
             <td class="td-name"  style="min-width:140px;position:sticky;left:220px;background:#fff;z-index:2"><button class="name-link" onclick="viewHubParticipants('${escHtml(r.id)}')">${escHtml(r.fullName)}</button></td>
@@ -698,7 +704,7 @@ function renderTable(regs) {
             <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:12px" title="${escHtml(r.address || '')}">${escHtml(r.address || '—')}</td>
             <td>${escHtml(r.venueType)}</td>
             <td>${escHtml(r.capacity)}</td>
-            <td>${r.hostedBefore === 'Yes' ? '✅ Yes' : '❌ No'}</td>
+            <td>${r.hostedBefore === 'Yes' ? '<svg class="icon" style="color:var(--success)"><use href="#icon-check"></use></svg> Yes' : '<svg class="icon" style="color:var(--danger)"><use href="#icon-x"></use></svg> No'}</td>
             <td>${escHtml(r.hostingFrequency || '—')}</td>
             <td>${formatDate(r.submittedAt)}</td>
             <td>${statusBadge(r.status)}${mergedIntoLabel(r)}${combinedFromLabel(r)}</td>
@@ -1142,7 +1148,7 @@ function viewDetails(id) {
             <ul>
                 ${pendingChanges.map(c => `<li>${escHtml(c.label)}: ${escHtml(c.oldValue || '—')} &rarr; ${escHtml(c.newValue || '—')}</li>`).join('')}
             </ul>
-            <button class="act-btn act-view" onclick="notifyHubUpdate('${escHtml(reg.id)}')" title="${reg.changeNotifiedAt ? 'Last notified ' + formatDate(reg.changeNotifiedAt) : 'Never notified'}">📣 Notify Participants</button>
+            <button class="act-btn act-view" onclick="notifyHubUpdate('${escHtml(reg.id)}')" title="${reg.changeNotifiedAt ? 'Last notified ' + formatDate(reg.changeNotifiedAt) : 'Never notified'}"><svg class="icon"><use href="#icon-megaphone"></use></svg> Notify Participants</button>
         </div>
         ` : ''}
         <div class="detail-section">
@@ -1209,15 +1215,15 @@ function viewDetails(id) {
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
             ${reg.status !== 'Approved'
-                ? `<button class="btn-primary" style="background:var(--success)" onclick="closeDetailsModal();confirmApprove('${escHtml(reg.id)}')">✅ Approve</button>`
+                ? `<button class="btn-primary" style="background:var(--success)" onclick="closeDetailsModal();confirmApprove('${escHtml(reg.id)}')"><svg class="icon"><use href="#icon-check"></use></svg> Approve</button>`
                 : ''}
             ${reg.status !== 'Rejected'
-                ? `<button class="btn-primary" style="background:var(--danger)" onclick="closeDetailsModal();confirmReject('${escHtml(reg.id)}')">❌ Reject</button>`
+                ? `<button class="btn-primary" style="background:var(--danger)" onclick="closeDetailsModal();confirmReject('${escHtml(reg.id)}')"><svg class="icon"><use href="#icon-x"></use></svg> Reject</button>`
                 : ''}
-            <button class="btn-primary" onclick="enterEditMode('${escHtml(reg.id)}')">✏️ Edit Details</button>
+            <button class="btn-primary" onclick="enterEditMode('${escHtml(reg.id)}')"><svg class="icon"><use href="#icon-edit"></use></svg> Edit Details</button>
         </div>
     `;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 }
 
 // ═══════════════════ HUB EDIT MODE ═══════════════════
@@ -1278,7 +1284,7 @@ function enterEditMode(id) {
             </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
-            <button class="btn-primary" onclick="saveHubEdits('${escHtml(reg.id)}')">💾 Save Changes</button>
+            <button class="btn-primary" onclick="saveHubEdits('${escHtml(reg.id)}')"><svg class="icon"><use href="#icon-save"></use></svg> Save Changes</button>
             <button class="act-btn act-view" onclick="viewDetails('${escHtml(reg.id)}')">Cancel</button>
         </div>
     `;
@@ -1359,6 +1365,42 @@ function notifyHubUpdate(id) {
 // ═══════════════════ CONFIRM MODAL ═══════════════════
 let _modalCallback = null;
 
+// ═══════════════════ MODAL FOCUS TRAP ═══════════════════
+// Keeps Tab/Shift+Tab cycling inside whichever modal is open and returns
+// focus to whatever triggered it once the modal closes — neither existed
+// before, and the app had zero aria-modal/focus-trap handling anywhere.
+let _focusTrapEl = null;
+let _focusReturnEl = null;
+
+function trapFocus(overlayEl) {
+    _focusReturnEl = document.activeElement;
+    _focusTrapEl = overlayEl.querySelector('.modal');
+    const focusable = _focusTrapEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length) focusable[0].focus();
+}
+
+function releaseFocusTrap() {
+    if (_focusReturnEl && typeof _focusReturnEl.focus === 'function') _focusReturnEl.focus();
+    _focusTrapEl = null;
+    _focusReturnEl = null;
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || !_focusTrapEl) return;
+    const focusable = [..._focusTrapEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter(el => el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
+function openDetailsOverlay() {
+    const overlay = document.getElementById('detailsOverlay');
+    overlay.classList.add('visible');
+    trapFocus(overlay);
+}
+
 function openConfirmModal(title, message, emoji, callback, confirmText = 'Confirm', isDanger = false) {
     _modalCallback = callback;
     document.getElementById('modalEmoji').textContent    = emoji;
@@ -1368,7 +1410,9 @@ function openConfirmModal(title, message, emoji, callback, confirmText = 'Confir
     btn.textContent = confirmText;
     btn.style.background = isDanger ? 'var(--danger)' : '';
     btn.style.boxShadow  = isDanger ? '0 4px 14px rgba(220,38,38,.3)' : '';
-    document.getElementById('confirmOverlay').classList.add('visible');
+    const overlay = document.getElementById('confirmOverlay');
+    overlay.classList.add('visible');
+    trapFocus(overlay);
 }
 
 function executeModalAction() {
@@ -1377,12 +1421,18 @@ function executeModalAction() {
 }
 
 function closeConfirmModal() {
-    document.getElementById('confirmOverlay').classList.remove('visible');
+    const overlay = document.getElementById('confirmOverlay');
+    const wasOpen = overlay.classList.contains('visible');
+    overlay.classList.remove('visible');
     _modalCallback = null;
+    if (wasOpen) releaseFocusTrap();
 }
 
 function closeDetailsModal() {
-    document.getElementById('detailsOverlay').classList.remove('visible');
+    const overlay = document.getElementById('detailsOverlay');
+    const wasOpen = overlay.classList.contains('visible');
+    overlay.classList.remove('visible');
+    if (wasOpen) releaseFocusTrap();
 }
 
 // Close modals on overlay click
@@ -2038,19 +2088,43 @@ function renderCityCapacityFill(hubs, parts) {
 }
 
 // ═══════════════════ TOAST NOTIFICATIONS ═══════════════════
+// Keyed by "type:message" so repeated identical failures (e.g. tab-switches
+// that re-trigger the same failed fetch) refresh the existing toast instead
+// of stacking a duplicate on top of it.
+const _activeToasts = new Map();
+
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    const key = `${type}:${message}`;
+
+    const existing = _activeToasts.get(key);
+    if (existing) {
+        clearTimeout(existing.timer);
+        existing.timer = setTimeout(() => dismissToast(key), type === 'error' ? 5000 : 3500);
+        existing.el.classList.remove('toast-pulse');
+        void existing.el.offsetWidth; // restart the CSS animation
+        existing.el.classList.add('toast-pulse');
+        return;
+    }
+
+    const iconMap = { success: 'icon-check-circle', error: 'icon-alert-circle', warning: 'icon-alert-triangle', info: 'icon-info' };
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><span class="toast-text">${escHtml(message)}</span>`;
+    toast.innerHTML = `<svg class="icon toast-icon"><use href="#${iconMap[type] || 'icon-info'}"></use></svg><span class="toast-text">${escHtml(message)}</span>`;
     container.appendChild(toast);
+
     const duration = type === 'error' ? 5000 : 3500;
-    setTimeout(() => {
-        toast.classList.add('out');
-        toast.addEventListener('animationend', () => toast.remove(), { once: true });
-    }, duration);
+    const timer = setTimeout(() => dismissToast(key), duration);
+    _activeToasts.set(key, { el: toast, timer });
+}
+
+function dismissToast(key) {
+    const entry = _activeToasts.get(key);
+    if (!entry) return;
+    _activeToasts.delete(key);
+    entry.el.classList.add('out');
+    entry.el.addEventListener('animationend', () => entry.el.remove(), { once: true });
 }
 
 // ═══════════════════ SIDEBAR TOGGLE ═══════════════════
@@ -2133,7 +2207,7 @@ function renderParticipantTable(parts) {
     tbody.innerHTML = parts.map(p => `
         <tr data-id="${escHtml(p.id)}">
             <td style="width:40px;position:sticky;left:0px;background:#fff;z-index:2" class="td-checkbox-col">
-                <input type="checkbox" class="participant-row-checkbox" value="${escHtml(p.id)}" ${selectedParticipantIds.has(p.id) ? 'checked' : ''} onchange="toggleParticipantSelection('${escHtml(p.id)}', this.checked)">
+                <input type="checkbox" class="participant-row-checkbox" value="${escHtml(p.id)}" ${selectedParticipantIds.has(p.id) ? 'checked' : ''} onchange="toggleParticipantSelection('${escHtml(p.id)}', this.checked)" aria-label="Select ${escHtml(p.fullName || p.id)}">
             </td>
             <td class="td-id"   style="min-width:200px;position:sticky;left:40px;  background:#fff;z-index:2">${escHtml(p.id)}</td>
             <td class="td-name" style="min-width:140px;position:sticky;left:240px;background:#fff;z-index:2"><button class="name-link" onclick="viewParticipantDetails('${escHtml(p.id)}')">${escHtml(p.fullName)}</button></td>
@@ -2615,7 +2689,7 @@ function viewHubParticipants(hubId) {
             ${participantRows}
         </div>
     `;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 }
 
 function viewParticipantFromHub(id) {
@@ -2658,7 +2732,7 @@ function viewParticipantDetails(id) {
         </div>
         ${p.note ? `<div class="detail-section"><h4>Note from Participant</h4><p style="font-size:14px;color:var(--text);line-height:1.65">"${escHtml(p.note)}"</p></div>` : ''}
     `;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 }
 
 // ═══════════════════ TRANSFER PARTICIPANT(S) TO ANOTHER CIRCLE ═══════════════════
@@ -2672,7 +2746,7 @@ async function openTransferParticipantsModal(participantIds) {
     if (titleEl) titleEl.textContent = `Transfer Participant${participantIds.length > 1 ? 's' : ''}`;
     const content = document.getElementById('detailsContent');
     content.innerHTML = `<p style="color:var(--muted)">Loading circles…</p>`;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 
     await loadHubs(); // refresh allHubs so capacity/counts are current
     const approved = allHubs.filter(h => h.status === 'Approved');
@@ -2764,7 +2838,7 @@ async function openCombineHubModal(closingHubId) {
     if (titleEl) titleEl.textContent = `Combine ${closingHub.fullName}'s Circle`;
     const content = document.getElementById('detailsContent');
     content.innerHTML = `<p style="color:var(--muted)">Loading circles…</p>`;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 
     await loadHubs(); // refresh allHubs so participant counts are current
     const candidates = allHubs.filter(h => h.status === 'Approved' && h.id !== closingHubId);
@@ -3104,7 +3178,7 @@ function openCrmImportModal() {
             <button class="btn-primary" id="crmImportSubmitBtn" onclick="submitCrmImport()">Import</button>
         </div>
     `;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 }
 
 async function submitCrmImport() {
@@ -3344,7 +3418,7 @@ function openCrmCampaignSettingsModal(id) {
             <button class="btn-primary" onclick="saveCrmCampaignSettings('${escHtml(id)}')">Save Settings</button>
         </div>
     `;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 }
 
 async function saveCrmCampaignSettings(id) {
@@ -3483,7 +3557,7 @@ async function previewCrmCampaign(id, sampleCity) {
     if (titleEl) titleEl.textContent = 'Campaign Preview';
     const content = document.getElementById('detailsContent');
     content.innerHTML = `<p style="color:var(--muted)">Loading preview…</p>`;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
     try {
         const qs = sampleCity ? `?sampleCity=${encodeURIComponent(sampleCity)}` : '';
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns/${id}/preview${qs}`);
@@ -3527,7 +3601,7 @@ async function openCrmCampaignModal() {
     if (titleEl) titleEl.textContent = 'New Campaign';
     const content = document.getElementById('detailsContent');
     content.innerHTML = `<p style="color:var(--muted)">Loading cities…</p>`;
-    document.getElementById('detailsOverlay').classList.add('visible');
+    openDetailsOverlay();
 
     let cities = [], batches = [], memberships = [], batchStatuses = [];
     try {
