@@ -6,7 +6,15 @@
 // Connection comes from the DATABASE_URL env var (the Supabase "Transaction"
 // pooler string, port 6543). Locally, set it in backend/.env; on Vercel, set it
 // in Project Settings → Environment Variables.
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// pg's default DATE (OID 1082) parser builds a JS Date at LOCAL midnight, then
+// callers read it back with UTC getters (or JSON.stringify it) — on any server
+// not running in UTC, that round-trip silently shifts the calendar date by a
+// day (e.g. an admin-entered '2026-09-28' becomes "27th Sept" once read back
+// on a UTC+5:30 machine). Keeping it as the raw 'YYYY-MM-DD' string Postgres
+// already sends removes the ambiguity entirely — see utils.js formatEditionDate.
+types.setTypeParser(1082, (val) => val);
 
 if (!process.env.DATABASE_URL) {
   console.warn(

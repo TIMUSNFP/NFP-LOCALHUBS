@@ -174,7 +174,8 @@
                             <span class="edition-control-label">Viewing</span>
                             <select id="hubEditionFilter" class="edition-select" onchange="onHubEditionFilterChange(this.value)" aria-label="Viewing edition"></select>
                         </label>
-                        <button class="btn-export btn-start-edition" id="startEditionBtn" onclick="confirmStartNewEdition()" title="Advance the active edition — new public applications and registrations start landing here. Nothing carries over automatically.">Start New Edition</button>
+                        <button class="btn-export" onclick="openEditEditionModal()" title="Edit the active edition's theme and event date/time — updates every edition-aware email going forward.">Edit Edition Details</button>
+                        <button class="btn-export btn-start-edition" id="startEditionBtn" onclick="openStartEditionModal()" title="Advance the active edition — new public applications and registrations start landing here. Nothing carries over automatically.">Start New Edition</button>
                         <button class="btn-export form-toggle" id="hubFormToggle" onclick="toggleHubForm()" style="margin-left:0;min-width:auto">Applications</button>
                     </div>
                 </div>

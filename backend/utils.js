@@ -109,6 +109,41 @@ function participantRowToJson(row) {
   };
 }
 
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function ordinal(n) {
+  const suffixes = ['th', 'st', 'nd', 'rd'];
+  const rem = n % 100;
+  return n + (suffixes[(rem - 20) % 10] || suffixes[rem] || suffixes[0]);
+}
+
+// Formats a DATE column value (db.js configures the pg driver to hand these
+// back as raw 'YYYY-MM-DD' strings, not JS Date objects — see the comment
+// there on why: constructing a Date from a plain date string and reading it
+// with local/UTC getters silently shifts the calendar day depending on the
+// server's timezone) into the handful of display strings used across the
+// edition-aware mailer templates.
+function formatEditionDate(value) {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value));
+  if (!match) return null;
+  const year = Number(match[1]);
+  const monthIdx = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const month = MONTH_ABBR[monthIdx];
+  // Pure UTC arithmetic purely to derive the day-of-week — never touches the
+  // server's local timezone, so this is deterministic wherever it runs.
+  const weekday = WEEKDAY_ABBR[new Date(Date.UTC(year, monthIdx, day)).getUTCDay()];
+  const dayOrdinal = ordinal(day);
+  return {
+    short: `${dayOrdinal} ${month}`,                              // "28th Sept"
+    withDay: `${dayOrdinal} ${month}, ${weekday}`,                 // "28th Sept, Mon"
+    withDayAndYear: `${dayOrdinal} ${month} ${year}, ${weekday}`,  // "28th Sept 2026, Mon"
+    full: `${day} ${month} ${year}`,                               // "28 Sept 2026"
+  };
+}
+
 // Haversine distance in km between two lat/lng points.
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371; // Earth radius in km
@@ -360,6 +395,7 @@ module.exports = {
   combinedLeaderName,
   hubRowToJson,
   participantRowToJson,
+  formatEditionDate,
   haversineKm,
   geocodeQuery,
   geocodeHub,

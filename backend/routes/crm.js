@@ -841,7 +841,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
 
   const renderedSubject = renderCrmSubject(campaign.subject, sampleContact.city);
 
-  const html = buildCircleCrmEmailHtml(
+  const html = await buildCircleCrmEmailHtml(
     { id: sampleContact.id, full_name: sampleContact.full_name, email: sampleContact.email, city: sampleContact.city },
     hubs,
     { subject: renderedSubject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : (campaign.target_cities || []) }

@@ -28,6 +28,7 @@ let pendingBulkAction = null;     // { ids, status } awaiting confirm-modal appr
 let selectedParticipantIds = new Set(); // bulk-select state for the Participants table
 let pendingBulkActionP     = null;      // { ids, status } awaiting confirm-modal approval
 let editionsList     = [1];  // every known edition, from GET /api/admin/editions
+let editionDetails   = {};   // { [edition]: { themeTitle, themeTagline, eventDate, eventTimeStart, eventTimeEnd } }
 let hubViewEdition    = null; // edition currently shown on the Applications tab (null until loaded)
 let partViewEdition   = null; // edition currently shown on the Registrations tab (null until loaded)
 
@@ -284,6 +285,7 @@ async function loadEditions() {
         if (!res.ok) return;
         const data = await res.json();
         editionsList = data.editions && data.editions.length ? data.editions : editionsList;
+        editionDetails = data.details || editionDetails;
         renderEditionControls();
     } catch (e) {
         if (e.message !== 'Unauthorized') { /* non-critical — dropdowns keep showing their last-known options */ }
@@ -328,38 +330,96 @@ async function onPartEditionFilterChange(value) {
     applyParticipantFilters();
 }
 
-// ═══════════════════ START NEW EDITION ═══════════════════
-// Deliberately does nothing but advance the active edition — it does NOT
-// carry any circles or participants forward. Circle leaders who want to
-// continue are moved individually (or via bulk-select) with the existing
-// "Move to Next Edition" action once you've confirmed which of them are
-// actually still in — carrying everyone automatically would drag along
-// leaders who've dropped out.
-function confirmStartNewEdition() {
-    const next = formSettings.activeEdition + 1;
-    openConfirmModal(
-        `Start Edition ${next}`,
-        `Start <strong>Edition ${next}</strong>? New public applications and registrations will be tagged with Edition ${next} going forward. ` +
-        `<strong>Nothing carries over automatically</strong> — every existing circle stays in Edition ${formSettings.activeEdition} until you individually move it forward with "Move to Next Edition." ` +
-        `Until you move at least one circle, the public site will show no Circles to join for the new edition.`,
-        '🚀',
-        executeStartNewEdition,
-        `Start Edition ${next}`,
-        false
-    );
+// ═══════════════════ START NEW EDITION / EDIT EDITION DETAILS ═══════════════════
+// Starting an edition captures its theme + event date/time right at the
+// moment you decide to advance — the one moment you're already deciding
+// what's changing — and every edition-aware email (approval, confirmation,
+// roster, reminders, etc) pulls its date/theme from here instead of a
+// hardcoded string. Deliberately does NOT carry any circles or participants
+// forward — leaders who want to continue are moved individually (or via
+// bulk-select) with the existing "Move to Next Edition" action once you've
+// confirmed which of them are actually still in.
+function editionDetailsFormHtml(prefill, submitFn, submitLabel, introHtml) {
+    const p = prefill || {};
+    return `
+        ${introHtml ? `<p style="color:var(--muted);font-size:14px;margin-bottom:16px">${introHtml}</p>` : ''}
+        <div class="detail-item">
+            <label>Theme Title</label>
+            <input type="text" id="editionThemeTitle" class="form-input" placeholder="e.g. Team Management" value="${escHtml(p.themeTitle || '')}">
+        </div>
+        <div class="detail-item">
+            <label>Theme Tagline (optional)</label>
+            <input type="text" id="editionThemeTagline" class="form-input" placeholder="e.g. Come with challenges. Leave with solutions." value="${escHtml(p.themeTagline || '')}">
+        </div>
+        <div class="detail-item">
+            <label>Event Date</label>
+            <input type="date" id="editionEventDate" class="form-input" value="${p.eventDate || ''}">
+        </div>
+        <div class="detail-item">
+            <label>Start Time</label>
+            <input type="text" id="editionTimeStart" class="form-input" placeholder="e.g. 4:00 PM" value="${escHtml(p.eventTimeStart || '')}">
+        </div>
+        <div class="detail-item">
+            <label>End Time</label>
+            <input type="text" id="editionTimeEnd" class="form-input" placeholder="e.g. 7:30 PM" value="${escHtml(p.eventTimeEnd || '')}">
+        </div>
+        <div class="modal-btns">
+            <button class="btn-outline" onclick="closeDetailsModal()">Cancel</button>
+            <button class="btn-primary" onclick="${submitFn}()">${submitLabel}</button>
+        </div>
+    `;
 }
 
-async function executeStartNewEdition() {
+function readEditionDetailsForm() {
+    return {
+        themeTitle: (document.getElementById('editionThemeTitle').value || '').trim(),
+        themeTagline: (document.getElementById('editionThemeTagline').value || '').trim(),
+        eventDate: document.getElementById('editionEventDate').value,
+        eventTimeStart: (document.getElementById('editionTimeStart').value || '').trim(),
+        eventTimeEnd: (document.getElementById('editionTimeEnd').value || '').trim(),
+    };
+}
+
+function openStartEditionModal() {
     const next = formSettings.activeEdition + 1;
-    closeConfirmModal();
-    const ok = await patchSettings({ activeEdition: next });
-    if (ok) {
-        showToast(`Edition ${next} is now active.`, 'success');
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = `Start Edition ${next}`;
+    const content = document.getElementById('detailsContent');
+    // Pre-fill with the outgoing edition's details as a starting point — edit
+    // whatever's changing (theme, date, times) before confirming.
+    content.innerHTML = editionDetailsFormHtml(
+        editionDetails[formSettings.activeEdition],
+        'submitStartEdition',
+        `Start Edition ${next}`,
+        `<strong>Nothing carries over automatically</strong> — existing circles stay in Edition ${formSettings.activeEdition} until you individually move each one forward with "Move to Next Edition." Until you move at least one, the public site shows no Circles to join for the new edition.`
+    );
+    openDetailsOverlay();
+}
+
+async function submitStartEdition() {
+    const fields = readEditionDetailsForm();
+    if (!fields.themeTitle || !fields.eventDate || !fields.eventTimeStart || !fields.eventTimeEnd) {
+        showToast('Theme title, event date, start time, and end time are all required.', 'error');
+        return;
+    }
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/editions/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fields),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(data.error || 'Could not start the new edition.', 'error'); return; }
+
+        formSettings.activeEdition = data.activeEdition;
+        closeDetailsModal();
+        showToast(`Edition ${data.edition} is now active.`, 'success');
+
         // Switch both tabs' view to the freshly-started (empty) edition, so the
         // table visibly clears instead of still showing the outgoing edition's
         // data under "All Editions." Switch back manually to move leaders forward.
-        hubViewEdition = next;
-        partViewEdition = next;
+        hubViewEdition = data.edition;
+        partViewEdition = data.edition;
         clearHubSelection();
         clearParticipantSelection();
         await loadEditions();
@@ -367,6 +427,48 @@ async function executeStartNewEdition() {
         refreshHubViews();
         updateParticipantStats();
         applyParticipantFilters();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
+    }
+}
+
+// Lets the active edition's theme/date be corrected after the fact (e.g. a
+// venue date slips) without starting a whole new edition — every mailer that
+// hasn't gone out yet for this edition will pick up the change automatically.
+function openEditEditionModal() {
+    const current = formSettings.activeEdition;
+    const titleEl = document.getElementById('detailsTitle');
+    if (titleEl) titleEl.textContent = `Edit Edition ${current} Details`;
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = editionDetailsFormHtml(
+        editionDetails[current],
+        'submitEditEdition',
+        'Save Changes',
+        `Updates the theme/date <strong>emails</strong> use for Edition ${current} going forward. Already-sent emails aren't retroactively changed.`
+    );
+    openDetailsOverlay();
+}
+
+async function submitEditEdition() {
+    const fields = readEditionDetailsForm();
+    if (!fields.themeTitle || !fields.eventDate || !fields.eventTimeStart || !fields.eventTimeEnd) {
+        showToast('Theme title, event date, start time, and end time are all required.', 'error');
+        return;
+    }
+    const current = formSettings.activeEdition;
+    try {
+        const res = await adminFetch(`${API_BASE}/api/admin/editions/${current}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fields),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(data.error || "Could not update this edition's details.", 'error'); return; }
+        closeDetailsModal();
+        showToast(`Edition ${current}'s details updated.`, 'success');
+        await loadEditions();
+    } catch (e) {
+        if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }
 }
 

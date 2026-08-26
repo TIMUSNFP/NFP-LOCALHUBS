@@ -680,12 +680,15 @@ router.post('/hubs/:id/move-to-next-edition', async (req, res) => {
       [newHubId, now, sourceHubId]
     );
 
-    // Let the Circle Leader know they're set for the new edition — non-blocking,
-    // errors are swallowed in mailer, same as every other admin action here.
-    sendHubCarriedToNextEdition(sourceHub);
-
     const updatedSourceHub = await db.get('SELECT * FROM hubs WHERE id = $1', [sourceHubId]);
     const newHub = await db.get('SELECT * FROM hubs WHERE id = $1', [newHubId]);
+
+    // Let the Circle Leader know they're set for the new edition — pass the
+    // NEW hub row (not the source) so the email shows the new edition's own
+    // date/theme, not the one they're leaving. Non-blocking, errors are
+    // swallowed in mailer, same as every other admin action here.
+    sendHubCarriedToNextEdition(newHub);
+
     res.json({
       sourceHub: hubRowToJson(updatedSourceHub),
       newHub: hubRowToJson(newHub),
@@ -697,27 +700,124 @@ router.post('/hubs/:id/move-to-next-edition', async (req, res) => {
 });
 
 // GET /api/admin/editions — every edition that has at least one hub or
-// participant row, plus (activeEdition + 1) always included so the admin can
-// always see "the next edition" as a selectable option even before anyone's
-// been moved into it yet.
+// participant row (plus activeEdition + 1, always included so the admin can
+// see "the next edition" as a selectable option even before anyone's been
+// moved into it), together with each known edition's theme/event details
+// from the `editions` table where set.
 router.get('/editions', async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT edition FROM hubs
        UNION
-       SELECT edition FROM participants`
+       SELECT edition FROM participants
+       UNION
+       SELECT edition FROM editions`
     );
     const { activeEdition } = await readFormSettings();
-    const editions = new Set(rows.map(r => Number(r.edition)));
-    editions.add(activeEdition);
-    editions.add(activeEdition + 1);
+    const editionNumbers = new Set(rows.map(r => Number(r.edition)));
+    editionNumbers.add(activeEdition);
+    editionNumbers.add(activeEdition + 1);
+
+    const detailRows = await db.all('SELECT * FROM editions');
+    const details = {};
+    detailRows.forEach((r) => {
+      details[r.edition] = {
+        themeTitle: r.theme_title,
+        themeTagline: r.theme_tagline,
+        eventDate: r.event_date,
+        eventTimeStart: r.event_time_start,
+        eventTimeEnd: r.event_time_end,
+      };
+    });
+
     res.json({
-      editions: Array.from(editions).sort((a, b) => a - b),
+      editions: Array.from(editionNumbers).sort((a, b) => a - b),
       active: activeEdition,
+      details,
     });
   } catch (e) {
     console.error('[admin/editions] GET failed:', e.message);
     res.status(500).json({ error: 'Failed to load editions.' });
+  }
+});
+
+// POST /api/admin/editions/start — advances the active edition AND records
+// the new edition's theme/event details in one step, captured at the moment
+// of starting rather than a separate settings screen, since that's the one
+// moment the admin is already deciding what's changing. Does NOT carry any
+// hubs/participants forward — see POST /hubs/:id/move-to-next-edition.
+router.post('/editions/start', async (req, res) => {
+  try {
+    const { themeTitle, themeTagline, eventDate, eventTimeStart, eventTimeEnd } = req.body || {};
+    if (!themeTitle || !eventDate || !eventTimeStart || !eventTimeEnd) {
+      return res.status(400).json({ error: 'themeTitle, eventDate, eventTimeStart, and eventTimeEnd are required.' });
+    }
+
+    const { activeEdition } = await readFormSettings();
+    const next = activeEdition + 1;
+
+    await db.run(
+      `INSERT INTO settings (key, value) VALUES ('active_edition', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [String(next)]
+    );
+    await db.run(
+      `INSERT INTO editions (edition, theme_title, theme_tagline, event_date, event_time_start, event_time_end)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (edition) DO UPDATE SET
+         theme_title = EXCLUDED.theme_title,
+         theme_tagline = EXCLUDED.theme_tagline,
+         event_date = EXCLUDED.event_date,
+         event_time_start = EXCLUDED.event_time_start,
+         event_time_end = EXCLUDED.event_time_end`,
+      [next, themeTitle, themeTagline || null, eventDate, eventTimeStart, eventTimeEnd]
+    );
+
+    res.json({ ...(await readFormSettings()), edition: next });
+  } catch (e) {
+    console.error('[admin/editions/start] failed:', e.message);
+    res.status(500).json({ error: 'Could not start the new edition.' });
+  }
+});
+
+// PATCH /api/admin/editions/:edition — edit an edition's theme/event details
+// without touching the active-edition setting (e.g. correcting a date after
+// the fact). Works on any edition number, though the admin UI only exposes
+// it for the currently active one.
+router.patch('/editions/:edition', async (req, res) => {
+  try {
+    const edition = parseInt(req.params.edition, 10);
+    if (!Number.isInteger(edition)) return res.status(400).json({ error: 'Invalid edition.' });
+
+    const { themeTitle, themeTagline, eventDate, eventTimeStart, eventTimeEnd } = req.body || {};
+    if (!themeTitle || !eventDate || !eventTimeStart || !eventTimeEnd) {
+      return res.status(400).json({ error: 'themeTitle, eventDate, eventTimeStart, and eventTimeEnd are required.' });
+    }
+
+    await db.run(
+      `INSERT INTO editions (edition, theme_title, theme_tagline, event_date, event_time_start, event_time_end)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (edition) DO UPDATE SET
+         theme_title = EXCLUDED.theme_title,
+         theme_tagline = EXCLUDED.theme_tagline,
+         event_date = EXCLUDED.event_date,
+         event_time_start = EXCLUDED.event_time_start,
+         event_time_end = EXCLUDED.event_time_end`,
+      [edition, themeTitle, themeTagline || null, eventDate, eventTimeStart, eventTimeEnd]
+    );
+
+    const row = await db.get('SELECT * FROM editions WHERE edition = $1', [edition]);
+    res.json({
+      edition,
+      themeTitle: row.theme_title,
+      themeTagline: row.theme_tagline,
+      eventDate: row.event_date,
+      eventTimeStart: row.event_time_start,
+      eventTimeEnd: row.event_time_end,
+    });
+  } catch (e) {
+    console.error('[admin/editions/:edition] PATCH failed:', e.message);
+    res.status(500).json({ error: "Could not update this edition's details." });
   }
 });
 

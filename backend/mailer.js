@@ -6,6 +6,8 @@ const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const db = require('./db');
+const { formatEditionDate } = require('./utils');
 
 // Build the SMTP transport from environment variables. Common providers:
 //   Google Workspace / Gmail : host smtp.gmail.com,   port 465 (secure)
@@ -41,6 +43,42 @@ try {
 function formatHubAddress(hub) {
   const line = [hub.address, hub.area, hub.city].filter(Boolean).join(', ');
   return hub.pincode ? `${line} - ${hub.pincode}` : line;
+}
+
+// ─── Edition theme/date lookup ──────────────────────────────────────────────
+// Every transactional email below is scoped to the edition the specific hub
+// or participant it's about actually belongs to (hub.edition / participant.
+// edition) — not just whatever edition happens to be active right now — so an
+// admin action on a past edition's circle still emails that edition's real
+// date, not today's. Cached per process since a single bulk action (e.g. Send
+// Roster to All Approved) can trigger this dozens of times for the same edition.
+const editionInfoCache = new Map();
+
+async function getEditionInfo(edition) {
+  if (editionInfoCache.has(edition)) return editionInfoCache.get(edition);
+  const row = await db.get('SELECT * FROM editions WHERE edition = $1', [edition]);
+  const info = {
+    themeTitle: row ? row.theme_title : null,
+    themeTagline: row ? row.theme_tagline : null,
+    date: row ? formatEditionDate(row.event_date) : null,
+    timeStart: row ? row.event_time_start : null,
+    timeEnd: row ? row.event_time_end : null,
+  };
+  editionInfoCache.set(edition, info);
+  return info;
+}
+
+// Composes the "<date><sep><time range>" strings used across templates.
+// `dateStyle` picks which of formatEditionDate's variants to use; `sep` sits
+// between the date and the time range, and `timeJoiner` between start/end
+// time — templates disagree on ", " + "–" vs " | " + "to", so this preserves
+// each one's existing voice instead of silently reformatting every email the
+// same way.
+function formatEventWhen(info, dateStyle, sep = ', ', timeJoiner = ' to ') {
+  if (!info || !info.date) return 'Date to be announced';
+  const datePart = info.date[dateStyle] || info.date.withDay;
+  if (!info.timeStart || !info.timeEnd) return datePart;
+  return `${datePart}${sep}${info.timeStart}${timeJoiner}${info.timeEnd}`;
 }
 
 // pool:true is what actually matters for CRM campaign sends: without it, nodemailer
@@ -145,6 +183,8 @@ function wrap(body) {
 // ─── Hub Approved ─────────────────────────────────────────────────────────────
 
 async function sendHubApproved(hub) {
+  const edition = await getEditionInfo(hub.edition);
+  const when = formatEventWhen(edition, 'full', ', ', ' – ');
   const html = wrap(`
     <div class="badge">✓ Application Approved</div>
     <h2>Welcome to NFP Circles, ${hub.full_name}!</h2>
@@ -153,7 +193,7 @@ async function sendHubApproved(hub) {
       <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
       <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
       <p><strong>Capacity:</strong> ${hub.capacity || '—'}</p>
-      <p><strong>Event Date:</strong> 28 Sept 2026, 4:00 PM – 7:30 PM</p>
+      <p><strong>Event Date:</strong> ${when}</p>
     </div>
     <p>Your circle is now live and visible to participants who can register with you.</p>
     <p class="section-heading">What to Expect Next?</p>
@@ -162,7 +202,7 @@ async function sendHubApproved(hub) {
       <li>Get added to the official Circle Leaders Group for all communications.</li>
       <li>Get notified when your circle is full, and know your participants.</li>
       <li>Join the all Circle Leads briefing call — 10 days prior to the event.</li>
-      <li>Get ready to host your circle in your city on 28 Sept 2026, 4:00 PM – 7:30 PM.</li>
+      <li>Get ready to host your circle in your city on ${when}.</li>
     </ol>
     <div class="btn-wrap">
       <a class="btn" href="${HUB_LEADERS_WHATSAPP_URL}">Join the Hub Leaders WhatsApp Group</a>
@@ -187,6 +227,9 @@ async function sendHubApproved(hub) {
 // ─── Hub Carried Over To Next Edition ──────────────────────────────────────────
 
 async function sendHubCarriedToNextEdition(hub) {
+  const edition = await getEditionInfo(hub.edition);
+  const when = formatEventWhen(edition, 'full', ', ', ' – ');
+  const themeLine = edition.themeTitle ? `<p><strong>This Edition's Theme:</strong> ${edition.themeTitle}</p>` : '';
   const html = wrap(`
     <div class="badge">✓ You're All Set for the Next Edition</div>
     <h2>Great news, ${hub.full_name}!</h2>
@@ -195,9 +238,11 @@ async function sendHubCarriedToNextEdition(hub) {
       <p><strong>Location:</strong> ${[hub.area, hub.city].filter(Boolean).join(', ')}</p>
       <p><strong>Venue Type:</strong> ${hub.venue_type || '—'}</p>
       <p><strong>Capacity:</strong> ${hub.capacity || '—'}</p>
+      <p><strong>Event Date:</strong> ${when}</p>
+      ${themeLine}
     </div>
     <p>Your circle is live again and open for participants to register. Since registrations reset each edition, participants — including anyone who joined you last time — will need to register again for this edition.</p>
-    <p>We'll be in touch with the schedule and further details as the date approaches.</p>
+    <p>We'll be in touch with further details as the date approaches.</p>
     <p>If you have any questions, please reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
     <p>Thank you for continuing to be part of the NFP community!</p>
   `);
@@ -239,21 +284,27 @@ async function sendHubRejected(hub) {
 // ─── Participant Confirmed ────────────────────────────────────────────────────
 
 async function sendParticipantConfirmed(participant, hub) {
+  const edition = await getEditionInfo(participant.edition);
+  const when = formatEventWhen(edition, 'withDay', ' | ');
+  const shortDate = edition.date ? edition.date.short : 'the day';
+  const themeBlock = edition.themeTitle
+    ? `<div class="theme-block">
+         <p class="theme-title">Theme: ${edition.themeTitle}</p>
+         ${edition.themeTagline ? `<p class="theme-tag">${edition.themeTagline}</p>` : ''}
+       </div>`
+    : '';
   const html = wrap(`
     <div class="badge">✅ Registration Confirmed</div>
     <h2>You're in, ${participant.full_name}! 🎉</h2>
     <p>Your registration for the NFP Circle has been confirmed. We look forward to seeing you at your local Circle Meet.</p>
-    <div class="theme-block">
-      <p class="theme-title">Theme 01: Team Management</p>
-      <p class="theme-tag">Come with challenges. Leave with solutions.</p>
-    </div>
+    ${themeBlock}
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${hub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(hub)}</p>
-      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p>Your Circle Lead &amp; the NFP Team will be in touch with further steps.</p>
-    <p>You'll soon receive the complete agenda for what's happening on 28th Sept. Till then, stay tuned!</p>
+    <p>You'll soon receive the complete agenda for what's happening on ${shortDate}. Till then, stay tuned!</p>
     <p class="section-heading">Your NFP Circle Experience:</p>
     <ul class="next-steps" style="list-style:none;padding-left:0">
       <li>1️⃣ Build Your Team</li>
@@ -309,6 +360,9 @@ async function sendParticipantCancelled(participant, hub) {
 // note instead of leaving them wondering why turnout looks low.
 
 async function sendHubRosterUpdate(hub, participants) {
+  const edition = await getEditionInfo(hub.edition);
+  const when = formatEventWhen(edition, 'withDayAndYear', ' | ');
+  const shortDate = edition.date ? edition.date.short : 'the day';
   const count = participants.length;
   const capacityNum = parseInt(hub.capacity, 10) || null;
 
@@ -344,11 +398,11 @@ async function sendHubRosterUpdate(hub, participants) {
   const html = wrap(`
     <div class="badge">📋 Your Circle Roster</div>
     <h2>Hi ${hub.full_name}, here's who's joining your Circle!</h2>
-    <p>As your NFP Circle Meet on 28th Sept approaches, here's the latest list of participants confirmed for your circle at ${formatHubAddress(hub)}.</p>
+    <p>As your NFP Circle Meet on ${shortDate} approaches, here's the latest list of participants confirmed for your circle at ${formatHubAddress(hub)}.</p>
     ${tableHtml}
     ${noteHtml}
     <div class="info-box">
-      <p><strong>Date &amp; Time:</strong> 28th Sept 2026, Mon | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> ${when}</p>
       <p><strong>Venue:</strong> ${formatHubAddress(hub)}</p>
     </div>
     <p class="section-heading">What to do next</p>
@@ -413,6 +467,8 @@ async function sendHubDetailsUpdated(participant, hub, changes) {
 // exactly what changed, not just that something did.
 
 async function sendParticipantTransferred(participant, oldHub, newHub) {
+  const edition = await getEditionInfo(participant.edition);
+  const when = formatEventWhen(edition, 'withDay', ' | ');
   const html = wrap(`
     <div class="badge">🔄 You've Been Moved to a New Circle</div>
     <h2>Hi ${participant.full_name}, your NFP Circle has changed</h2>
@@ -427,7 +483,7 @@ async function sendParticipantTransferred(participant, oldHub, newHub) {
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${newHub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(newHub)}</p>
-      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p>No action is needed from you — your registration is already confirmed with your new Circle Leader.</p>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
@@ -447,6 +503,8 @@ async function sendParticipantTransferred(participant, oldHub, newHub) {
 // to follow up, rather than being left wondering.
 
 async function sendParticipantEventReminder(participant, hub) {
+  const edition = await getEditionInfo(participant.edition);
+  const when = formatEventWhen(edition, 'withDay', ' | ');
   const scheduleImageHtml = scheduleImageBuffer
     ? `<div style="text-align:center;margin:20px 0">
          <img src="cid:circle-schedule" alt="NFP Circle Schedule" width="536" style="max-width:100%;height:auto;border-radius:8px" />
@@ -460,7 +518,7 @@ async function sendParticipantEventReminder(participant, hub) {
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${hub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(hub)}</p>
-      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 3:30 PM to 7:00 PM</p>
+      <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p class="section-heading">Here's what's on the agenda</p>
     ${scheduleImageHtml}
@@ -487,6 +545,8 @@ async function sendParticipantEventReminder(participant, hub) {
 // distinct wording from sendParticipantTransferred above: this is framed as two
 // circles joining together into one bigger group, not an arbitrary reassignment.
 async function sendParticipantCircleCombined(participant, oldHub, newHub) {
+  const edition = await getEditionInfo(participant.edition);
+  const when = formatEventWhen(edition, 'withDay', ' | ');
   const html = wrap(`
     <div class="badge">🤝 Your Circle Has Combined With Another</div>
     <h2>Hi ${participant.full_name}, exciting update about your NFP Circle</h2>
@@ -504,7 +564,7 @@ async function sendParticipantCircleCombined(participant, oldHub, newHub) {
       <p><strong>Circle Leader:</strong> ${newHub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(newHub)}</p>
       <p><strong>Venue Type:</strong> ${newHub.venue_type || '—'}</p>
-      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p>Your registration is already confirmed with your new Circle Leader — just show up at the address above.</p>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
@@ -549,6 +609,8 @@ async function sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount) {
 // (former) surviving circle independently, or was since manually transferred
 // elsewhere, is left alone.
 async function sendParticipantCircleMergeReverted(participant, fromHub, toHub) {
+  const edition = await getEditionInfo(participant.edition);
+  const when = formatEventWhen(edition, 'withDay', ' | ');
   const html = wrap(`
     <div class="badge">↩️ Your Circle Has Been Restored</div>
     <h2>Hi ${participant.full_name}, your original NFP Circle is back</h2>
@@ -558,7 +620,7 @@ async function sendParticipantCircleMergeReverted(participant, fromHub, toHub) {
       <p><strong>Circle Leader:</strong> ${toHub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(toHub)}</p>
       <p><strong>Venue Type:</strong> ${toHub.venue_type || '—'}</p>
-      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
   `);
@@ -598,15 +660,21 @@ function crmUnsubscribeUrl(contactId) {
   return `${CRM_UNSUBSCRIBE_BASE_URL}?cid=${encodeURIComponent(contactId)}&token=${encodeURIComponent(token)}`;
 }
 
-const DEFAULT_CRM_INTRO = `
-  <p>Registrations for NFP Circles in your city close <strong>today at 4:00 PM</strong> — after that,
-  we won't be able to accommodate any more sign-ups for the 28th September meetup.</p>
-  <p>NFP Circles are small, in-person peer-learning meetups made specifically for NFP Members —
-  a few hours to connect with peers in your city, discuss real challenges, and walk away with
-  practical ideas you can use right away.</p>
-  <p>They're free to attend, run by fellow NFP Members and QPFP Certificants, and built purely
-  for peer learning — no sales pitches, no solicitation.</p>
-`;
+// The "today at 4:00 PM" deadline here is campaign-send-day copy, not the
+// event's own start time — a coincidence in wording, not the same value — so
+// it's left as admin-editable campaign copy (campaign.introHtml already
+// overrides this default). Only the event date reference is parameterized.
+function buildDefaultCrmIntro(shortDate) {
+  return `
+    <p>Registrations for NFP Circles in your city close <strong>today at 4:00 PM</strong> — after that,
+    we won't be able to accommodate any more sign-ups for the ${shortDate} meetup.</p>
+    <p>NFP Circles are small, in-person peer-learning meetups made specifically for NFP Members —
+    a few hours to connect with peers in your city, discuss real challenges, and walk away with
+    practical ideas you can use right away.</p>
+    <p>They're free to attend, run by fellow NFP Members and QPFP Certificants, and built purely
+    for peer learning — no sales pitches, no solicitation.</p>
+  `;
+}
 
 // hub.full_name/area/venue_type come from the public Hub Leader application form
 // and contact.full_name/city come from an admin-imported spreadsheet — neither is
@@ -619,23 +687,33 @@ function escHtml(str) {
 }
 
 // hubs: array of hub rows (city/area/venue_type/capacity) to feature in the email.
-function buildCircleCrmEmailHtml(contact, hubs, campaign) {
+// Each hub is dated using its own edition (hub.edition), not a single global
+// "today's" date — a campaign can in principle span hubs from more than one
+// edition, and each should show its own real event date.
+async function buildCircleCrmEmailHtml(contact, hubs, campaign) {
   const cityLabel = escHtml(campaign.targetCities && campaign.targetCities.length ? campaign.targetCities.join(' / ') : (contact.city || 'your city'));
 
-  const hubsHtml = hubs.map((hub) => `
+  const hubsHtml = (await Promise.all(hubs.map(async (hub) => {
+    const edition = await getEditionInfo(hub.edition);
+    const when = formatEventWhen(edition, 'withDay', ' | ');
+    return `
     <div class="info-box">
       <p><strong>Circle Leader:</strong> ${escHtml(hub.full_name || hub.fullName || '—')}</p>
       <p><strong>Area:</strong> ${escHtml(hub.area || '—')}</p>
       <p><strong>Venue Type:</strong> ${escHtml(hub.venue_type || hub.venueType || '—')}</p>
-      <p><strong>Date &amp; Time:</strong> 28th Sept, Mon | 4:00 PM to 7:30 PM</p>
+      <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
-  `).join('');
+  `;
+  }))).join('');
+
+  const primaryEdition = await getEditionInfo(hubs[0] ? hubs[0].edition : undefined);
+  const shortDate = primaryEdition.date ? primaryEdition.date.short : 'the';
 
   const html = wrap(`
     <div class="badge" style="background:#FEE2E2;color:#B91C1C">🚨 FINAL DEADLINE — Registrations close today at 4:00 PM</div><br>
     <div class="badge" style="margin-top:8px">📍 NFP Circles open in ${cityLabel}</div>
     <h2>Hi ${escHtml(contact.full_name)}, this is your last chance to join an NFP Circle near you!</h2>
-    ${campaign.introHtml || DEFAULT_CRM_INTRO}
+    ${campaign.introHtml || buildDefaultCrmIntro(shortDate)}
     <p class="section-heading">Open Circles in ${cityLabel}</p>
     ${hubsHtml}
     <p>Don't miss out — registration closes at <strong>4:00 PM today</strong>.</p>
@@ -665,7 +743,7 @@ async function sendCrmCampaignEmail(contact, hubs, campaign) {
   if (!transporter) {
     throw new Error('SMTP not configured — set SMTP_HOST/SMTP_USER/SMTP_PASS to send campaigns.');
   }
-  const html = buildCircleCrmEmailHtml(contact, hubs, campaign);
+  const html = await buildCircleCrmEmailHtml(contact, hubs, campaign);
   await transporter.sendMail({ from: FROM, to: contact.email, subject: campaign.subject, html });
 }
 
