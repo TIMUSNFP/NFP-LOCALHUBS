@@ -61,12 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadParticipantFormState();
 });
 
-function handleNavbarScroll() {
-    const navbar = document.getElementById('navbar');
-    window.addEventListener('scroll', () => {
-        navbar.classList.toggle('scrolled', window.scrollY > 20);
-    });
-}
+// handleNavbarScroll, toggleMenu, closeMenu, isValidEmail, formatDate, escHtml,
+// showToast now live in shared/common.js (loaded before this file).
 
 function bindMobileInputs() {
     // Live clear on valid inputs (none required pre-fill on this site, kept for parity/safety)
@@ -268,39 +264,7 @@ function applyParticipantsFilter() {
     renderParticipantsTable(filtered, emptyMessage);
 }
 
-// ═══════════════════ NAVBAR MOBILE ═══════════════════
-function toggleMenu() {
-    const hamburger = document.getElementById('hamburger');
-    const navMenu   = document.getElementById('navMenu');
-    hamburger.classList.toggle('open');
-    navMenu.classList.toggle('open');
-}
-
-function closeMenu() {
-    document.getElementById('hamburger').classList.remove('open');
-    document.getElementById('navMenu').classList.remove('open');
-}
-
 // ═══════════════════ VALIDATION HELPERS ═══════════════════
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-}
-
-function formatDate(date) {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function escHtml(str) {
-    if (str == null) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
 // "City - Circle Leader Name" — used wherever a circle's display name is shown.
 // After a Combine, the backend sends displayName crediting both leaders (e.g.
 // "Vishal and Nihar's Circle (Combined)") instead of just fullName — fall back
@@ -316,22 +280,6 @@ function formatHubAddress(hub) {
     const streetOrArea = hub.address || hub.area || '';
     const line = [streetOrArea, hub.city].filter(Boolean).map(escHtml).join(', ');
     return hub.pincode ? `${line} - ${escHtml(hub.pincode)}` : line;
-}
-
-// ═══════════════════ TOAST NOTIFICATIONS ═══════════════════
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><span class="toast-text">${escHtml(message)}</span>`;
-    container.appendChild(toast);
-    const duration = type === 'error' ? 5000 : 3500;
-    setTimeout(() => {
-        toast.classList.add('out');
-        toast.addEventListener('animationend', () => toast.remove(), { once: true });
-    }, duration);
 }
 
 // ═══════════════════════════════════════════════════════════════

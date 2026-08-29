@@ -69,12 +69,8 @@ function initGrowthBar() {
     setTimeout(() => { bar.style.width = bar.dataset.width || '35%'; }, 600);
 }
 
-function handleNavbarScroll() {
-    const navbar = document.getElementById('navbar');
-    window.addEventListener('scroll', () => {
-        navbar.classList.toggle('scrolled', window.scrollY > 20);
-    });
-}
+// handleNavbarScroll, toggleMenu, closeMenu, isValidEmail, formatDate, escHtml,
+// showToast now live in shared/common.js (loaded before this file).
 
 function bindMobileInputs() {
     // Only allow digits in mobile & pincode fields
@@ -208,19 +204,6 @@ function resetGalleryAutoplay() {
     startGalleryAutoplay();
 }
 
-// ═══════════════════ NAVBAR MOBILE ═══════════════════
-function toggleMenu() {
-    const hamburger = document.getElementById('hamburger');
-    const navMenu   = document.getElementById('navMenu');
-    hamburger.classList.toggle('open');
-    navMenu.classList.toggle('open');
-}
-
-function closeMenu() {
-    document.getElementById('hamburger').classList.remove('open');
-    document.getElementById('navMenu').classList.remove('open');
-}
-
 // ═══════════════════ FORM STEP NAVIGATION ═══════════════════
 function goToStep(step) {
     currentStep = step;
@@ -251,10 +234,6 @@ function updateStepIndicator(step) {
 }
 
 // ═══════════════════ VALIDATION ═══════════════════
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-}
-
 function setErr(id, msg) {
     const el = document.getElementById(id);
     if (el) el.textContent = msg;
@@ -311,7 +290,17 @@ let hubFormOpen = true;
 async function loadHubFormState() {
     try {
         const res = await fetch(`${API_BASE}/api/settings`);
-        if (res.ok) { const s = await res.json(); hubFormOpen = s.hubFormOpen !== false; }
+        if (res.ok) {
+            const s = await res.json();
+            hubFormOpen = s.hubFormOpen !== false;
+            if (s.activeEditionEventDate) {
+                const label = `Only host on ${formatDate(s.activeEditionEventDate)}`;
+                const labelEl = document.getElementById('freqOnceLabel');
+                const inputEl = document.getElementById('freqOnce');
+                if (labelEl) labelEl.textContent = label;
+                if (inputEl) inputEl.value = label;
+            }
+        }
     } catch (e) { /* assume open if settings can't be read */ }
     const closedScreen = document.getElementById('hubClosedScreen');
     const openUI = document.getElementById('hubOpenUI');
@@ -380,11 +369,6 @@ shakeStyle.textContent = `
 document.head.appendChild(shakeStyle);
 
 // ═══════════════════ REGISTRATION SUBMISSION ═══════════════════
-function formatDate(date) {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
 // Guard against double submission: once a submit is in flight, ignore further
 // clicks until it finishes. This is what prevents the same hub registering twice.
 let hubSubmitting = false;
@@ -533,28 +517,3 @@ function resetAndRegister() {
     showSection('registration');
 }
 
-// ═══════════════════ TOAST NOTIFICATIONS ═══════════════════
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><span class="toast-text">${escHtml(message)}</span>`;
-    container.appendChild(toast);
-    const duration = type === 'error' ? 5000 : 3500;
-    setTimeout(() => {
-        toast.classList.add('out');
-        toast.addEventListener('animationend', () => toast.remove(), { once: true });
-    }, duration);
-}
-
-function escHtml(str) {
-    if (str == null) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}

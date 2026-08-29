@@ -21,8 +21,16 @@ async function readFormSettings() {
 }
 
 // GET /api/settings — public. Used by the participant + hub-leader pages.
+// Includes the active edition's event date (not just its number) so those
+// static pages can render date-dependent copy (e.g. the hosting-frequency
+// option "Only host on <date>") without needing an authenticated endpoint.
 router.get('/', async (req, res) => {
-  res.json(await readFormSettings());
+  const settings = await readFormSettings();
+  const edition = await db.get(
+    'SELECT event_date FROM editions WHERE edition = $1',
+    [settings.activeEdition]
+  );
+  res.json({ ...settings, activeEditionEventDate: edition ? edition.event_date : null });
 });
 
 module.exports = router;

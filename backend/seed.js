@@ -14,6 +14,9 @@ async function seed() {
     return;
   }
 
+  const { readFormSettings } = require('./routes/settings');
+  const { activeEdition } = await readFormSettings();
+
   const names = [
     'Rajesh Kumar', 'Priya Sharma', 'Ankit Gupta', 'Meena Patel', 'Suresh Iyer',
     'Divya Nair', 'Amit Verma', 'Sunita Joshi', 'Vikram Singh', 'Pooja Mehta',
@@ -67,6 +70,7 @@ async function seed() {
       hosting_frequency: frequencies[i % frequencies.length],
       lat: null,
       lng: null,
+      edition: activeEdition,
     };
   });
 
@@ -74,14 +78,15 @@ async function seed() {
     await db.run(
       `INSERT INTO hubs (
         id, submitted_at, last_updated, status, full_name, email, mobile, membership,
-        city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, lat, lng
+        city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency, lat, lng, edition
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
       )`,
       [
         hub.id, hub.submitted_at, hub.last_updated, hub.status, hub.full_name, hub.email,
         hub.mobile, hub.membership, hub.city, hub.area, hub.address, hub.pincode,
         hub.venue_type, hub.capacity, hub.hosted_before, hub.hosting_frequency, hub.lat, hub.lng,
+        hub.edition,
       ]
     );
   }

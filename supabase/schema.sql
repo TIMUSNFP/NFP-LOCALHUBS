@@ -41,6 +41,14 @@ alter table hubs add column if not exists change_notified_at text;
 -- an admin combines this circle into another (see routes/admin.js's /combine route).
 alter table hubs add column if not exists merged_into_hub_id text references hubs(id);
 alter table hubs add column if not exists merged_at text;
+-- Editions: each hub belongs to the edition it registered for (default 1 for
+-- rows created before the Editions feature). carried_over_from_hub_id /
+-- carried_over_to_hub_id link a leader's hub row across editions when an
+-- admin uses "Move to Next Edition" (routes/admin.js) — mirrors
+-- merged_into_hub_id above but across editions instead of within one.
+alter table hubs add column if not exists edition integer not null default 1;
+alter table hubs add column if not exists carried_over_from_hub_id text references hubs(id);
+alter table hubs add column if not exists carried_over_to_hub_id text references hubs(id);
 
 -- One row per /hubs/:id/combine call — records exactly which participants moved
 -- so a later "Undo Merge" can move back precisely those still sitting in the
@@ -72,6 +80,8 @@ create table if not exists participants (
   confirmation_sent_at text
 );
 alter table participants add column if not exists confirmation_sent_at text;
+alter table participants add column if not exists edition integer not null default 1;
+alter table participants add column if not exists event_reminder_sent_at text;
 
 -- Geocoding cache: pincode -> lat/lng, so we don't re-call the geocoder
 create table if not exists pincode_cache (
@@ -89,8 +99,22 @@ create table if not exists settings (
 );
 insert into settings (key, value) values
   ('hub_form_open', 'true'),
-  ('participant_form_open', 'true')
+  ('participant_form_open', 'true'),
+  ('active_edition', '1')
 on conflict (key) do nothing;
+
+-- One row per edition, holding the theme/event details captured when an admin
+-- starts that edition (routes/admin.js POST /editions/start, PATCH
+-- /editions/:edition). The active edition number itself lives in `settings`
+-- (key 'active_edition') — this table is edition metadata, not the pointer.
+create table if not exists editions (
+  edition integer primary key,
+  theme_title text,
+  theme_tagline text,
+  event_date text,
+  event_time_start text,
+  event_time_end text
+);
 
 -- ── NFP Circle CRM ─────────────────────────────────────────────────────────────
 -- Cold-outreach contact list (NFP Members / QPFP Certificants) and the campaigns
@@ -235,6 +259,7 @@ alter table public.crm_contacts             enable row level security;
 alter table public.crm_campaigns            enable row level security;
 alter table public.crm_campaign_recipients  enable row level security;
 alter table public.hub_merges               enable row level security;
+alter table public.editions                 enable row level security;
 alter table public.poll_sessions      enable row level security;
 alter table public.poll_questions     enable row level security;
 alter table public.poll_participants  enable row level security;

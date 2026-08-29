@@ -144,11 +144,10 @@ router.patch('/hubs/:id/status', async (req, res) => {
   if (!hub) return res.status(404).json({ error: 'Hub not found' });
 
   const lastUpdated = new Date().toISOString();
-  await db.run('UPDATE hubs SET status = $1, last_updated = $2 WHERE id = $3', [
-    status,
-    lastUpdated,
-    req.params.id,
-  ]);
+  let { rows: [updated] } = await db.run(
+    'UPDATE hubs SET status = $1, last_updated = $2 WHERE id = $3 RETURNING *',
+    [status, lastUpdated, req.params.id]
+  );
 
   // Geocode on approval (only if coords are missing). This is the moment the hub
   // becomes visible on the map and in the PIN-code nearby search, so it's the right
@@ -166,14 +165,15 @@ router.patch('/hubs/:id/status', async (req, res) => {
       ]);
       if (coords) {
         const [lat, lng] = coords;
-        await db.run('UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3', [lat, lng, req.params.id]);
+        ({ rows: [updated] } = await db.run(
+          'UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3 RETURNING *',
+          [lat, lng, req.params.id]
+        ));
       }
     } catch (e) {
       // Best-effort; frontend falls back to city-centre coords if this stays null.
     }
   }
-
-  const updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
 
   // Fire approval/rejection email — non-blocking, errors are swallowed in mailer.
   // Resetting back to Pending is silent (no email) — it's an internal correction,
@@ -238,9 +238,10 @@ router.patch('/hubs/:id', async (req, res) => {
   setClauses.push(`last_updated = $${values.length}`);
 
   values.push(req.params.id);
-  await db.run(`UPDATE hubs SET ${setClauses.join(', ')} WHERE id = $${values.length}`, values);
-
-  let updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+  let { rows: [updated] } = await db.run(
+    `UPDATE hubs SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`,
+    values
+  );
 
   // The map pin is only ever set once, at approval time — if an admin corrects
   // the address/area/city/pincode afterward, re-geocode now so the pin doesn't
@@ -256,8 +257,10 @@ router.patch('/hubs/:id', async (req, res) => {
       });
       if (coords) {
         const [lat, lng] = coords;
-        await db.run('UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3', [lat, lng, req.params.id]);
-        updated = await db.get('SELECT * FROM hubs WHERE id = $1', [req.params.id]);
+        ({ rows: [updated] } = await db.run(
+          'UPDATE hubs SET lat = $1, lng = $2 WHERE id = $3 RETURNING *',
+          [lat, lng, req.params.id]
+        ));
       }
     } catch (e) {
       // Best-effort; existing lat/lng (however stale) is left untouched.
@@ -388,21 +391,23 @@ router.patch('/participants/:id/status', async (req, res) => {
   const participant = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
   if (!participant) return res.status(404).json({ error: 'Participant not found' });
 
+  let updated;
   if (status === 'Confirmed') {
     // Marked sent at the same moment the email is fired below — this is what
     // lets "Send Confirmation to Never-Sent" tell a normal confirm apart from
     // a participant who's Confirmed but never actually got the email (e.g.
     // imported/bulk-transferred data, or an earlier send that predates this
     // column existing).
-    await db.run(
-      'UPDATE participants SET status = $1, confirmation_sent_at = $2 WHERE id = $3',
+    ({ rows: [updated] } = await db.run(
+      'UPDATE participants SET status = $1, confirmation_sent_at = $2 WHERE id = $3 RETURNING *',
       [status, new Date().toISOString(), req.params.id]
-    );
+    ));
   } else {
-    await db.run('UPDATE participants SET status = $1 WHERE id = $2', [status, req.params.id]);
+    ({ rows: [updated] } = await db.run(
+      'UPDATE participants SET status = $1 WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    ));
   }
-
-  const updated = await db.get('SELECT * FROM participants WHERE id = $1', [req.params.id]);
 
   // Fire confirmation/cancellation email — non-blocking, errors are swallowed in mailer.
   // Resetting back to Pending is silent (no email) — same convention as hubs.
@@ -477,23 +482,31 @@ router.post('/participants/transfer', async (req, res) => {
     return res.status(400).json({ error: 'Destination circle must be an Approved circle.' });
   }
 
-  let transferred = 0;
-  let skipped = 0;
-  for (const pid of participantIds) {
-    const participant = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
-    if (!participant || participant.hub_id === newHubId) {
-      skipped++;
-      continue;
-    }
+  const candidates = await db.all('SELECT * FROM participants WHERE id = ANY($1::text[])', [participantIds]);
+  const toTransfer = candidates.filter((p) => p.hub_id !== newHubId);
+  const skipped = participantIds.length - toTransfer.length;
+  const oldHubIdByParticipantId = new Map(toTransfer.map((p) => [p.id, p.hub_id]));
 
-    const oldHub = await db.get('SELECT * FROM hubs WHERE id = $1', [participant.hub_id]);
-    await db.run('UPDATE participants SET hub_id = $1 WHERE id = $2', [newHubId, pid]);
-    const updated = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
-    transferred++;
-
-    // Fire transfer email — non-blocking, errors are swallowed in mailer.
-    sendParticipantTransferred(updated, oldHub, newHub);
+  let updatedParticipants = [];
+  if (toTransfer.length > 0) {
+    ({ rows: updatedParticipants } = await db.run(
+      'UPDATE participants SET hub_id = $1 WHERE id = ANY($2::text[]) RETURNING *',
+      [newHubId, toTransfer.map((p) => p.id)]
+    ));
   }
+  const transferred = updatedParticipants.length;
+
+  // Old hub per participant — fetched once per distinct source hub, not once per participant.
+  const oldHubIds = [...new Set(toTransfer.map((p) => p.hub_id))];
+  const oldHubs = oldHubIds.length > 0
+    ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [oldHubIds])
+    : [];
+  const oldHubById = new Map(oldHubs.map((h) => [h.id, h]));
+
+  // Fire transfer emails — non-blocking, errors are swallowed in mailer.
+  updatedParticipants.forEach((p) => {
+    sendParticipantTransferred(p, oldHubById.get(oldHubIdByParticipantId.get(p.id)), newHub);
+  });
 
   res.json({ transferred, skipped, newHub: hubRowToJson(newHub) });
 });
@@ -540,19 +553,21 @@ router.post('/hubs/:id/combine', async (req, res) => {
     "SELECT * FROM participants WHERE hub_id = $1 AND status != 'Cancelled'",
     [closingHubId]
   );
+  const movedParticipantIds = movingParticipants.map((p) => p.id);
 
-  const movedParticipantIds = [];
-  for (const participant of movingParticipants) {
-    await db.run('UPDATE participants SET hub_id = $1 WHERE id = $2', [targetHubId, participant.id]);
-    const updated = await db.get('SELECT * FROM participants WHERE id = $1', [participant.id]);
-    movedParticipantIds.push(participant.id);
-    // Fire notification emails — non-blocking, errors are swallowed in mailer.
-    sendParticipantCircleCombined(updated, closingHub, survivingHub);
+  let movedParticipants = [];
+  if (movedParticipantIds.length > 0) {
+    ({ rows: movedParticipants } = await db.run(
+      'UPDATE participants SET hub_id = $1 WHERE id = ANY($2::text[]) RETURNING *',
+      [targetHubId, movedParticipantIds]
+    ));
   }
+  // Fire notification emails — non-blocking, errors are swallowed in mailer.
+  movedParticipants.forEach((p) => sendParticipantCircleCombined(p, closingHub, survivingHub));
 
   const now = new Date().toISOString();
-  await db.run(
-    `UPDATE hubs SET status = 'Merged', merged_into_hub_id = $1, merged_at = $2, last_updated = $2 WHERE id = $3`,
+  const { rows: [updatedClosingHub] } = await db.run(
+    `UPDATE hubs SET status = 'Merged', merged_into_hub_id = $1, merged_at = $2, last_updated = $2 WHERE id = $3 RETURNING *`,
     [targetHubId, now, closingHubId]
   );
   await db.run(
@@ -564,7 +579,6 @@ router.post('/hubs/:id/combine', async (req, res) => {
   // Let the closing circle's own Leader know — non-blocking, same as above.
   sendHubLeaderCircleMerged(closingHub, survivingHub, movedParticipantIds.length);
 
-  const updatedClosingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [closingHubId]);
   res.json({
     movedParticipants: movedParticipantIds.length,
     closingHub: hubRowToJson(updatedClosingHub),
@@ -596,31 +610,36 @@ router.post('/hubs/:id/revert-merge', async (req, res) => {
   const survivingHub = await db.get('SELECT * FROM hubs WHERE id = $1', [merge.target_hub_id]);
   const participantIds = merge.participant_ids || [];
 
-  let restoredCount = 0;
-  let skippedCount = 0;
-  for (const pid of participantIds) {
-    const participant = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
-    if (!participant || participant.hub_id !== merge.target_hub_id) {
-      skippedCount++;
-      continue;
-    }
-    await db.run('UPDATE participants SET hub_id = $1 WHERE id = $2', [closingHubId, pid]);
-    const updated = await db.get('SELECT * FROM participants WHERE id = $1', [pid]);
-    restoredCount++;
-    // Fire notification emails — non-blocking, errors are swallowed in mailer.
-    if (survivingHub) sendParticipantCircleMergeReverted(updated, survivingHub, closingHub);
+  // Only restore participants still sitting in the surviving hub — anyone
+  // deleted or manually transferred elsewhere since the merge is skipped.
+  const candidates = participantIds.length > 0
+    ? await db.all('SELECT * FROM participants WHERE id = ANY($1::text[])', [participantIds])
+    : [];
+  const toRestoreIds = candidates.filter((p) => p.hub_id === merge.target_hub_id).map((p) => p.id);
+  const skippedCount = participantIds.length - toRestoreIds.length;
+
+  let restoredParticipants = [];
+  if (toRestoreIds.length > 0) {
+    ({ rows: restoredParticipants } = await db.run(
+      'UPDATE participants SET hub_id = $1 WHERE id = ANY($2::text[]) RETURNING *',
+      [closingHubId, toRestoreIds]
+    ));
+  }
+  const restoredCount = restoredParticipants.length;
+  // Fire notification emails — non-blocking, errors are swallowed in mailer.
+  if (survivingHub) {
+    restoredParticipants.forEach((p) => sendParticipantCircleMergeReverted(p, survivingHub, closingHub));
   }
 
   const now = new Date().toISOString();
-  await db.run(
-    `UPDATE hubs SET status = 'Approved', merged_into_hub_id = NULL, merged_at = NULL, last_updated = $1 WHERE id = $2`,
+  const { rows: [updatedHub] } = await db.run(
+    `UPDATE hubs SET status = 'Approved', merged_into_hub_id = NULL, merged_at = NULL, last_updated = $1 WHERE id = $2 RETURNING *`,
     [now, closingHubId]
   );
   await db.run(`UPDATE hub_merges SET reverted_at = $1 WHERE id = $2`, [now, merge.id]);
 
   if (survivingHub) sendHubLeaderCircleMergeReverted(closingHub, survivingHub, restoredCount);
 
-  const updatedHub = await db.get('SELECT * FROM hubs WHERE id = $1', [closingHubId]);
   res.json({
     restoredParticipants: restoredCount,
     skippedParticipants: skippedCount,
@@ -659,14 +678,14 @@ router.post('/hubs/:id/move-to-next-edition', async (req, res) => {
     const newHubId = generateHubId();
     const now = new Date().toISOString();
 
-    await db.run(
+    const { rows: [newHub] } = await db.run(
       `INSERT INTO hubs (
         id, submitted_at, last_updated, status, full_name, email, mobile, membership,
         city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency,
         poc_role, lat, lng, edition, carried_over_from_hub_id
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
-      )`,
+      ) RETURNING *`,
       [
         newHubId, now, null, 'Approved', sourceHub.full_name, sourceHub.email, sourceHub.mobile,
         sourceHub.membership, sourceHub.city, sourceHub.area, sourceHub.address, sourceHub.pincode,
@@ -675,13 +694,10 @@ router.post('/hubs/:id/move-to-next-edition', async (req, res) => {
       ]
     );
 
-    await db.run(
-      `UPDATE hubs SET carried_over_to_hub_id = $1, last_updated = $2 WHERE id = $3`,
+    const { rows: [updatedSourceHub] } = await db.run(
+      `UPDATE hubs SET carried_over_to_hub_id = $1, last_updated = $2 WHERE id = $3 RETURNING *`,
       [newHubId, now, sourceHubId]
     );
-
-    const updatedSourceHub = await db.get('SELECT * FROM hubs WHERE id = $1', [sourceHubId]);
-    const newHub = await db.get('SELECT * FROM hubs WHERE id = $1', [newHubId]);
 
     // Let the Circle Leader know they're set for the new edition — pass the
     // NEW hub row (not the source) so the email shows the new edition's own

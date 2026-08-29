@@ -919,8 +919,11 @@ router.post('/campaigns/:id/pause', asyncHandler(async (req, res) => {
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
   if (campaign.status !== 'Sending') return res.status(400).json({ error: 'Only a sending campaign can be paused.' });
   unscheduleCampaignTimer(campaign.id);
-  await db.run(`UPDATE crm_campaigns SET status = 'Paused' WHERE id = $1`, [campaign.id]);
-  res.json(campaignRowToJson(await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id])));
+  const { rows: [updated] } = await db.run(
+    `UPDATE crm_campaigns SET status = 'Paused' WHERE id = $1 RETURNING *`,
+    [campaign.id]
+  );
+  res.json(campaignRowToJson(updated));
 }));
 
 // POST /api/admin/crm/campaigns/:id/resume
@@ -928,10 +931,13 @@ router.post('/campaigns/:id/resume', asyncHandler(async (req, res) => {
   const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
   if (campaign.status !== 'Paused') return res.status(400).json({ error: 'Only a paused campaign can be resumed.' });
-  await db.run(`UPDATE crm_campaigns SET status = 'Sending' WHERE id = $1`, [campaign.id]);
+  const { rows: [updated] } = await db.run(
+    `UPDATE crm_campaigns SET status = 'Sending' WHERE id = $1 RETURNING *`,
+    [campaign.id]
+  );
   scheduleCampaignTimer(campaign.id, campaign.interval_minutes);
   runCampaignBatch(campaign.id).catch((e) => console.error(`[crm] resume batch error for ${campaign.id}:`, e.message));
-  res.json(campaignRowToJson(await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [campaign.id])));
+  res.json(campaignRowToJson(updated));
 }));
 
 // POST /api/admin/crm/campaigns/:id/retry-failed — resets every Failed recipient

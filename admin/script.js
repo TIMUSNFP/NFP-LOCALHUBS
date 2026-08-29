@@ -1503,7 +1503,13 @@ function viewDetails(id) {
 // ═══════════════════ HUB EDIT MODE ═══════════════════
 const CAPACITY_OPTIONS = Array.from({ length: 11 }, (_, i) => `${i + 5} People`);
 const MEMBERSHIP_OPTIONS = ['QPFP Certificant', 'NFP Member', 'Both NFP ProMember & QPFP Certificant'];
-const HOSTING_FREQUENCY_OPTIONS = ['Only host on 28 September', 'Once a Quarter', 'Open to Either'];
+function hostingFrequencyOptions(edition) {
+    const details = editionDetails[edition];
+    const oneTimeLabel = details && details.eventDate
+        ? `Only host on ${formatDate(details.eventDate)}`
+        : 'One Time Only';
+    return [oneTimeLabel, 'Once a Quarter', 'Open to Either'];
+}
 
 function optionsHtml(options, current) {
     return options.map(o => `<option value="${escHtml(o)}" ${o === current ? 'selected' : ''}>${escHtml(o)}</option>`).join('');
@@ -1546,7 +1552,7 @@ function enterEditMode(id) {
                 </div>
                 <div class="detail-item">
                     <label>Willing to Host NFP Circle</label>
-                    <select id="editHostingFrequency" class="form-input">${optionsHtml(HOSTING_FREQUENCY_OPTIONS, reg.hostingFrequency)}</select>
+                    <select id="editHostingFrequency" class="form-input">${optionsHtml(hostingFrequencyOptions(reg.edition), reg.hostingFrequency)}</select>
                 </div>
                 <div class="detail-item">
                     <label>Circle POC</label>
@@ -1822,6 +1828,18 @@ function renderAnalytics() {
     renderCityCapacityFill(hubsAll, partsAll);
 }
 
+// Tally `items` into { [keyFn(item)]: count }, skipping falsy keys unless
+// `fallback` is given (used for "Unknown"/"Not specified" buckets).
+function countBy(items, keyFn, fallback) {
+    const counts = {};
+    items.forEach(item => {
+        const key = keyFn(item) || fallback;
+        if (!key) return;
+        counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+}
+
 // ── Shared: horizontal bar set ──
 function renderBarSet(containerId, counts, color) {
     color = color || 'var(--primary)';
@@ -1978,15 +1996,11 @@ function renderStatusFunnel(regs, parts) {
 }
 
 function renderCityBars(regs) {
-    const counts = {};
-    regs.forEach(r => { counts[r.city] = (counts[r.city] || 0) + 1; });
-    renderBarSet('cityBars', counts, 'var(--primary)');
+    renderBarSet('cityBars', countBy(regs, r => r.city), 'var(--primary)');
 }
 
 function renderAreaBars(regs) {
-    const counts = {};
-    regs.forEach(r => { if (r.area) counts[r.area] = (counts[r.area] || 0) + 1; });
-    renderBarSet('areaBars', counts, '#0EA5E9');
+    renderBarSet('areaBars', countBy(regs, r => r.area), '#0EA5E9');
 }
 
 function renderApprovalByCity(regs) {
@@ -2016,15 +2030,11 @@ function renderApprovalByCity(regs) {
 }
 
 function renderMemberBars(regs) {
-    const counts = {};
-    regs.forEach(r => { counts[r.membership] = (counts[r.membership] || 0) + 1; });
-    renderBarSet('memberBars', counts, '#2563EB');
+    renderBarSet('memberBars', countBy(regs, r => r.membership), '#2563EB');
 }
 
 function renderVenueBars(regs) {
-    const counts = {};
-    regs.forEach(r => { counts[r.venueType] = (counts[r.venueType] || 0) + 1; });
-    renderBarSet('venueBars', counts, '#16A34A');
+    renderBarSet('venueBars', countBy(regs, r => r.venueType), '#16A34A');
 }
 
 function renderCapacityDistribution(regs) {
@@ -2046,9 +2056,7 @@ function renderHostingExperience(regs) {
 }
 
 function renderHostingFrequency(regs) {
-    const counts = {};
-    regs.forEach(r => { const f = r.hostingFrequency || 'Not specified'; counts[f] = (counts[f]||0)+1; });
-    renderBarSet('freqBars', counts, '#8B5CF6');
+    renderBarSet('freqBars', countBy(regs, r => r.hostingFrequency, 'Not specified'), '#8B5CF6');
 }
 
 function renderPocRole(regs) {
@@ -2069,11 +2077,8 @@ function renderRegistrationTrend(parts) {
 }
 
 function renderParticipantsByCity(parts) {
-    const counts = {};
-    parts.filter(p => p.status === 'Confirmed').forEach(p => {
-        const c = p.hubCity || 'Unknown'; counts[c] = (counts[c]||0)+1;
-    });
-    renderBarSet('partCityBars', counts, '#0EA5E9');
+    const confirmed = parts.filter(p => p.status === 'Confirmed');
+    renderBarSet('partCityBars', countBy(confirmed, p => p.hubCity, 'Unknown'), '#0EA5E9');
 }
 
 // Complements the "Participants by City" breakdown with a single at-a-glance
@@ -2097,17 +2102,12 @@ function renderParticipantUniqueCities(parts) {
 }
 
 function renderTopCirclesByParticipants(parts) {
-    const counts = {};
-    parts.filter(p => p.status === 'Confirmed').forEach(p => {
-        const k = p.hubLeader || 'Unknown'; counts[k] = (counts[k]||0)+1;
-    });
-    renderBarSet('topCirclesBars', counts, '#EC4899');
+    const confirmed = parts.filter(p => p.status === 'Confirmed');
+    renderBarSet('topCirclesBars', countBy(confirmed, p => p.hubLeader, 'Unknown'), '#EC4899');
 }
 
 function renderParticipantMembership(parts) {
-    const counts = {};
-    parts.forEach(p => { counts[p.membership] = (counts[p.membership]||0)+1; });
-    renderBarSet('partMemberBars', counts, '#2563EB');
+    renderBarSet('partMemberBars', countBy(parts, p => p.membership), '#2563EB');
 }
 
 function renderCircleFillRate(hubs, parts) {
@@ -3064,11 +3064,17 @@ async function openTransferParticipantsModal(participantIds) {
     `;
 }
 
-function filterTransferHubList() {
-    const q = (document.getElementById('transferHubSearch')?.value || '').trim().toLowerCase();
-    document.querySelectorAll('.transfer-hub-option').forEach(el => {
+// Shared by the Transfer and Combine modals' hub-picker search boxes — both
+// filter a list of `.{prefix}-hub-option` rows by a `data-search` attribute.
+function filterHubOptionList(searchInputId, optionClass) {
+    const q = (document.getElementById(searchInputId)?.value || '').trim().toLowerCase();
+    document.querySelectorAll(`.${optionClass}`).forEach(el => {
         el.style.display = (!q || el.dataset.search.includes(q)) ? 'flex' : 'none';
     });
+}
+
+function filterTransferHubList() {
+    filterHubOptionList('transferHubSearch', 'transfer-hub-option');
 }
 
 async function submitTransferParticipants() {
@@ -3153,10 +3159,7 @@ async function openCombineHubModal(closingHubId) {
 }
 
 function filterCombineHubList() {
-    const q = (document.getElementById('combineHubSearch')?.value || '').trim().toLowerCase();
-    document.querySelectorAll('.combine-hub-option').forEach(el => {
-        el.style.display = (!q || el.dataset.search.includes(q)) ? 'flex' : 'none';
-    });
+    filterHubOptionList('combineHubSearch', 'combine-hub-option');
 }
 
 async function submitCombineHub() {
