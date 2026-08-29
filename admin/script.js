@@ -638,7 +638,14 @@ async function showAdminTab(tab, linkEl) {
     closeSidebar();
 }
 
-// ═══════════════════ COLUMN FILTERS (HUBS, Excel-style) ═══════════════════
+// ═══════════════════ COLUMN FILTERS (Excel-style, shared controller) ═══════════════════
+// Hubs and Participants each get an Excel-style per-column filter panel:
+// click a column header's ▼ to see its unique values and check/uncheck which
+// to show. The two tables' filter systems were identical apart from which
+// column list, which data set, which value-getter, and which apply-filters
+// function they drive — one factory, two instances below. Both instances
+// share the single #colFilterPanel element in the DOM (only one is ever
+// open at a time), same as before this refactor.
 const HUB_FILTER_COLUMNS = [
     { key: 'id',               label: 'Reg. ID' },
     { key: 'fullName',         label: 'Full Name' },
@@ -656,71 +663,19 @@ const HUB_FILTER_COLUMNS = [
     { key: 'status',           label: 'Status' },
 ];
 
-let hubColumnFilters = {}; // colKey -> Set of allowed values ("absent" key = no filter on that column)
-let activeFilterCol  = null;
-
-function initHubColumnFilters() {
-    const row = document.getElementById('hubTableHeaderRow');
-    if (!row) return;
-    const ths = row.querySelectorAll('th');
-    // ths[0] is the bulk-select checkbox column — filterable columns start at index 1.
-    HUB_FILTER_COLUMNS.forEach((col, i) => {
-        const th = ths[i + 1];
-        if (!th) return;
-        const label = th.textContent.trim();
-        th.innerHTML = `<div class="th-inner"><span class="th-label">${label}</span><button type="button" class="col-filter-btn" data-col="${col.key}" onclick="toggleColumnFilter(event,'${col.key}')" title="Filter ${label}">&#9660;</button></div>`;
-    });
-    document.addEventListener('click', (e) => {
-        const panel = document.getElementById('colFilterPanel');
-        if (!panel || panel.classList.contains('hidden')) return;
-        if (panel.contains(e.target) || e.target.closest('.col-filter-btn')) return;
-        closeColumnFilterPanel();
-    });
-    window.addEventListener('resize', closeColumnFilterPanel);
-}
-
-function getHubColumnValue(record, key) {
-    if (key === 'submittedAt') return record.submittedAt ? formatDate(record.submittedAt) : '—';
-    if (key === 'hostedBefore') return record.hostedBefore === 'Yes' ? 'Yes' : 'No';
-    const v = record[key];
-    return (v === null || v === undefined || String(v).trim() === '') ? '—' : String(v).trim();
-}
-
-function toggleColumnFilter(evt, colKey) {
-    evt.stopPropagation();
-    if (activeFilterCol === colKey) { closeColumnFilterPanel(); return; }
-    openColumnFilterPanel(evt.currentTarget, colKey);
-}
-
-function openColumnFilterPanel(btnEl, colKey) {
-    activeFilterCol = colKey;
-    const panel = document.getElementById('colFilterPanel');
-    if (!panel) return;
-
-    const uniqueValues = [...new Set(allHubs.map(r => getHubColumnValue(r, colKey)))]
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    const selected = hubColumnFilters[colKey]; // Set or undefined (undefined = all selected)
-
-    panel.innerHTML = `
-        <div class="cfp-search"><input type="text" placeholder="Search values..." oninput="filterColumnValueList(this.value)" /></div>
-        <div class="cfp-selectall"><label><input type="checkbox" id="cfpSelectAll" ${!selected ? 'checked' : ''} onchange="toggleAllColumnValues(this.checked)"> Select All</label></div>
-        <div class="cfp-list" id="cfpList">
-            ${uniqueValues.map(v => `
-                <label class="cfp-item">
-                    <input type="checkbox" value="${escHtml(v)}" ${!selected || selected.has(v) ? 'checked' : ''}>
-                    <span>${escHtml(v)}</span>
-                </label>
-            `).join('')}
-        </div>
-        <div class="cfp-actions">
-            <button type="button" class="cfp-clear" onclick="clearColumnFilter('${colKey}')">Clear</button>
-            <button type="button" class="cfp-apply" onclick="applyColumnFilter('${colKey}')">Apply</button>
-        </div>
-    `;
-
-    panel.classList.remove('hidden');
-    positionColumnFilterPanel(btnEl, panel);
-}
+const PARTICIPANT_FILTER_COLUMNS = [
+    { key: 'id',           label: 'Participant ID' },
+    { key: 'fullName',     label: 'Full Name' },
+    { key: 'mobile',       label: 'Mobile' },
+    { key: 'email',        label: 'Email' },
+    { key: 'membership',   label: 'Membership' },
+    { key: 'hubLeader',    label: 'Circle Host' },
+    { key: 'hubCity',      label: 'Circle City' },
+    { key: 'hubArea',      label: 'Circle Area' },
+    { key: 'note',         label: 'Note' },
+    { key: 'registeredAt', label: 'Registered On' },
+    { key: 'status',       label: 'Status' },
+];
 
 function positionColumnFilterPanel(btnEl, panel) {
     const rect = btnEl.getBoundingClientRect();
@@ -745,84 +700,133 @@ function toggleAllColumnValues(checked) {
     });
 }
 
-function applyColumnFilter(colKey) {
-    const checkboxes = document.querySelectorAll('#cfpList .cfp-item input');
-    const checkedValues = [...checkboxes].filter(cb => cb.checked).map(cb => cb.value);
-    if (checkedValues.length === checkboxes.length) {
-        delete hubColumnFilters[colKey]; // everything selected = no filter
-    } else {
-        hubColumnFilters[colKey] = new Set(checkedValues);
+function createColumnFilterController({ headerRowId, columns, dataAttr, dataGetter, getColumnValue, applyFiltersFn, toggleFnName, clearFnName, applyFnName }) {
+    const filters = {}; // colKey -> Set of allowed values ("absent" key = no filter on that column)
+    let activeCol = null;
+
+    function init() {
+        const row = document.getElementById(headerRowId);
+        if (!row) return;
+        const ths = row.querySelectorAll('th');
+        // ths[0] is the bulk-select checkbox column — filterable columns start at index 1.
+        columns.forEach((col, i) => {
+            const th = ths[i + 1];
+            if (!th) return;
+            const label = th.textContent.trim();
+            th.innerHTML = `<div class="th-inner"><span class="th-label">${label}</span><button type="button" class="col-filter-btn" data-${dataAttr}="${col.key}" onclick="${toggleFnName}(event,'${col.key}')" title="Filter ${label}">&#9660;</button></div>`;
+        });
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('colFilterPanel');
+            if (!panel || panel.classList.contains('hidden') || activeCol === null) return;
+            if (panel.contains(e.target) || e.target.closest('.col-filter-btn')) return;
+            close();
+        });
+        window.addEventListener('resize', () => { if (activeCol !== null) close(); });
     }
-    updateFilterIconStates();
-    closeColumnFilterPanel();
-    applyFilters();
-}
 
-function clearColumnFilter(colKey) {
-    delete hubColumnFilters[colKey];
-    updateFilterIconStates();
-    closeColumnFilterPanel();
-    applyFilters();
-}
+    function toggle(evt, colKey) {
+        evt.stopPropagation();
+        if (activeCol === colKey) { close(); return; }
+        open(evt.currentTarget, colKey);
+    }
 
-function updateFilterIconStates() {
-    document.querySelectorAll('.col-filter-btn').forEach(btn => {
-        btn.classList.toggle('active', !!hubColumnFilters[btn.getAttribute('data-col')]);
-    });
-}
-
-function closeColumnFilterPanel() {
-    const panel = document.getElementById('colFilterPanel');
-    if (panel) panel.classList.add('hidden');
-    activeFilterCol = null;
-}
-
-function applyHubColumnFilters(regs) {
-    Object.keys(hubColumnFilters).forEach(key => {
-        const allowed = hubColumnFilters[key];
-        if (!allowed || allowed.size === 0) return;
-        regs = regs.filter(r => allowed.has(getHubColumnValue(r, key)));
-    });
-    return regs;
-}
-
-// ═══════════════════ COLUMN FILTERS (PARTICIPANTS, Excel-style) ═══════════════════
-const PARTICIPANT_FILTER_COLUMNS = [
-    { key: 'id',           label: 'Participant ID' },
-    { key: 'fullName',     label: 'Full Name' },
-    { key: 'mobile',       label: 'Mobile' },
-    { key: 'email',        label: 'Email' },
-    { key: 'membership',   label: 'Membership' },
-    { key: 'hubLeader',    label: 'Circle Host' },
-    { key: 'hubCity',      label: 'Circle City' },
-    { key: 'hubArea',      label: 'Circle Area' },
-    { key: 'note',         label: 'Note' },
-    { key: 'registeredAt', label: 'Registered On' },
-    { key: 'status',       label: 'Status' },
-];
-
-let participantColumnFilters = {}; // colKey -> Set of allowed values ("absent" key = no filter on that column)
-let activeFilterColP = null;
-
-function initParticipantColumnFilters() {
-    const row = document.getElementById('partTableHeaderRow');
-    if (!row) return;
-    const ths = row.querySelectorAll('th');
-    // ths[0] is the bulk-select checkbox column — filterable columns start at index 1.
-    PARTICIPANT_FILTER_COLUMNS.forEach((col, i) => {
-        const th = ths[i + 1];
-        if (!th) return;
-        const label = th.textContent.trim();
-        th.innerHTML = `<div class="th-inner"><span class="th-label">${label}</span><button type="button" class="col-filter-btn" data-colp="${col.key}" onclick="toggleColumnFilterP(event,'${col.key}')" title="Filter ${label}">&#9660;</button></div>`;
-    });
-    document.addEventListener('click', (e) => {
+    function open(btnEl, colKey) {
+        activeCol = colKey;
         const panel = document.getElementById('colFilterPanel');
-        if (!panel || panel.classList.contains('hidden') || activeFilterColP === null) return;
-        if (panel.contains(e.target) || e.target.closest('.col-filter-btn')) return;
-        closeColumnFilterPanelP();
-    });
-    window.addEventListener('resize', () => { if (activeFilterColP !== null) closeColumnFilterPanelP(); });
+        if (!panel) return;
+
+        const uniqueValues = [...new Set(dataGetter().map(r => getColumnValue(r, colKey)))]
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        const selected = filters[colKey]; // Set or undefined (undefined = all selected)
+
+        panel.innerHTML = `
+            <div class="cfp-search"><input type="text" placeholder="Search values..." oninput="filterColumnValueList(this.value)" /></div>
+            <div class="cfp-selectall"><label><input type="checkbox" id="cfpSelectAll" ${!selected ? 'checked' : ''} onchange="toggleAllColumnValues(this.checked)"> Select All</label></div>
+            <div class="cfp-list" id="cfpList">
+                ${uniqueValues.map(v => `
+                    <label class="cfp-item">
+                        <input type="checkbox" value="${escHtml(v)}" ${!selected || selected.has(v) ? 'checked' : ''}>
+                        <span>${escHtml(v)}</span>
+                    </label>
+                `).join('')}
+            </div>
+            <div class="cfp-actions">
+                <button type="button" class="cfp-clear" onclick="${clearFnName}('${colKey}')">Clear</button>
+                <button type="button" class="cfp-apply" onclick="${applyFnName}('${colKey}')">Apply</button>
+            </div>
+        `;
+
+        panel.classList.remove('hidden');
+        positionColumnFilterPanel(btnEl, panel);
+    }
+
+    function apply(colKey) {
+        const checkboxes = document.querySelectorAll('#cfpList .cfp-item input');
+        const checkedValues = [...checkboxes].filter(cb => cb.checked).map(cb => cb.value);
+        if (checkedValues.length === checkboxes.length) {
+            delete filters[colKey]; // everything selected = no filter
+        } else {
+            filters[colKey] = new Set(checkedValues);
+        }
+        updateIconStates();
+        close();
+        applyFiltersFn();
+    }
+
+    function clearOne(colKey) {
+        delete filters[colKey];
+        updateIconStates();
+        close();
+        applyFiltersFn();
+    }
+
+    function updateIconStates() {
+        document.querySelectorAll(`.col-filter-btn[data-${dataAttr}]`).forEach(btn => {
+            btn.classList.toggle('active', !!filters[btn.getAttribute(`data-${dataAttr}`)]);
+        });
+    }
+
+    function close() {
+        const panel = document.getElementById('colFilterPanel');
+        if (panel) panel.classList.add('hidden');
+        activeCol = null;
+    }
+
+    function applyToRows(rows) {
+        Object.keys(filters).forEach(key => {
+            const allowed = filters[key];
+            if (!allowed || allowed.size === 0) return;
+            rows = rows.filter(r => allowed.has(getColumnValue(r, key)));
+        });
+        return rows;
+    }
+
+    return { init, toggle, apply, clearOne, applyToRows };
 }
+
+function getHubColumnValue(record, key) {
+    if (key === 'submittedAt') return record.submittedAt ? formatDate(record.submittedAt) : '—';
+    if (key === 'hostedBefore') return record.hostedBefore === 'Yes' ? 'Yes' : 'No';
+    const v = record[key];
+    return (v === null || v === undefined || String(v).trim() === '') ? '—' : String(v).trim();
+}
+
+const hubColumnFilterController = createColumnFilterController({
+    headerRowId: 'hubTableHeaderRow',
+    columns: HUB_FILTER_COLUMNS,
+    dataAttr: 'col',
+    dataGetter: () => allHubs,
+    getColumnValue: getHubColumnValue,
+    applyFiltersFn: () => applyFilters(),
+    toggleFnName: 'toggleColumnFilter',
+    clearFnName: 'clearColumnFilter',
+    applyFnName: 'applyColumnFilter',
+});
+function initHubColumnFilters() { hubColumnFilterController.init(); }
+function toggleColumnFilter(evt, colKey) { hubColumnFilterController.toggle(evt, colKey); }
+function applyColumnFilter(colKey) { hubColumnFilterController.apply(colKey); }
+function clearColumnFilter(colKey) { hubColumnFilterController.clearOne(colKey); }
+function applyHubColumnFilters(regs) { return hubColumnFilterController.applyToRows(regs); }
 
 function getParticipantColumnValue(record, key) {
     if (key === 'registeredAt') return record.registeredAt ? formatDate(record.registeredAt) : '—';
@@ -830,82 +834,22 @@ function getParticipantColumnValue(record, key) {
     return (v === null || v === undefined || String(v).trim() === '') ? '—' : String(v).trim();
 }
 
-function toggleColumnFilterP(evt, colKey) {
-    evt.stopPropagation();
-    if (activeFilterColP === colKey) { closeColumnFilterPanelP(); return; }
-    openColumnFilterPanelP(evt.currentTarget, colKey);
-}
-
-function openColumnFilterPanelP(btnEl, colKey) {
-    activeFilterColP = colKey;
-    const panel = document.getElementById('colFilterPanel');
-    if (!panel) return;
-
-    const uniqueValues = [...new Set(allParticipants.map(r => getParticipantColumnValue(r, colKey)))]
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    const selected = participantColumnFilters[colKey]; // Set or undefined (undefined = all selected)
-
-    panel.innerHTML = `
-        <div class="cfp-search"><input type="text" placeholder="Search values..." oninput="filterColumnValueList(this.value)" /></div>
-        <div class="cfp-selectall"><label><input type="checkbox" id="cfpSelectAll" ${!selected ? 'checked' : ''} onchange="toggleAllColumnValues(this.checked)"> Select All</label></div>
-        <div class="cfp-list" id="cfpList">
-            ${uniqueValues.map(v => `
-                <label class="cfp-item">
-                    <input type="checkbox" value="${escHtml(v)}" ${!selected || selected.has(v) ? 'checked' : ''}>
-                    <span>${escHtml(v)}</span>
-                </label>
-            `).join('')}
-        </div>
-        <div class="cfp-actions">
-            <button type="button" class="cfp-clear" onclick="clearColumnFilterP('${colKey}')">Clear</button>
-            <button type="button" class="cfp-apply" onclick="applyColumnFilterP('${colKey}')">Apply</button>
-        </div>
-    `;
-
-    panel.classList.remove('hidden');
-    positionColumnFilterPanel(btnEl, panel);
-}
-
-function applyColumnFilterP(colKey) {
-    const checkboxes = document.querySelectorAll('#cfpList .cfp-item input');
-    const checkedValues = [...checkboxes].filter(cb => cb.checked).map(cb => cb.value);
-    if (checkedValues.length === checkboxes.length) {
-        delete participantColumnFilters[colKey]; // everything selected = no filter
-    } else {
-        participantColumnFilters[colKey] = new Set(checkedValues);
-    }
-    updateFilterIconStatesP();
-    closeColumnFilterPanelP();
-    applyParticipantFilters();
-}
-
-function clearColumnFilterP(colKey) {
-    delete participantColumnFilters[colKey];
-    updateFilterIconStatesP();
-    closeColumnFilterPanelP();
-    applyParticipantFilters();
-}
-
-function updateFilterIconStatesP() {
-    document.querySelectorAll('.col-filter-btn[data-colp]').forEach(btn => {
-        btn.classList.toggle('active', !!participantColumnFilters[btn.getAttribute('data-colp')]);
-    });
-}
-
-function closeColumnFilterPanelP() {
-    const panel = document.getElementById('colFilterPanel');
-    if (panel) panel.classList.add('hidden');
-    activeFilterColP = null;
-}
-
-function applyParticipantColumnFilters(parts) {
-    Object.keys(participantColumnFilters).forEach(key => {
-        const allowed = participantColumnFilters[key];
-        if (!allowed || allowed.size === 0) return;
-        parts = parts.filter(r => allowed.has(getParticipantColumnValue(r, key)));
-    });
-    return parts;
-}
+const participantColumnFilterController = createColumnFilterController({
+    headerRowId: 'partTableHeaderRow',
+    columns: PARTICIPANT_FILTER_COLUMNS,
+    dataAttr: 'colp',
+    dataGetter: () => allParticipants,
+    getColumnValue: getParticipantColumnValue,
+    applyFiltersFn: () => applyParticipantFilters(),
+    toggleFnName: 'toggleColumnFilterP',
+    clearFnName: 'clearColumnFilterP',
+    applyFnName: 'applyColumnFilterP',
+});
+function initParticipantColumnFilters() { participantColumnFilterController.init(); }
+function toggleColumnFilterP(evt, colKey) { participantColumnFilterController.toggle(evt, colKey); }
+function applyColumnFilterP(colKey) { participantColumnFilterController.apply(colKey); }
+function clearColumnFilterP(colKey) { participantColumnFilterController.clearOne(colKey); }
+function applyParticipantColumnFilters(parts) { return participantColumnFilterController.applyToRows(parts); }
 
 // ═══════════════════ TABLE RENDERING (HUBS) ═══════════════════
 function applyFilters() {
@@ -1304,47 +1248,70 @@ function sendUnsentApprovedRosters() {
     );
 }
 
-// ═══════════════════ BULK SELECTION (HUBS) ═══════════════════
-function toggleHubSelection(id, checked) {
-    if (checked) selectedHubIds.add(id);
-    else selectedHubIds.delete(id);
-    updateBulkBar();
-    updateSelectAllState();
+// ═══════════════════ BULK SELECTION (shared controller) ═══════════════════
+// Hubs and Participants tables each have identical select/select-all/bulk-bar
+// mechanics, differing only by which Set tracks selected ids and which DOM
+// ids/classes they operate on. One controller factory, two instances below —
+// every original function name is kept as a thin wrapper so existing
+// onclick="..."/onchange="..." handlers in admin/index.html and other call
+// sites in this file don't need to change.
+function createSelectionController({ selectedIds, rowSelector, selectAllId, barId, countId }) {
+    function updateBulkBar() {
+        const bar = document.getElementById(barId);
+        const countEl = document.getElementById(countId);
+        if (!bar) return;
+        bar.classList.toggle('hidden', selectedIds.size === 0);
+        if (countEl) countEl.textContent = `${selectedIds.size} selected`;
+    }
+
+    function updateSelectAllState() {
+        const selectAll = document.getElementById(selectAllId);
+        if (!selectAll) return;
+        const boxes = [...document.querySelectorAll(rowSelector)];
+        const checkedCount = boxes.filter(cb => cb.checked).length;
+        selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
+        selectAll.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+    }
+
+    function toggle(id, checked) {
+        if (checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+        updateBulkBar();
+        updateSelectAllState();
+    }
+
+    function toggleSelectAll(checked) {
+        // Only affects the currently rendered (filtered) rows, not the full dataset.
+        document.querySelectorAll(rowSelector).forEach(cb => {
+            cb.checked = checked;
+            if (checked) selectedIds.add(cb.value);
+            else selectedIds.delete(cb.value);
+        });
+        updateBulkBar();
+    }
+
+    function clear() {
+        selectedIds.clear();
+        document.querySelectorAll(rowSelector).forEach(cb => { cb.checked = false; });
+        updateBulkBar();
+        updateSelectAllState();
+    }
+
+    return { toggle, toggleSelectAll, updateSelectAllState, updateBulkBar, clear };
 }
 
-function toggleSelectAllHubs(checked) {
-    // Only affects the currently rendered (filtered) rows, not the full dataset.
-    document.querySelectorAll('#tableBody .hub-row-checkbox').forEach(cb => {
-        cb.checked = checked;
-        if (checked) selectedHubIds.add(cb.value);
-        else selectedHubIds.delete(cb.value);
-    });
-    updateBulkBar();
-}
-
-function updateSelectAllState() {
-    const selectAll = document.getElementById('selectAllHubs');
-    if (!selectAll) return;
-    const boxes = [...document.querySelectorAll('#tableBody .hub-row-checkbox')];
-    const checkedCount = boxes.filter(cb => cb.checked).length;
-    selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
-    selectAll.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
-}
-
-function updateBulkBar() {
-    const bar = document.getElementById('hubBulkBar');
-    const countEl = document.getElementById('hubBulkCount');
-    if (!bar) return;
-    bar.classList.toggle('hidden', selectedHubIds.size === 0);
-    if (countEl) countEl.textContent = `${selectedHubIds.size} selected`;
-}
-
-function clearHubSelection() {
-    selectedHubIds.clear();
-    document.querySelectorAll('#tableBody .hub-row-checkbox').forEach(cb => { cb.checked = false; });
-    updateBulkBar();
-    updateSelectAllState();
-}
+const hubSelection = createSelectionController({
+    selectedIds: selectedHubIds,
+    rowSelector: '#tableBody .hub-row-checkbox',
+    selectAllId: 'selectAllHubs',
+    barId: 'hubBulkBar',
+    countId: 'hubBulkCount',
+});
+function toggleHubSelection(id, checked) { hubSelection.toggle(id, checked); }
+function toggleSelectAllHubs(checked) { hubSelection.toggleSelectAll(checked); }
+function updateSelectAllState() { hubSelection.updateSelectAllState(); }
+function updateBulkBar() { hubSelection.updateBulkBar(); }
+function clearHubSelection() { hubSelection.clear(); }
 
 function bulkUpdateHubs(status) {
     if (selectedHubIds.size === 0) return;
@@ -2624,46 +2591,19 @@ function resetParticipant(id) {
 }
 
 // ═══════════════════ BULK SELECTION (PARTICIPANTS) ═══════════════════
-function toggleParticipantSelection(id, checked) {
-    if (checked) selectedParticipantIds.add(id);
-    else selectedParticipantIds.delete(id);
-    updateBulkBarP();
-    updateSelectAllStateP();
-}
-
-function toggleSelectAllParticipants(checked) {
-    // Only affects the currently rendered (filtered) rows, not the full dataset.
-    document.querySelectorAll('#pTableBody .participant-row-checkbox').forEach(cb => {
-        cb.checked = checked;
-        if (checked) selectedParticipantIds.add(cb.value);
-        else selectedParticipantIds.delete(cb.value);
-    });
-    updateBulkBarP();
-}
-
-function updateSelectAllStateP() {
-    const selectAll = document.getElementById('selectAllParticipants');
-    if (!selectAll) return;
-    const boxes = [...document.querySelectorAll('#pTableBody .participant-row-checkbox')];
-    const checkedCount = boxes.filter(cb => cb.checked).length;
-    selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
-    selectAll.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
-}
-
-function updateBulkBarP() {
-    const bar = document.getElementById('partBulkBar');
-    const countEl = document.getElementById('partBulkCount');
-    if (!bar) return;
-    bar.classList.toggle('hidden', selectedParticipantIds.size === 0);
-    if (countEl) countEl.textContent = `${selectedParticipantIds.size} selected`;
-}
-
-function clearParticipantSelection() {
-    selectedParticipantIds.clear();
-    document.querySelectorAll('#pTableBody .participant-row-checkbox').forEach(cb => { cb.checked = false; });
-    updateBulkBarP();
-    updateSelectAllStateP();
-}
+// See createSelectionController above (defined with the Hubs instance).
+const participantSelection = createSelectionController({
+    selectedIds: selectedParticipantIds,
+    rowSelector: '#pTableBody .participant-row-checkbox',
+    selectAllId: 'selectAllParticipants',
+    barId: 'partBulkBar',
+    countId: 'partBulkCount',
+});
+function toggleParticipantSelection(id, checked) { participantSelection.toggle(id, checked); }
+function toggleSelectAllParticipants(checked) { participantSelection.toggleSelectAll(checked); }
+function updateSelectAllStateP() { participantSelection.updateSelectAllState(); }
+function updateBulkBarP() { participantSelection.updateBulkBar(); }
+function clearParticipantSelection() { participantSelection.clear(); }
 
 function bulkUpdateParticipants(status) {
     if (selectedParticipantIds.size === 0) return;
