@@ -987,46 +987,6 @@ function carriedOverLabel(hub) {
 }
 
 // ═══════════════════ ADMIN ACTIONS (HUBS) ═══════════════════
-function confirmApprove(id) {
-    const reg = allHubs.find(r => String(r.id) === String(id));
-    if (!reg) return;
-    pendingRegId  = id;
-    openConfirmModal(
-        'Approve Application',
-        `Approve the application from <strong>${escHtml(reg.fullName)}</strong> (${escHtml(reg.city)})? This will grant them Circle Host status.`,
-        '✅',
-        executeApprove,
-        'Approve'
-    );
-}
-
-function confirmReject(id) {
-    const reg = allHubs.find(r => String(r.id) === String(id));
-    if (!reg) return;
-    pendingRegId  = id;
-    openConfirmModal(
-        'Reject Application',
-        `Reject the application from <strong>${escHtml(reg.fullName)}</strong>? This action can be reversed later.`,
-        '❌',
-        executeReject,
-        'Reject',
-        true
-    );
-}
-
-function confirmReset(id) {
-    const reg = allHubs.find(r => String(r.id) === String(id));
-    if (!reg) return;
-    pendingRegId  = id;
-    openConfirmModal(
-        'Reset to Pending',
-        `Reset <strong>${escHtml(reg.fullName)}</strong>'s application back to Pending? No email is sent for this — you can then Approve or Reject again to trigger a fresh notification.`,
-        '↩️',
-        executeReset,
-        'Reset'
-    );
-}
-
 // Returns the updated hub (already reflects the new status) on success, or
 // null on failure — callers patch it straight into allHubs instead of
 // re-fetching the whole table, so a single click doesn't pay for a full
@@ -1062,47 +1022,82 @@ function refreshHubViews() {
     }
 }
 
-async function executeApprove() {
-    if (!pendingRegId) return;
-    const updated = await updateHubStatus(pendingRegId, 'Approved');
-    if (updated) {
-        showToast('Application approved successfully!', 'success');
-        patchHubLocally(updated);
-        refreshHubViews();
-    } else {
-        showToast('Failed to approve application.', 'error');
-    }
-    closeConfirmModal();
-    pendingRegId = null;
+// Shared by confirmApprove/Reject/Reset (hubs) and confirmParticipant/
+// cancelParticipant/resetParticipant below — each opens a confirm modal for
+// one record's status change, then PATCHes + patches the local list on
+// success. `findRecord` is optional: when given, it both guards against a
+// missing record and supplies it to `message`; when omitted (cancelParticipant
+// never looked its record up either, pre-refactor) the modal just opens with
+// a static message. `danger` drives both the confirm button's styling and
+// (matching every one of the six original call sites) whether the success
+// toast reads as 'warning' instead of 'success'.
+function createStatusChangeAction({ findRecord, updateFn, patchLocallyFn, refreshViewsFn, status, title, message, icon, btnText, danger, successMsg, failMsg }) {
+    return function confirmAction(id) {
+        const record = findRecord ? findRecord(id) : undefined;
+        if (findRecord && !record) return;
+        openConfirmModal(
+            title,
+            typeof message === 'function' ? message(record) : message,
+            icon,
+            async () => {
+                const updated = await updateFn(id, status);
+                if (updated) {
+                    showToast(successMsg, danger ? 'warning' : 'success');
+                    patchLocallyFn(updated);
+                    refreshViewsFn();
+                } else {
+                    showToast(failMsg, 'error');
+                }
+                closeConfirmModal();
+            },
+            btnText,
+            danger
+        );
+    };
 }
 
-async function executeReject() {
-    if (!pendingRegId) return;
-    const updated = await updateHubStatus(pendingRegId, 'Rejected');
-    if (updated) {
-        showToast('Application has been rejected.', 'warning');
-        patchHubLocally(updated);
-        refreshHubViews();
-    } else {
-        showToast('Failed to reject application.', 'error');
-    }
-    closeConfirmModal();
-    pendingRegId = null;
-}
+const confirmApprove = createStatusChangeAction({
+    findRecord: id => allHubs.find(r => String(r.id) === String(id)),
+    updateFn: updateHubStatus,
+    patchLocallyFn: patchHubLocally,
+    refreshViewsFn: refreshHubViews,
+    status: 'Approved',
+    title: 'Approve Application',
+    message: reg => `Approve the application from <strong>${escHtml(reg.fullName)}</strong> (${escHtml(reg.city)})? This will grant them Circle Host status.`,
+    icon: '✅',
+    btnText: 'Approve',
+    successMsg: 'Application approved successfully!',
+    failMsg: 'Failed to approve application.',
+});
 
-async function executeReset() {
-    if (!pendingRegId) return;
-    const updated = await updateHubStatus(pendingRegId, 'Pending');
-    if (updated) {
-        showToast('Application reset to Pending.', 'success');
-        patchHubLocally(updated);
-        refreshHubViews();
-    } else {
-        showToast('Failed to reset application.', 'error');
-    }
-    closeConfirmModal();
-    pendingRegId = null;
-}
+const confirmReject = createStatusChangeAction({
+    findRecord: id => allHubs.find(r => String(r.id) === String(id)),
+    updateFn: updateHubStatus,
+    patchLocallyFn: patchHubLocally,
+    refreshViewsFn: refreshHubViews,
+    status: 'Rejected',
+    title: 'Reject Application',
+    message: reg => `Reject the application from <strong>${escHtml(reg.fullName)}</strong>? This action can be reversed later.`,
+    icon: '❌',
+    btnText: 'Reject',
+    danger: true,
+    successMsg: 'Application has been rejected.',
+    failMsg: 'Failed to reject application.',
+});
+
+const confirmReset = createStatusChangeAction({
+    findRecord: id => allHubs.find(r => String(r.id) === String(id)),
+    updateFn: updateHubStatus,
+    patchLocallyFn: patchHubLocally,
+    refreshViewsFn: refreshHubViews,
+    status: 'Pending',
+    title: 'Reset to Pending',
+    message: reg => `Reset <strong>${escHtml(reg.fullName)}</strong>'s application back to Pending? No email is sent for this — you can then Approve or Reject again to trigger a fresh notification.`,
+    icon: '↩️',
+    btnText: 'Reset',
+    successMsg: 'Application reset to Pending.',
+    failMsg: 'Failed to reset application.',
+});
 
 // Permanently delete a hub leader application — frees up their email/mobile so
 // they can apply again. Backend blocks this if participants are still registered
@@ -2525,70 +2520,50 @@ function refreshParticipantViews() {
     applyParticipantFilters();
 }
 
-function confirmParticipant(id) {
-    const p = allParticipants.find(p => String(p.id) === String(id));
-    if (!p) return;
-    openConfirmModal(
-        'Confirm Registration',
-        `Confirm <strong>${escHtml(p.fullName)}</strong>'s registration? This will send them a confirmation email.`,
-        '✅',
-        async () => {
-            const updated = await updateParticipantStatus(id, 'Confirmed');
-            if (updated) {
-                showToast('Registration confirmed.', 'success');
-                patchParticipantLocally(updated);
-                refreshParticipantViews();
-            } else {
-                showToast('Failed to confirm registration.', 'error');
-            }
-            closeConfirmModal();
-        },
-        'Confirm'
-    );
-}
+// See createStatusChangeAction above (defined with the Hubs approve/reject/reset instances).
+const confirmParticipant = createStatusChangeAction({
+    findRecord: id => allParticipants.find(p => String(p.id) === String(id)),
+    updateFn: updateParticipantStatus,
+    patchLocallyFn: patchParticipantLocally,
+    refreshViewsFn: refreshParticipantViews,
+    status: 'Confirmed',
+    title: 'Confirm Registration',
+    message: p => `Confirm <strong>${escHtml(p.fullName)}</strong>'s registration? This will send them a confirmation email.`,
+    icon: '✅',
+    btnText: 'Confirm',
+    successMsg: 'Registration confirmed.',
+    failMsg: 'Failed to confirm registration.',
+});
 
-function cancelParticipant(id) {
-    openConfirmModal(
-        'Cancel Registration',
-        'Are you sure you want to cancel this participant registration? This will send them a cancellation email.',
-        '❌',
-        async () => {
-            const updated = await updateParticipantStatus(id, 'Cancelled');
-            if (updated) {
-                showToast('Registration cancelled.', 'warning');
-                patchParticipantLocally(updated);
-                refreshParticipantViews();
-            } else {
-                showToast('Failed to cancel registration.', 'error');
-            }
-            closeConfirmModal();
-        },
-        'Yes, Cancel',
-        true
-    );
-}
+// Unlike confirmParticipant/resetParticipant, this never looked its record up
+// even pre-refactor — the modal message is static, so no lookup is needed.
+const cancelParticipant = createStatusChangeAction({
+    updateFn: updateParticipantStatus,
+    patchLocallyFn: patchParticipantLocally,
+    refreshViewsFn: refreshParticipantViews,
+    status: 'Cancelled',
+    title: 'Cancel Registration',
+    message: 'Are you sure you want to cancel this participant registration? This will send them a cancellation email.',
+    icon: '❌',
+    btnText: 'Yes, Cancel',
+    danger: true,
+    successMsg: 'Registration cancelled.',
+    failMsg: 'Failed to cancel registration.',
+});
 
-function resetParticipant(id) {
-    const p = allParticipants.find(p => String(p.id) === String(id));
-    if (!p) return;
-    openConfirmModal(
-        'Reset to Pending',
-        `Reset <strong>${escHtml(p.fullName)}</strong>'s registration back to Pending? No email is sent for this — you can then Confirm or Cancel again to trigger a fresh notification.`,
-        '↩️',
-        async () => {
-            const updated = await updateParticipantStatus(id, 'Pending');
-            if (updated) {
-                showToast('Registration reset to Pending.', 'success');
-                patchParticipantLocally(updated);
-                refreshParticipantViews();
-            } else {
-                showToast('Failed to reset registration.', 'error');
-            }
-            closeConfirmModal();
-        },
-        'Reset'
-    );
-}
+const resetParticipant = createStatusChangeAction({
+    findRecord: id => allParticipants.find(p => String(p.id) === String(id)),
+    updateFn: updateParticipantStatus,
+    patchLocallyFn: patchParticipantLocally,
+    refreshViewsFn: refreshParticipantViews,
+    status: 'Pending',
+    title: 'Reset to Pending',
+    message: p => `Reset <strong>${escHtml(p.fullName)}</strong>'s registration back to Pending? No email is sent for this — you can then Confirm or Cancel again to trigger a fresh notification.`,
+    icon: '↩️',
+    btnText: 'Reset',
+    successMsg: 'Registration reset to Pending.',
+    failMsg: 'Failed to reset registration.',
+});
 
 // ═══════════════════ BULK SELECTION (PARTICIPANTS) ═══════════════════
 // See createSelectionController above (defined with the Hubs instance).
