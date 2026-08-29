@@ -1129,35 +1129,89 @@ function deleteHub(id) {
     );
 }
 
-// Email an approved Circle Leader their current list of Confirmed participants
-// (name + mobile). Safe to re-send as new participants confirm.
-function sendHubRoster(id) {
-    const reg = allHubs.find(r => String(r.id) === String(id));
-    if (!reg) return;
-    const n = reg.participantCount || 0;
-    openConfirmModal(
-        'Send Roster Email',
-        `Email <strong>${escHtml(reg.fullName)}</strong> the current list of confirmed participants for their circle in ${escHtml(reg.city)}? (${n} confirmed right now.) This sends a real email immediately.`,
-        '📋',
-        async () => {
-            try {
-                const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/send-roster`, { method: 'POST' });
-                if (res.ok) {
-                    showToast('Roster email sent.', 'success');
-                    await updateDashboard();
-                } else {
-                    const body = await res.json().catch(() => ({}));
-                    showToast(body.error || 'Failed to send roster email.', 'error');
+// ═══════════════════ EMAIL SEND ACTIONS (shared factories) ═══════════════════
+// Hub roster, participant confirmation, and participant event-reminder emails
+// are each offered four ways — single (re)send, bulk-send to the current
+// selection, "send to never-sent", and "send to all eligible" — and were each
+// hand-written 3x with identical mechanics (open a confirm modal, POST to a
+// per-record endpoint, toast, refresh). Two factories below: one for the
+// single-record send, one for the id-list bulk sender that the three "bulk"
+// triggers (selection / never-sent / all) share.
+
+// endpointFor: (id) => URL path. findRecord: optional (id) => record — when
+// given, also guards against a missing record; titleFn/messageFn receive that
+// record (or undefined if findRecord was omitted, matching sendHubRoster's
+// habit of always looking one up vs none of the others needing to).
+function createSingleEmailSendAction({ findRecord, endpointFor, titleFn, messageFn, icon, successMsg, failMsg, refreshFn }) {
+    return function trigger(id) {
+        const record = findRecord ? findRecord(id) : undefined;
+        if (findRecord && !record) return;
+        openConfirmModal(
+            typeof titleFn === 'function' ? titleFn(record) : titleFn,
+            messageFn(record),
+            icon,
+            async () => {
+                try {
+                    const res = await adminFetch(`${API_BASE}${endpointFor(id)}`, { method: 'POST' });
+                    if (res.ok) {
+                        showToast(successMsg, 'success');
+                        await refreshFn();
+                    } else {
+                        const body = await res.json().catch(() => ({}));
+                        showToast(body.error || failMsg, 'error');
+                    }
+                } catch (e) {
+                    if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
                 }
-            } catch (e) {
-                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
-            }
-            closeConfirmModal();
-        },
-        'Send',
-        false
-    );
+                closeConfirmModal();
+            },
+            'Send',
+            false
+        );
+    };
 }
+
+// finalize: async () => void, run once after the whole loop (refresh + any
+// selection-clearing the caller wants). noun/skippedReason feed the toast text.
+function createBulkEmailSender({ endpointFor, finalize, noun, skippedReason }) {
+    return async function executeBulkSend(ids) {
+        let successCount = 0;
+        for (const id of ids) {
+            try {
+                const res = await adminFetch(`${API_BASE}${endpointFor(id)}`, { method: 'POST' });
+                if (res.ok) successCount++;
+            } catch (e) { /* keep going through the rest of the selection */ }
+        }
+        await finalize();
+
+        if (successCount === ids.length) {
+            showToast(`${successCount} ${noun}${successCount > 1 ? 's' : ''} sent!`, 'success');
+        } else {
+            showToast(`${successCount}/${ids.length} sent — the rest were skipped (${skippedReason}) or failed.`, 'warning');
+        }
+    };
+}
+
+// ─── Hub roster email ───────────────────────────────────────────────────────
+// Emails an approved Circle Leader their current list of Confirmed participants
+// (name + mobile). Safe to re-send as new participants confirm.
+const sendHubRoster = createSingleEmailSendAction({
+    findRecord: id => allHubs.find(r => String(r.id) === String(id)),
+    endpointFor: id => `/api/admin/hubs/${id}/send-roster`,
+    titleFn: 'Send Roster Email',
+    messageFn: reg => `Email <strong>${escHtml(reg.fullName)}</strong> the current list of confirmed participants for their circle in ${escHtml(reg.city)}? (${reg.participantCount || 0} confirmed right now.) This sends a real email immediately.`,
+    icon: '📋',
+    successMsg: 'Roster email sent.',
+    failMsg: 'Failed to send roster email.',
+    refreshFn: updateDashboard,
+});
+
+const executeBulkSendRoster = createBulkEmailSender({
+    endpointFor: id => `/api/admin/hubs/${id}/send-roster`,
+    finalize: async () => { clearHubSelection(); await updateDashboard(); },
+    noun: 'roster email',
+    skippedReason: 'not Approved',
+});
 
 // Bulk version — loops the same endpoint over the selected hubs, same pattern
 // as bulkUpdateHubs. Non-Approved hubs in the selection are skipped server-side.
@@ -1170,34 +1224,10 @@ function bulkSendHubRoster() {
         `Send Roster Email${plural} to ${count} Circle${plural}`,
         `Email the current confirmed-participant list to <strong>${count}</strong> selected circle leader${plural}? Only Approved circles will actually receive an email. This sends real emails immediately.`,
         '📋',
-        executeBulkSendRoster,
+        () => { closeConfirmModal(); executeBulkSendRoster(ids); },
         'Send',
         false
     );
-    pendingBulkAction = { ids, status: '__send_roster__' };
-}
-
-async function executeBulkSendRoster() {
-    if (!pendingBulkAction) return;
-    const { ids } = pendingBulkAction;
-    closeConfirmModal();
-    pendingBulkAction = null;
-
-    let successCount = 0;
-    for (const id of ids) {
-        try {
-            const res = await adminFetch(`${API_BASE}/api/admin/hubs/${id}/send-roster`, { method: 'POST' });
-            if (res.ok) successCount++;
-        } catch (e) { /* keep going through the rest of the selection */ }
-    }
-    clearHubSelection();
-    await updateDashboard();
-
-    if (successCount === ids.length) {
-        showToast(`${successCount} roster email${successCount > 1 ? 's' : ''} sent!`, 'success');
-    } else {
-        showToast(`${successCount}/${ids.length} sent — the rest were skipped (not Approved) or failed.`, 'warning');
-    }
 }
 
 // One-click version — no selection needed. Sends the roster email to every
@@ -1210,12 +1240,11 @@ function sendAllApprovedRosters() {
     }
     const count = approved.length;
     const plural = count > 1 ? 's' : '';
-    pendingBulkAction = { ids: approved.map(r => r.id), status: '__send_roster__' };
     openConfirmModal(
         `Send Roster Email to All ${count} Approved Circle${plural}`,
         `Email the current confirmed-participant list to <strong>all ${count}</strong> approved circle leader${plural}? This sends real emails immediately.`,
         '📋',
-        executeBulkSendRoster,
+        () => { closeConfirmModal(); executeBulkSendRoster(approved.map(r => r.id)); },
         'Send to All',
         false
     );
@@ -1232,12 +1261,11 @@ function sendUnsentApprovedRosters() {
     }
     const count = unsent.length;
     const plural = count > 1 ? 's' : '';
-    pendingBulkAction = { ids: unsent.map(r => r.id), status: '__send_roster__' };
     openConfirmModal(
         `Send Roster Email to ${count} Never-Sent Circle${plural}`,
         `These <strong>${count}</strong> approved circle leader${plural} have never received a roster email. Send it to them now? This sends real emails immediately.`,
         '📋',
-        executeBulkSendRoster,
+        () => { closeConfirmModal(); executeBulkSendRoster(unsent.map(r => r.id)); },
         'Send',
         false
     );
@@ -2625,56 +2653,34 @@ async function executeBulkUpdateParticipants() {
 }
 
 // ═══════════════════ CONFIRMATION EMAIL — SEND / RESEND ═══════════════════
-// Same pattern as the hub roster send (sendHubRoster / bulkSendHubRoster /
-// sendAllApprovedRosters / sendUnsentApprovedRosters): a single on-demand
-// endpoint, looped client-side for the bulk versions.
+// Same pattern as the hub roster send — see createSingleEmailSendAction /
+// createBulkEmailSender above.
 
-function sendParticipantConfirmationEmail(id) {
-    const p = allParticipants.find(x => String(x.id) === String(id));
-    if (!p) return;
-    openConfirmModal(
-        p.confirmationSentAt ? 'Resend Confirmation Email' : 'Send Confirmation Email',
-        `Email <strong>${escHtml(p.fullName)}</strong> their registration confirmation for ${escHtml(p.hubLeader)}'s circle in ${escHtml(p.hubCity)}? This sends a real email immediately.`,
-        '📩',
-        async () => {
-            try {
-                const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-confirmation`, { method: 'POST' });
-                if (res.ok) {
-                    showToast('Confirmation email sent.', 'success');
-                    await loadParticipants();
-                    applyParticipantFilters();
-                } else {
-                    const body = await res.json().catch(() => ({}));
-                    showToast(body.error || 'Failed to send confirmation email.', 'error');
-                }
-            } catch (e) {
-                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
-            }
-            closeConfirmModal();
-        },
-        'Send',
-        false
-    );
-}
-
-async function executeBulkSendParticipantConfirmations(ids) {
-    let successCount = 0;
-    for (const id of ids) {
-        try {
-            const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-confirmation`, { method: 'POST' });
-            if (res.ok) successCount++;
-        } catch (e) { /* keep going through the rest */ }
-    }
+async function refreshParticipantEmailViews() {
     await loadParticipants();
     updateParticipantStats();
     applyParticipantFilters();
-
-    if (successCount === ids.length) {
-        showToast(`${successCount} confirmation email${successCount > 1 ? 's' : ''} sent!`, 'success');
-    } else {
-        showToast(`${successCount}/${ids.length} sent — the rest were skipped (not Confirmed) or failed.`, 'warning');
-    }
 }
+
+const sendParticipantConfirmationEmail = createSingleEmailSendAction({
+    findRecord: id => allParticipants.find(x => String(x.id) === String(id)),
+    endpointFor: id => `/api/admin/participants/${id}/send-confirmation`,
+    titleFn: p => p.confirmationSentAt ? 'Resend Confirmation Email' : 'Send Confirmation Email',
+    messageFn: p => `Email <strong>${escHtml(p.fullName)}</strong> their registration confirmation for ${escHtml(p.hubLeader)}'s circle in ${escHtml(p.hubCity)}? This sends a real email immediately.`,
+    icon: '📩',
+    successMsg: 'Confirmation email sent.',
+    failMsg: 'Failed to send confirmation email.',
+    // Single-send only refreshed the table+filters, not the stat cards — kept
+    // as-is (only the bulk sender below also updates stats).
+    refreshFn: async () => { await loadParticipants(); applyParticipantFilters(); },
+});
+
+const executeBulkSendParticipantConfirmations = createBulkEmailSender({
+    endpointFor: id => `/api/admin/participants/${id}/send-confirmation`,
+    finalize: refreshParticipantEmailViews,
+    noun: 'confirmation email',
+    skippedReason: 'not Confirmed',
+});
 
 // Only targets Confirmed participants who've never received a confirmation
 // email (confirmationSentAt is empty) — catches up stragglers (imported data,
@@ -2722,52 +2728,23 @@ function sendAllParticipantConfirmations() {
 // Same pattern as the confirmation email block above ("5 days to go" reminder
 // with the schedule image and the circle leader's contact details).
 
-function sendParticipantEventReminderEmail(id) {
-    const p = allParticipants.find(x => String(x.id) === String(id));
-    if (!p) return;
-    openConfirmModal(
-        p.eventReminderSentAt ? 'Resend Event Reminder' : 'Send Event Reminder',
-        `Email <strong>${escHtml(p.fullName)}</strong> the "5 days to go" reminder for ${escHtml(p.hubLeader)}'s circle in ${escHtml(p.hubCity)}? This sends a real email immediately.`,
-        '⏰',
-        async () => {
-            try {
-                const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-event-reminder`, { method: 'POST' });
-                if (res.ok) {
-                    showToast('Event reminder sent.', 'success');
-                    await loadParticipants();
-                    applyParticipantFilters();
-                } else {
-                    const body = await res.json().catch(() => ({}));
-                    showToast(body.error || 'Failed to send event reminder.', 'error');
-                }
-            } catch (e) {
-                if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
-            }
-            closeConfirmModal();
-        },
-        'Send',
-        false
-    );
-}
+const sendParticipantEventReminderEmail = createSingleEmailSendAction({
+    findRecord: id => allParticipants.find(x => String(x.id) === String(id)),
+    endpointFor: id => `/api/admin/participants/${id}/send-event-reminder`,
+    titleFn: p => p.eventReminderSentAt ? 'Resend Event Reminder' : 'Send Event Reminder',
+    messageFn: p => `Email <strong>${escHtml(p.fullName)}</strong> the "5 days to go" reminder for ${escHtml(p.hubLeader)}'s circle in ${escHtml(p.hubCity)}? This sends a real email immediately.`,
+    icon: '⏰',
+    successMsg: 'Event reminder sent.',
+    failMsg: 'Failed to send event reminder.',
+    refreshFn: async () => { await loadParticipants(); applyParticipantFilters(); },
+});
 
-async function executeBulkSendParticipantEventReminders(ids) {
-    let successCount = 0;
-    for (const id of ids) {
-        try {
-            const res = await adminFetch(`${API_BASE}/api/admin/participants/${id}/send-event-reminder`, { method: 'POST' });
-            if (res.ok) successCount++;
-        } catch (e) { /* keep going through the rest */ }
-    }
-    await loadParticipants();
-    updateParticipantStats();
-    applyParticipantFilters();
-
-    if (successCount === ids.length) {
-        showToast(`${successCount} event reminder${successCount > 1 ? 's' : ''} sent!`, 'success');
-    } else {
-        showToast(`${successCount}/${ids.length} sent — the rest were skipped (not Confirmed) or failed.`, 'warning');
-    }
-}
+const executeBulkSendParticipantEventReminders = createBulkEmailSender({
+    endpointFor: id => `/api/admin/participants/${id}/send-event-reminder`,
+    finalize: refreshParticipantEmailViews,
+    noun: 'event reminder',
+    skippedReason: 'not Confirmed',
+});
 
 // Only targets Confirmed participants who've never received this reminder yet.
 function sendUnsentParticipantEventReminders() {

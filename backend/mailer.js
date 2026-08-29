@@ -30,7 +30,7 @@ const CRM_UNSUBSCRIBE_BASE_URL = 'https://nfp-circles.vercel.app/api/crm/unsubsc
 
 // Read once at startup and sent as a CID attachment (not a hosted <img src>) so
 // it always renders regardless of whether Images/ is served publicly.
-const SCHEDULE_IMAGE_PATH = path.join(__dirname, '..', 'Images', 'NFP Circles Schedule.png');
+const SCHEDULE_IMAGE_PATH = path.join(__dirname, '..', 'participant', 'Images', 'NFP Circles Schedule.png');
 let scheduleImageBuffer = null;
 try {
   scheduleImageBuffer = fs.readFileSync(SCHEDULE_IMAGE_PATH);
