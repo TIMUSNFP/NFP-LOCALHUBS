@@ -34,7 +34,7 @@ const HUB_CITIES = [
     { name:'Vizag', x:53.7, y:61.17, delay:2, lg:false, lbl:'left' },
     { name:'Bengaluru', x:33.04, y:72.2, delay:0.6, lg:true, lbl:'left' },
     { name:'Chennai', x:43.48, y:74.52, delay:0.2, lg:true, lbl:'right' },
-    { name:'Kochi', x:28.26, y:81.05, delay:1.4, lg:false, lbl:'left' },
+    { name:'Kochi', x:31.8, y:79.0, delay:1.4, lg:false, lbl:'left' },
 ];
 
 function renderHeroMapPins() {
