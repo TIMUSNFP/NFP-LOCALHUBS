@@ -3,7 +3,9 @@
     { "source": "/api/(.*)", "destination": "/api" }
   ],
   "redirects": [
-    { "source": "/", "destination": "/participant", "permanent": false }
+    { "source": "/", "destination": "/participant/", "permanent": false },
+    { "source": "/participant", "destination": "/participant/", "permanent": true },
+    { "source": "/circle-leaders", "destination": "/circle-leaders/", "permanent": true }
   ],
   "functions": {
     "api/index.js": {
