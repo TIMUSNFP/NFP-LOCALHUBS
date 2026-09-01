@@ -1385,18 +1385,17 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .launch-banner {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    background: linear-gradient(135deg, #FF5000, #ff7a33);
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 10px;
+    gap: 8px;
+    background: rgba(255, 80, 0, 0.08);
+    color: #B03D00;
+    padding: 7px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 80, 0, 0.2);
     font-size: 13px;
     font-weight: 600;
     margin-bottom: 22px;
-    box-shadow: 0 2px 6px rgba(255,80,0,0.18);
     align-self: flex-start;
 }
-.launch-banner-icon { font-size: 16px; line-height: 1; }
 .launch-banner-text strong { font-weight: 800; }
 @media (max-width: 640px) {
     .launch-banner { font-size: 12px; padding: 8px 14px; }
