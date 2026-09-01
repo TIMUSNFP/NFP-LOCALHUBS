@@ -2,6 +2,9 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" }
   ],
+  "redirects": [
+    { "source": "/", "destination": "/circle-leaders/", "permanent": false }
+  ],
   "functions": {
     "api/index.js": {
       "maxDuration": 60
