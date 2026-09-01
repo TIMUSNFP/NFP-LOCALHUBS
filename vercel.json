@@ -3,7 +3,7 @@
     { "source": "/api/(.*)", "destination": "/api" }
   ],
   "redirects": [
-    { "source": "/", "destination": "/circle-leaders/", "permanent": false }
+    { "source": "/", "destination": "/participant", "permanent": false }
   ],
   "functions": {
     "api/index.js": {
