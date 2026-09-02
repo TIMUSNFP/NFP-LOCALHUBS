@@ -19,22 +19,27 @@ const API_BASE = '';
 // To reposition pins (e.g. after swapping the map image), open
 // map-pin-tool.html in a browser, click to place/drag pins, and paste the
 // generated array back in here.
+// x/y are % position on Images/MapChart_Map.png, derived from each city's real
+// lat/lng via an affine fit against the map's own pixel geometry (anchored on
+// Kanyakumari, the Kutch/Gujarat western tip, and the Arunachal Pradesh eastern
+// tip — see map-pin-tool.html for the calibration method) rather than eyeballed,
+// after several pins (esp. Hyderabad) were found visibly off-position.
 const HUB_CITIES = [
-    { name:'Chandigarh', x:34.57, y:24.03, delay:1.6, lg:false, lbl:'right' },
-    { name:'Delhi NCR', x:36.74, y:30.99, delay:0, lg:true, lbl:'right' },
-    { name:'Jaipur', x:30.22, y:36.36, delay:0.5, lg:false, lbl:'left' },
-    { name:'Lucknow', x:49.57, y:36.65, delay:0.9, lg:false, lbl:'right' },
-    { name:'Ahmedabad', x:19.13, y:46.23, delay:0.3, lg:false, lbl:'left' },
-    { name:'Bhopal', x:38.04, y:45.21, delay:1.8, lg:false, lbl:'right' },
-    { name:'Kolkata', x:71.74, y:46.52, delay:0.8, lg:true, lbl:'left' },
-    { name:'Nagpur', x:43.7, y:52.32, delay:1.2, lg:false, lbl:'right' },
-    { name:'Mumbai', x:18.04, y:56.53, delay:0.4, lg:true, lbl:'left' },
-    { name:'Pune', x:21.3, y:58.85, delay:0.7, lg:false, lbl:'right' },
-    { name:'Hyderabad', x:37.1, y:68.24, delay:1, lg:true, lbl:'left' },
-    { name:'Vizag', x:53.7, y:61.17, delay:2, lg:false, lbl:'left' },
-    { name:'Bengaluru', x:33.04, y:72.2, delay:0.6, lg:true, lbl:'left' },
-    { name:'Chennai', x:43.48, y:74.52, delay:0.2, lg:true, lbl:'right' },
-    { name:'Kochi', x:31.8, y:79.0, delay:1.4, lg:false, lbl:'left' },
+    { name:'Chandigarh', x:30.57, y:24.41, delay:1.6, lg:false, lbl:'right' },
+    { name:'Delhi NCR', x:31.93, y:30.24, delay:0, lg:true, lbl:'right' },
+    { name:'Jaipur', x:27.14, y:35.00, delay:0.5, lg:false, lbl:'left' },
+    { name:'Lucknow', x:44.33, y:34.96, delay:0.9, lg:false, lbl:'right' },
+    { name:'Ahmedabad', x:16.30, y:45.88, delay:0.3, lg:false, lbl:'left' },
+    { name:'Bhopal', x:32.44, y:45.01, delay:1.8, lg:false, lbl:'right' },
+    { name:'Kolkata', x:68.91, y:46.43, delay:0.8, lg:true, lbl:'left' },
+    { name:'Nagpur', x:37.95, y:50.77, delay:1.2, lg:false, lbl:'right' },
+    { name:'Mumbai', x:17.19, y:56.76, delay:0.4, lg:true, lbl:'left' },
+    { name:'Pune', x:20.43, y:58.25, delay:0.7, lg:false, lbl:'right' },
+    { name:'Hyderabad', x:35.82, y:61.18, delay:1, lg:true, lbl:'left' },
+    { name:'Vizag', x:51.60, y:60.14, delay:2, lg:false, lbl:'left' },
+    { name:'Bengaluru', x:32.71, y:73.40, delay:0.6, lg:true, lbl:'left' },
+    { name:'Chennai', x:41.63, y:72.97, delay:0.2, lg:true, lbl:'right' },
+    { name:'Kochi', x:28.19, y:81.85, delay:1.4, lg:false, lbl:'left' },
 ];
 
 function renderHeroMapPins() {
