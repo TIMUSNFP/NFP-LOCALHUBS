@@ -1009,6 +1009,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     max-width: min(580px, calc((100vh - var(--nav-height) - 112px) / 1.5));
     padding-bottom: 40px; /* room for the counter pill below the map */
 }
+.india-map-inner {
+    position: relative;
+    width: 100%;
+}
 #heroMapPins {
     position: absolute;
     inset: 0;
