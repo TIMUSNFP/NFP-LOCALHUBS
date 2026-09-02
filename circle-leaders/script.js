@@ -12,16 +12,15 @@
 // backend on another port, set this to e.g. 'http://localhost:4000'.
 const API_BASE = '';
 
-// ═══════════════════ HERO MAP — CITY PIN POSITIONS ═══════════════════
-// Positions are direct x/y percentages of the map image (Images/MapChart_Map.png),
-// NOT lat/lng run through a projection — that indirection was fragile (every
-// time the map image got replaced, all 15 pins needed hand recalibration).
-// Same image and coordinates as the participant site, for a matching map.
-// x/y are % position on Images/MapChart_Map.png, derived from each city's real
-// lat/lng via an affine fit against the map's own pixel geometry (anchored on
-// Kanyakumari, the Kutch/Gujarat western tip, and the Arunachal Pradesh eastern
-// tip — see participant/map-pin-tool.html for the calibration method) rather
-// than eyeballed, after several pins (esp. Hyderabad) were found off-position.
+// ═══════════════════ HERO MAP — CITY PIN POSITIONS (LOCKED — do not edit) ═══
+// x/y are % position on Images/MapChart_Map.png. Same image and coordinates
+// as the participant site, for a matching map. These were computed via an
+// affine fit from each city's real lat/lng to the map's own pixel geometry
+// (anchored on Kanyakumari, the Kutch/Gujarat western tip, and the Arunachal
+// Pradesh eastern tip), then manually reviewed and confirmed correct in
+// participant/map-pin-tool.html. This array is final — do not hand-edit or
+// re-eyeball individual pins. If the map image itself is ever replaced,
+// recalibrate via map-pin-tool.html rather than nudging numbers directly.
 const HUB_CITIES = [
     { name:'Chandigarh', x:30.57, y:24.41, delay:1.6, lg:false, lbl:'right' },
     { name:'Delhi NCR', x:31.93, y:30.24, delay:0, lg:true, lbl:'right' },
