@@ -1514,11 +1514,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     justify-content: center;
     gap: 8px;
     margin-top: 14px;
+    text-decoration: none;
+    cursor: pointer;
 }
 .lh-for-alt-label {
     font-size: 12px;
     color: var(--muted);
 }
+.lh-for-alt:hover .lh-for-alt-label { color: var(--brand); }
 .lh-for-alt-btn {
     display: inline-block;
     font-size: 12px;
@@ -1531,7 +1534,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     text-decoration: none;
     transition: all 0.2s ease;
 }
-.lh-for-alt-btn:hover { border-color: var(--brand); background: var(--brand-ultra); }
+.lh-for-alt:hover .lh-for-alt-btn { border-color: var(--brand); background: var(--brand-ultra); }
 .lh-for-note {
     text-align: center;
     font-size: 14px;
