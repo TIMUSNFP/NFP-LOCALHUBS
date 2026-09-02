@@ -1508,6 +1508,30 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     padding: 6px 18px;
     border-radius: 100px;
 }
+.lh-for-alt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+.lh-for-alt-label {
+    font-size: 12px;
+    color: var(--muted);
+}
+.lh-for-alt-btn {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--brand);
+    background: transparent;
+    border: 1.5px solid var(--border);
+    padding: 5px 14px;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.lh-for-alt-btn:hover { border-color: var(--brand); background: var(--brand-ultra); }
 .lh-for-note {
     text-align: center;
     font-size: 14px;
