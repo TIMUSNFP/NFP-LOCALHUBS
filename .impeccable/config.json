@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "lato",
+        "createdAt": "2026-09-28T10:04:50.687Z",
+        "reason": "Lato is the NFP Circles brand typeface, set as the body/UI font in the site's brand fonts block since before this session (admin/styles.css header: 'Brand: NFP Orange' + self-hosted Lato @font-face) and used identically across the participant and circle-leaders pages, not introduced by this admin redesign."
+      }
+    ]
+  }
+}

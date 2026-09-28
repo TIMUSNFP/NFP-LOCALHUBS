@@ -191,6 +191,7 @@
                     </div>
                 </div>
                 <div class="table-wrap-outer" id="hubTableOuter">
+                <div class="table-loading-bar" aria-hidden="true"></div>
                 <div class="table-wrap" id="hubTableWrap">
                     <table class="data-table">
                         <thead>
@@ -210,7 +211,7 @@
                     </table>
                     <div class="table-empty" id="tableEmpty">
                         <div class="te-icon"><svg class="icon"><use href="#icon-clipboard"></use></svg></div>
-                        <h3>No applications found</h3>
+                        <h2>No applications found</h2>
                         <p>No records match your current search or filter criteria.</p>
                     </div>
                 </div>
@@ -243,13 +244,13 @@
                 <div class="analytics-section-title">Hub Leader Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card">
-                        <h3>Application Status</h3>
+                        <h2>Application Status</h2>
                         <div class="donut-chart-wrap" id="donutChart"></div>
                         <div class="chart-legend" id="chartLegend"></div>
                     </div>
                     <div class="analytics-card">
                         <div class="chart-header">
-                            <h3>Applications Over Time</h3>
+                            <h2>Applications Over Time</h2>
                             <div class="trend-toggle">
                                 <button class="tt-btn active" id="trendDayBtn" onclick="setTrendMode('day')">Days</button>
                                 <button class="tt-btn" id="trendMonthBtn" onclick="setTrendMode('month')">Months</button>
@@ -258,53 +259,53 @@
                         <div class="trend-chart" id="trendBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Status Funnel</h3>
+                        <h2>Status Funnel</h2>
                         <div id="funnelChart"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Applications by City</h3>
+                        <h2>Applications by City</h2>
                         <div id="cityBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Approved Circles by City</h3>
+                        <h2>Approved Circles by City</h2>
                         <div id="citiesKpi"></div>
                     </div>
                     <div class="analytics-card analytics-card-wide">
-                        <h3>Target Cities Still Needing a Circle</h3>
+                        <h2>Target Cities Still Needing a Circle</h2>
                         <div class="analytics-sublabel">No approved Circle yet — call potential leaders in these cities</div>
                         <div id="citiesNeedingList"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Applications by Area / Locality</h3>
+                        <h2>Applications by Area / Locality</h2>
                         <div id="areaBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Approval Rate by City</h3>
+                        <h2>Approval Rate by City</h2>
                         <div id="approvalCityBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Membership Type</h3>
+                        <h2>Membership Type</h2>
                         <div id="memberBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Venue Type</h3>
+                        <h2>Venue Type</h2>
                         <div id="venueBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Hosting Capacity</h3>
+                        <h2>Hosting Capacity</h2>
                         <div id="capacityBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Hosting Experience</h3>
+                        <h2>Hosting Experience</h2>
                         <div class="donut-chart-wrap" id="experienceDonut"></div>
                         <div class="chart-legend" id="experienceLegend"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Willing to Host</h3>
+                        <h2>Willing to Host</h2>
                         <div id="freqBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Circle POC Role</h3>
+                        <h2>Circle POC Role</h2>
                         <div class="donut-chart-wrap" id="pocDonut"></div>
                         <div class="chart-legend" id="pocLegend"></div>
                     </div>
@@ -316,7 +317,7 @@
                 <div class="analytics-grid">
                     <div class="analytics-card">
                         <div class="chart-header">
-                            <h3>Registrations Over Time</h3>
+                            <h2>Registrations Over Time</h2>
                             <div class="trend-toggle">
                                 <button class="tt-btn active" id="regTrendDayBtn" onclick="setRegTrendMode('day')">Days</button>
                                 <button class="tt-btn" id="regTrendMonthBtn" onclick="setRegTrendMode('month')">Months</button>
@@ -325,31 +326,31 @@
                         <div class="trend-chart" id="regTrendBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Participants by City</h3>
+                        <h2>Participants by City</h2>
                         <div id="partCityBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Unique Cities</h3>
+                        <h2>Unique Cities</h2>
                         <div id="participantUniqueCitiesKpi"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Top Circles by Participants</h3>
+                        <h2>Top Circles by Participants</h2>
                         <div id="topCirclesBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Participant Membership Type</h3>
+                        <h2>Participant Membership Type</h2>
                         <div id="partMemberBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Circle Fill Rate</h3>
+                        <h2>Circle Fill Rate</h2>
                         <div id="fillRateBars"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Cancellation Rate</h3>
+                        <h2>Cancellation Rate</h2>
                         <div id="cancellationKpi"></div>
                     </div>
                     <div class="analytics-card analytics-card-wide">
-                        <h3>Approved Circles with No Participants Yet</h3>
+                        <h2>Approved Circles with No Participants Yet</h2>
                         <div id="noParticipantsList"></div>
                     </div>
                 </div>
@@ -359,7 +360,7 @@
                 <div class="analytics-section-title">Combined Insights</div>
                 <div class="analytics-grid">
                     <div class="analytics-card analytics-card-wide">
-                        <h3>Supply vs Demand by City</h3>
+                        <h2>Supply vs Demand by City</h2>
                         <div class="analytics-sublabel">Approved circles (supply) vs confirmed participants (demand) per city</div>
                         <div id="supplyDemandBars"></div>
                         <div class="lp-threshold-row">
@@ -376,11 +377,11 @@
                         <div id="lowParticipantCirclesList"></div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Total Capacity vs Registered</h3>
+                        <h2>Total Capacity vs Registered</h2>
                         <div id="capacityVsRegistered"></div>
                     </div>
                     <div class="analytics-card analytics-card-wide">
-                        <h3>Capacity by City</h3>
+                        <h2>Capacity by City</h2>
                         <div class="analytics-sublabel">Total seats across approved circles in each city vs how many are filled (Confirmed participants)</div>
                         <div id="cityCapacityFillBars"></div>
                     </div>
@@ -455,6 +456,7 @@
                     </div>
                 </div>
                 <div class="table-wrap-outer" id="partTableOuter">
+                <div class="table-loading-bar" aria-hidden="true"></div>
                 <div class="table-wrap" id="partTableWrap">
                     <table class="data-table">
                         <thead>
@@ -473,7 +475,7 @@
                     </table>
                     <div class="table-empty" id="pTableEmpty">
                         <div class="te-icon"><svg class="icon"><use href="#icon-users"></use></svg></div>
-                        <h3>No participant registrations yet</h3>
+                        <h2>No participant registrations yet</h2>
                         <p>Once participants register through the public portal, they will appear here.</p>
                     </div>
                 </div>
@@ -527,7 +529,7 @@
                     </table>
                     <div class="table-empty" id="crmContactsTableEmpty">
                         <div class="te-icon"><svg class="icon"><use href="#icon-user"></use></svg></div>
-                        <h3>No CRM contacts yet</h3>
+                        <h2>No CRM contacts yet</h2>
                         <p>Import a spreadsheet of NFP Members / QPFP Certificants to get started.</p>
                     </div>
                 </div>
@@ -556,7 +558,7 @@
                     </table>
                     <div class="table-empty" id="crmCampaignsTableEmpty">
                         <div class="te-icon"><svg class="icon"><use href="#icon-mail"></use></svg></div>
-                        <h3>No campaigns yet</h3>
+                        <h2>No campaigns yet</h2>
                         <p>Create a campaign to email CRM contacts about open Circles in their city.</p>
                     </div>
                 </div>
@@ -576,7 +578,7 @@
 <div class="modal-overlay" id="confirmOverlay">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-emoji" id="modalEmoji">!</div>
-        <h3 id="modalTitle">Confirm Action</h3>
+        <h2 id="modalTitle">Confirm Action</h2>
         <p id="modalMessage">Are you sure you want to proceed?</p>
         <div class="modal-btns">
             <button class="btn-outline" onclick="closeConfirmModal()">Cancel</button>
@@ -589,7 +591,7 @@
 <div class="modal-overlay" id="detailsOverlay">
     <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="detailsTitle">
         <button class="modal-x" onclick="closeDetailsModal()" aria-label="Close"><svg class="icon"><use href="#icon-x"></use></svg></button>
-        <h3 id="detailsTitle">Application Details</h3>
+        <h2 id="detailsTitle">Application Details</h2>
         <div id="detailsContent" class="details-content"></div>
         <div class="modal-btns">
             <button class="btn-primary" onclick="closeDetailsModal()">Close</button>

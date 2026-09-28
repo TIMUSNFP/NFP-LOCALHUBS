@@ -35,6 +35,29 @@ let analyticsParticipants = [];
 let hubViewEdition    = null; // edition currently shown on the Applications tab (null until loaded)
 let partViewEdition   = null; // edition currently shown on the Registrations tab (null until loaded)
 
+// Per-edition caches so re-switching the "Viewing" dropdown back to an
+// edition you've already loaded renders instantly instead of paying for
+// another round trip to the (connection-limited, 3-max-pool) Supabase
+// pooler every single time. Populated as a side effect of loadHubs() /
+// loadParticipants() / loadAnalyticsHubs() / loadAnalyticsParticipants(), so
+// every one of their ~15 call sites keeps working unchanged — this is purely
+// additive. The *EditionFilterChange handlers below are the only callers
+// that consult the cache before fetching; everywhere else keeps fetching
+// fresh (correct after any action that mutates data) and just warms the
+// cache for later. Each loadX() only writes its global (allHubs, etc.) when
+// the view it was fetched for is still the one showing, so a stale response
+// from an edition the admin has since switched away from can't clobber it.
+const hubsCache = new Map();
+const participantsCache = new Map();
+const analyticsHubsCache = new Map();
+const analyticsParticipantsCache = new Map();
+function editionCacheKey(v) { return v == null ? '__all__' : String(v); }
+
+function setTableLoading(outerId, isLoading) {
+    const el = document.getElementById(outerId);
+    if (el) el.classList.toggle('is-loading', isLoading);
+}
+
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
     handleNavbarScroll();
@@ -328,16 +351,37 @@ function renderEditionControls() {
 async function onHubEditionFilterChange(value) {
     hubViewEdition = value === '' ? null : parseInt(value, 10);
     clearHubSelection();
-    await loadHubs();
-    refreshHubViews();
+    const cached = hubsCache.get(editionCacheKey(hubViewEdition));
+    if (cached) {
+        // Render what we already have instantly, then quietly re-check the
+        // server in the background in case it's changed since we last saw it.
+        allHubs = cached;
+        refreshHubViews();
+        loadHubs().then(refreshHubViews);
+    } else {
+        setTableLoading('hubTableOuter', true);
+        await loadHubs();
+        setTableLoading('hubTableOuter', false);
+        refreshHubViews();
+    }
 }
 
 async function onPartEditionFilterChange(value) {
     partViewEdition = value === '' ? null : parseInt(value, 10);
     clearParticipantSelection();
-    await loadParticipants();
-    updateParticipantStats();
-    applyParticipantFilters();
+    const cached = participantsCache.get(editionCacheKey(partViewEdition));
+    if (cached) {
+        allParticipants = cached;
+        updateParticipantStats();
+        applyParticipantFilters();
+        loadParticipants().then(() => { updateParticipantStats(); applyParticipantFilters(); });
+    } else {
+        setTableLoading('partTableOuter', true);
+        await loadParticipants();
+        setTableLoading('partTableOuter', false);
+        updateParticipantStats();
+        applyParticipantFilters();
+    }
 }
 
 // Analytics reads from its own analyticsHubs/analyticsParticipants — kept
@@ -345,22 +389,28 @@ async function onPartEditionFilterChange(value) {
 // tabs' own data) so switching what those two tabs are viewing never changes
 // what Analytics is showing, and vice versa.
 async function loadAnalyticsHubs() {
+    const requestEdition = analyticsViewEdition;
     try {
-        const qs = analyticsViewEdition != null ? `?edition=${analyticsViewEdition}` : '';
+        const qs = requestEdition != null ? `?edition=${requestEdition}` : '';
         const res = await adminFetch(`${API_BASE}/api/admin/hubs${qs}`);
         if (!res.ok) { showToast('Failed to load analytics data.', 'error'); return; }
-        analyticsHubs = await res.json();
+        const data = await res.json();
+        analyticsHubsCache.set(editionCacheKey(requestEdition), data);
+        if (analyticsViewEdition === requestEdition) analyticsHubs = data;
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }
 }
 
 async function loadAnalyticsParticipants() {
+    const requestEdition = analyticsViewEdition;
     try {
-        const qs = analyticsViewEdition != null ? `?edition=${analyticsViewEdition}` : '';
+        const qs = requestEdition != null ? `?edition=${requestEdition}` : '';
         const res = await adminFetch(`${API_BASE}/api/admin/participants${qs}`);
         if (!res.ok) { showToast('Failed to load analytics data.', 'error'); return; }
-        analyticsParticipants = await res.json();
+        const data = await res.json();
+        analyticsParticipantsCache.set(editionCacheKey(requestEdition), data);
+        if (analyticsViewEdition === requestEdition) analyticsParticipants = data;
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }
@@ -368,8 +418,18 @@ async function loadAnalyticsParticipants() {
 
 async function onAnalyticsEditionFilterChange(value) {
     analyticsViewEdition = value === '' ? null : parseInt(value, 10);
-    await Promise.all([loadAnalyticsHubs(), loadAnalyticsParticipants()]);
-    renderAnalytics();
+    const key = editionCacheKey(analyticsViewEdition);
+    const cachedHubs = analyticsHubsCache.get(key);
+    const cachedParts = analyticsParticipantsCache.get(key);
+    if (cachedHubs && cachedParts) {
+        analyticsHubs = cachedHubs;
+        analyticsParticipants = cachedParts;
+        renderAnalytics();
+        Promise.all([loadAnalyticsHubs(), loadAnalyticsParticipants()]).then(renderAnalytics);
+    } else {
+        await Promise.all([loadAnalyticsHubs(), loadAnalyticsParticipants()]);
+        renderAnalytics();
+    }
 }
 
 // ═══════════════════ START NEW EDITION / EDIT EDITION DETAILS ═══════════════════
@@ -516,22 +576,32 @@ async function submitEditEdition() {
 
 // ═══════════════════ DATA LOADING ═══════════════════
 async function loadHubs() {
+    // Captured up front: if the admin switches "Viewing" again before this
+    // request resolves, this response is stale for the tab now showing and
+    // must not overwrite allHubs out from under it (it still warms the cache
+    // for whichever edition it actually belongs to).
+    const requestEdition = hubViewEdition;
     try {
-        const qs = hubViewEdition != null ? `?edition=${hubViewEdition}` : '';
+        const qs = requestEdition != null ? `?edition=${requestEdition}` : '';
         const res = await adminFetch(`${API_BASE}/api/admin/hubs${qs}`);
         if (!res.ok) { showToast('Failed to load applications.', 'error'); return; }
-        allHubs = await res.json();
+        const data = await res.json();
+        hubsCache.set(editionCacheKey(requestEdition), data);
+        if (hubViewEdition === requestEdition) allHubs = data;
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }
 }
 
 async function loadParticipants() {
+    const requestEdition = partViewEdition;
     try {
-        const qs = partViewEdition != null ? `?edition=${partViewEdition}` : '';
+        const qs = requestEdition != null ? `?edition=${requestEdition}` : '';
         const res = await adminFetch(`${API_BASE}/api/admin/participants${qs}`);
         if (!res.ok) { showToast('Failed to load participants.', 'error'); return; }
-        allParticipants = await res.json();
+        const data = await res.json();
+        participantsCache.set(editionCacheKey(requestEdition), data);
+        if (partViewEdition === requestEdition) allParticipants = data;
     } catch (e) {
         if (e.message !== 'Unauthorized') showToast('Could not reach the server.', 'error');
     }
@@ -1389,7 +1459,7 @@ function viewDetails(id) {
     const pendingChanges = Array.isArray(reg.pendingChangeSummary) ? reg.pendingChangeSummary : [];
     content.innerHTML = `
         <div class="detail-section">
-            <h4>Application Info</h4>
+            <h3>Application Info</h3>
             <div class="detail-grid">
                 <div class="detail-item">
                     <label>Registration ID</label>
@@ -1416,7 +1486,7 @@ function viewDetails(id) {
         </div>
         ` : ''}
         <div class="detail-section">
-            <h4>Personal Details</h4>
+            <h3>Personal Details</h3>
             <div class="detail-grid">
                 <div class="detail-item">
                     <label>Full Name</label>
@@ -1437,7 +1507,7 @@ function viewDetails(id) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Circle / Venue Details</h4>
+            <h3>Circle / Venue Details</h3>
             <div class="detail-grid">
                 <div class="detail-item">
                     <label>City</label>
@@ -1513,7 +1583,7 @@ function enterEditMode(id) {
     const content = document.getElementById('detailsContent');
     content.innerHTML = `
         <div class="detail-section">
-            <h4>Personal Details</h4>
+            <h3>Personal Details</h3>
             <div class="detail-grid">
                 <div class="detail-item"><label>Full Name</label><input id="editFullName" class="form-input" value="${escHtml(reg.fullName)}"></div>
                 <div class="detail-item"><label>Email</label><input id="editEmail" class="form-input" type="email" value="${escHtml(reg.email)}"></div>
@@ -1525,7 +1595,7 @@ function enterEditMode(id) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Circle / Venue Details</h4>
+            <h3>Circle / Venue Details</h3>
             <div class="detail-grid">
                 <div class="detail-item"><label>City</label><input id="editCity" class="form-input" value="${escHtml(reg.city)}"></div>
                 <div class="detail-item"><label>Area / Locality</label><input id="editArea" class="form-input" value="${escHtml(reg.area)}"></div>
@@ -1846,7 +1916,7 @@ function renderBarSet(containerId, counts, color) {
                 <strong>${val}</strong>
             </div>
             <div class="bar-track">
-                <div class="bar-fill" style="width:${Math.round(val/max*100)}%;background:${color}"></div>
+                <div class="bar-fill" style="--pct:${val/max};background:${color}"></div>
             </div>
         </div>
     `).join('');
@@ -2014,7 +2084,7 @@ function renderApprovalByCity(regs) {
                 <strong>${c.approved}/${c.total} — ${c.rate}%</strong>
             </div>
             <div class="bar-track">
-                <div class="bar-fill" style="width:${c.rate}%;background:#16A34A"></div>
+                <div class="bar-fill" style="--pct:${c.rate/100};background:var(--success)"></div>
             </div>
         </div>`).join('');
 }
@@ -2119,7 +2189,7 @@ function renderCircleFillRate(hubs, parts) {
                 <span style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(d.name)}">${escHtml(d.name)}</span>
                 <strong style="color:${col}">${d.reg}/${d.cap} (${d.pct}%)</strong>
             </div>
-            <div class="bar-track"><div class="bar-fill" style="width:${d.pct}%;background:${col}"></div></div>
+            <div class="bar-track"><div class="bar-fill" style="--pct:${d.pct/100};background:${col}"></div></div>
         </div>`;
     }).join('');
 }
@@ -2277,12 +2347,12 @@ function renderSupplyVsDemand(hubs, parts) {
             <div class="sd-bars">
                 <div class="sd-bar-wrap">
                     <span class="sd-badge" style="background:#3B82F6">Circles</span>
-                    <div class="bar-track" style="flex:1"><div class="bar-fill" style="width:${Math.round(d.circles/Math.max(maxC,1)*100)}%;background:#3B82F6"></div></div>
+                    <div class="bar-track" style="flex:1"><div class="bar-fill" style="--pct:${d.circles/Math.max(maxC,1)};background:#3B82F6"></div></div>
                     <span class="sd-val">${d.circles}</span>
                 </div>
                 <div class="sd-bar-wrap">
                     <span class="sd-badge" style="background:#7C3AED">People</span>
-                    <div class="bar-track" style="flex:1"><div class="bar-fill" style="width:${Math.round(d.participants/maxP*100)}%;background:#7C3AED"></div></div>
+                    <div class="bar-track" style="flex:1"><div class="bar-fill" style="--pct:${d.participants/maxP};background:#7C3AED"></div></div>
                     <span class="sd-val">${d.participants}</span>
                 </div>
             </div>
@@ -2300,7 +2370,7 @@ function renderCapacityVsRegistered(hubs, parts) {
         <div style="text-align:center;padding:8px 0">
             <div class="kpi-big" style="color:${col}">${pct}%</div>
             <div class="kpi-sub">Overall Fill Rate</div>
-            <div class="cap-prog-track"><div class="cap-prog-fill" style="width:${pct}%;background:${col}"></div></div>
+            <div class="cap-prog-track"><div class="cap-prog-fill" style="--pct:${pct/100};background:${col}"></div></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px">
                 <span>${totalReg} Registered</span>
                 <span>${totalCap} Total Spots</span>
@@ -2346,7 +2416,7 @@ function renderCityCapacityFill(hubs, parts) {
                 <span>${escHtml(d.city)}</span>
                 <strong style="color:${col}">${d.filled}/${d.capacity} (${d.pct}%)</strong>
             </div>
-            <div class="bar-track"><div class="bar-fill" style="width:${d.pct}%;background:${col}"></div></div>
+            <div class="bar-track"><div class="bar-fill" style="--pct:${d.pct/100};background:${col}"></div></div>
         </div>`;
     }).join('');
 }
@@ -2842,7 +2912,7 @@ function viewHubParticipants(hubId) {
 
     content.innerHTML = `
         <div class="detail-section">
-            <h4>Circle Info</h4>
+            <h3>Circle Info</h3>
             <div class="detail-grid">
                 <div class="detail-item"><label>Circle Host</label><span>${escHtml(hub.fullName)}</span></div>
                 <div class="detail-item"><label>City</label><span>${escHtml(hub.city)}</span></div>
@@ -2851,7 +2921,7 @@ function viewHubParticipants(hubId) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Participants <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 10px;font-size:13px;font-weight:600;margin-left:6px;vertical-align:middle">${activeCount}${activeCount !== hubParticipants.length ? ` / ${hubParticipants.length}` : ''}</span></h4>
+            <h3>Participants <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 10px;font-size:13px;font-weight:600;margin-left:6px;vertical-align:middle">${activeCount}${activeCount !== hubParticipants.length ? ` / ${hubParticipants.length}` : ''}</span></h3>
             ${participantRows}
         </div>
     `;
@@ -2871,7 +2941,7 @@ function viewParticipantDetails(id) {
     const content = document.getElementById('detailsContent');
     content.innerHTML = `
         <div class="detail-section">
-            <h4>Participant Info</h4>
+            <h3>Participant Info</h3>
             <div class="detail-grid">
                 <div class="detail-item"><label>Participant ID</label><span style="color:var(--primary);font-family:monospace">${escHtml(p.id)}</span></div>
                 <div class="detail-item"><label>Status</label><span>${participantStatusBadge(p.status)}</span></div>
@@ -2880,7 +2950,7 @@ function viewParticipantDetails(id) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Personal Details</h4>
+            <h3>Personal Details</h3>
             <div class="detail-grid">
                 <div class="detail-item"><label>Full Name</label><span>${escHtml(p.fullName)}</span></div>
                 <div class="detail-item"><label>Email</label><span>${escHtml(p.email)}</span></div>
@@ -2888,7 +2958,7 @@ function viewParticipantDetails(id) {
             </div>
         </div>
         <div class="detail-section">
-            <h4>Circle Details</h4>
+            <h3>Circle Details</h3>
             <div class="detail-grid">
                 <div class="detail-item"><label>Circle Host</label><span>${escHtml(p.hubLeader)}</span></div>
                 <div class="detail-item"><label>City</label><span>${escHtml(p.hubCity)}</span></div>
@@ -2896,7 +2966,7 @@ function viewParticipantDetails(id) {
                 <div class="detail-item"><label>Venue Type</label><span>${escHtml(p.hubVenue || '—')}</span></div>
             </div>
         </div>
-        ${p.note ? `<div class="detail-section"><h4>Note from Participant</h4><p style="font-size:14px;color:var(--text);line-height:1.65">"${escHtml(p.note)}"</p></div>` : ''}
+        ${p.note ? `<div class="detail-section"><h3>Note from Participant</h3><p style="font-size:14px;color:var(--text);line-height:1.65">"${escHtml(p.note)}"</p></div>` : ''}
     `;
     openDetailsOverlay();
 }
