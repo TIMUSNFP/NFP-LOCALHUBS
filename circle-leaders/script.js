@@ -65,6 +65,48 @@ document.addEventListener('DOMContentLoaded', () => {
     initGrowthBar();
     renderHeroMapPins();
     loadHubFormState();
+    initEditionCarousel();
+});
+
+// ═══════════════════ LAST EDITION PHOTO CAROUSEL + LIGHTBOX ═══════════════════
+function initEditionCarousel() {
+    const viewport = document.getElementById('editionViewport');
+    const track = document.getElementById('editionTrack');
+    if (!viewport || !track) return;
+
+    // Duplicate the image set once so the marquee can loop seamlessly at -50%/0%.
+    track.innerHTML += track.innerHTML;
+
+    const sizeColumns = () => {
+        const gap = 16;
+        const w = viewport.clientWidth;
+        const colW = Math.max(180, (w - gap * 2) / 3);
+        viewport.style.setProperty('--col-w', colW + 'px');
+    };
+    sizeColumns();
+    window.addEventListener('resize', sizeColumns);
+}
+
+function openEditionLightbox(imgEl) {
+    const lightbox = document.getElementById('editionLightbox');
+    const lightboxImg = document.getElementById('editionLightboxImg');
+    if (!lightbox || !lightboxImg || !imgEl) return;
+    lightboxImg.src = imgEl.src;
+    lightboxImg.alt = imgEl.alt || '';
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditionLightbox(event) {
+    if (event && event.target && event.target.id === 'editionLightboxImg') return;
+    const lightbox = document.getElementById('editionLightbox');
+    if (!lightbox) return;
+    lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeEditionLightbox();
 });
 
 function initGrowthBar() {
