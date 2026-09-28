@@ -20,6 +20,142 @@
         "value": "scrollbounce",
         "createdAt": "2026-09-28T11:13:14.366Z",
         "reason": "A continuous up-down scroll-cue arrow at the bottom of the hero (ease timing, not an elastic entrance) — a standard, purposeful 'scroll down' affordance, not the AI-slop bouncy-entrance pattern this rule targets."
+      },
+      {
+        "rule": "hero-eyebrow-chip",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:19:54.431Z"
+      },
+      {
+        "rule": "hero-eyebrow-chip",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:06.521Z"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:07.803Z"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:09.019Z"
+      },
+      {
+        "rule": "kicker-above-heading",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:10.218Z"
+      },
+      {
+        "rule": "kicker-above-heading",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:11.426Z"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:21.986Z"
+      },
+      {
+        "rule": "radial-spotlight-glow",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:23.261Z"
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:24.537Z"
+      },
+      {
+        "rule": "image-hover-transform",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:25.836Z"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "participant/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:27.080Z"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:28.476Z"
+      },
+      {
+        "rule": "radial-spotlight-glow",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:29.768Z"
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:31.019Z"
+      },
+      {
+        "rule": "image-hover-transform",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:32.319Z"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:33.545Z"
+      },
+      {
+        "rule": "skipped-heading",
+        "value": "*",
+        "files": [
+          "circle-leaders/index.html"
+        ],
+        "createdAt": "2026-09-28T11:20:34.674Z"
       }
     ]
   }

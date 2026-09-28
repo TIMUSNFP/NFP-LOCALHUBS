@@ -2010,7 +2010,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 
 @media (max-width: 768px) {
-    .lh-hero-title { letter-spacing: -1px; }
+    .lh-hero-title { letter-spacing: -0.6px; }
     .lh-what-grid { grid-template-columns: repeat(2, 1fr); }
     .lh-why-stats { flex-direction: column; }
     .lh-why-stat-divider { width: 60px; height: 1px; }
