@@ -1485,12 +1485,15 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 /* No tinted swatch behind the mark — the brandmark art is high-contrast and
    colorful enough on its own; a background frame here just repeated the
    orange the logo already carries. */
+/* Wordmark art (~3.26:1) needs a wide, short box — not the square icon slot
+   this held before switching from a brandmark to a wordmark logo. */
 .lh-for-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 108px;
-    height: 108px;
+    width: 100%;
+    max-width: 260px;
+    height: 80px;
     margin: 0 auto 24px;
 }
 .lh-for-img {
