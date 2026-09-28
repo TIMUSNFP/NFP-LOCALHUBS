@@ -995,3 +995,8 @@ router.delete('/campaigns/:id', asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
+// Also exposed for routes/cron.js — the Vercel Cron endpoint that drives
+// campaign batches forward on a schedule (see that file for why: a
+// setInterval started here only keeps ticking while this serverless
+// instance happens to stay warm, which is not guaranteed on Vercel).
+module.exports.runCampaignBatch = runCampaignBatch;

@@ -118,7 +118,8 @@ document.addEventListener('keydown', (e) => {
 function initGrowthBar() {
     const bar = document.querySelector('.lh-growth-bar-fill');
     if (!bar) return;
-    setTimeout(() => { bar.style.width = bar.dataset.width || '35%'; }, 600);
+    const pct = parseFloat(bar.dataset.width) || 35; // dataset.width was a "NN%" string; now a 0-1 fraction for scaleX
+    setTimeout(() => { bar.style.setProperty('--pct', pct / 100); }, 600);
 }
 
 // handleNavbarScroll, toggleMenu, closeMenu, isValidEmail, formatDate, escHtml,

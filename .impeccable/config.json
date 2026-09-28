@@ -8,6 +8,18 @@
         "value": "lato",
         "createdAt": "2026-09-28T10:04:50.687Z",
         "reason": "Lato is the NFP Circles brand typeface, set as the body/UI font in the site's brand fonts block since before this session (admin/styles.css header: 'Brand: NFP Orange' + self-hosted Lato @font-face) and used identically across the participant and circle-leaders pages, not introduced by this admin redesign."
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "successbounce",
+        "createdAt": "2026-09-28T11:13:13.167Z",
+        "reason": "Name is legacy — the animation now uses a smooth expo-out cubic-bezier(.16,1,.3,1), not an elastic/overshoot curve. Renaming would be cleaner but touches JS/CSS call sites for no functional gain."
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "scrollbounce",
+        "createdAt": "2026-09-28T11:13:14.366Z",
+        "reason": "A continuous up-down scroll-cue arrow at the bottom of the hero (ease timing, not an elastic entrance) — a standard, purposeful 'scroll down' affordance, not the AI-slop bouncy-entrance pattern this rule targets."
       }
     ]
   }

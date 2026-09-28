@@ -20,6 +20,7 @@ const adminRouter = require('./routes/admin');
 const settingsRouter = require('./routes/settings');
 const crmRouter = require('./routes/crm');
 const crmPublicRouter = require('./routes/crmPublic');
+const cronRouter = require('./routes/cron');
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/admin/crm', crmRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/crm', crmPublicRouter);
+app.use('/api/cron', cronRouter);
 
 // 404 fallback for unknown API routes.
 app.use('/api', (req, res) => {

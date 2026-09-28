@@ -60,7 +60,7 @@
     --warning-bg:    #FEF3C7;
     --danger:        #DC2626;
     --danger-bg:     #FEE2E2;
-    --info:          #2563EB;
+    --info:          #1D4ED8;
     --info-bg:       #DBEAFE;
     --shadow-sm:     0 1px 3px rgba(0,0,0,.08);
     --shadow-md:     0 4px 16px rgba(0,0,0,.1);
@@ -276,7 +276,7 @@ ul { list-style: none; }
     text-transform: uppercase;
 }
 .fs-icon:hover { background: var(--primary); border-color: var(--primary); color: white; }
-.footer-col h4 { color: var(--white); font-size: 14px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+.footer-col h3 { color: var(--white); font-size: 14px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
 .footer-col a, .footer-col p {
     display: block;
     font-size: 14px;
@@ -426,7 +426,7 @@ ul { list-style: none; }
     box-shadow: 0 0 0 3px rgba(224,91,37,.12);
 }
 .form-input.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,.1); }
-.form-input::placeholder { color: var(--light-text); }
+.form-input::placeholder { color: var(--brand-slate); }
 select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6B6B' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px; cursor: pointer; }
 .select-wrap { position: relative; }
 .err-msg { font-size: 12px; color: var(--danger); font-weight: 500; min-height: 16px; }
@@ -489,7 +489,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     width: 100%;
     text-align: center;
     box-shadow: var(--shadow-xl);
-    animation: scaleIn .4s cubic-bezier(.34, 1.56, .64, 1);
+    animation: scaleIn .4s cubic-bezier(.16, 1, .3, 1);
 }
 @keyframes scaleIn {
     from { transform: scale(.85); opacity: 0; }
@@ -504,7 +504,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     align-items: center;
     justify-content: center;
     margin: 0 auto 24px;
-    animation: successBounce .6s cubic-bezier(.34, 1.56, .64, 1) 0.2s both;
+    animation: successBounce .6s cubic-bezier(.16, 1, .3, 1) 0.2s both;
 }
 @keyframes successBounce {
     from { transform: scale(0) rotate(-20deg); opacity: 0; }
@@ -561,7 +561,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     min-width: 280px;
     max-width: 380px;
     pointer-events: all;
-    animation: toastIn .3s cubic-bezier(.34, 1.56, .64, 1);
+    animation: toastIn .3s cubic-bezier(.16, 1, .3, 1);
 }
 @keyframes toastIn {
     from { transform: translateX(120%); opacity: 0; }
@@ -713,7 +713,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     /* ── Footer ── */
     .footer { padding: 40px 0 0; }
     .footer-grid { gap: 24px; }
-    .footer-col h4 { font-size: 13px; }
+    .footer-col h3 { font-size: 13px; }
     .footer-col a, .footer-col p { font-size: 13px; }
 }
 
@@ -779,11 +779,17 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 
 /* === BRAND OVERRIDES === */
 :root {
+    --brand-slate:    #5D6F7C;   /* cooler secondary tone for placeholders/captions, AA-safe on white */
     --brand:          #FF5000;
     --brand-dark:     #d94400;
     --brand-light:    #ff6a20;
     --brand-ultra:    #fff0e8;
     --hero-cream:     #fbf3ea;
+    /* Text-only variant of the brand orange — #FF5000/#d94400 read fine as a
+       button or badge FILL with white text on top, but as foreground text on
+       white/cream/pale-orange surfaces they fall short of WCAG AA (~3:1).
+       Use this wherever brand orange is the text color, not the background. */
+    --brand-ink:      #C23C00;
 }
 
 /* === SHARED SECTION LAYOUT === */
@@ -803,7 +809,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: var(--brand);
+    color: var(--brand-ink);
     background: var(--brand-ultra);
     padding: 5px 14px;
     border-radius: 100px;
@@ -916,18 +922,18 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 700;
     color: var(--dark);
     line-height: 1.1;
-    letter-spacing: -1.5px;
+    letter-spacing: -0.8px;
     margin-bottom: 10px;
 }
 .lh-hero-accent {
-    color: var(--brand);
+    color: var(--brand-ink);
 }
 .lh-hero-mission {
     font-family: 'The Youngest Serif', Georgia, serif;
     font-style: italic;
     font-size: clamp(22px, 2.8vw, 32px);
     font-weight: 400;
-    color: var(--brand-dark);
+    color: var(--brand-ink);
     margin-bottom: 10px;
     letter-spacing: 0;
     line-height: 1.3;
@@ -1084,7 +1090,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     padding: 5px 18px;
     font-size: 11px;
     font-weight: 700;
-    color: var(--brand);
+    color: var(--brand-ink);
     white-space: nowrap;
     letter-spacing: 0.5px;
     font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1239,7 +1245,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-family: 'The Youngest Serif', Georgia, serif;
     font-size: 140px;
     line-height: 1;
-    color: var(--brand);
+    color: var(--brand-ink);
     opacity: 0.1;
     position: absolute;
     top: -12px;
@@ -1283,7 +1289,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: block;
     font-size: 32px;
     font-weight: 800;
-    color: var(--brand);
+    color: var(--brand-ink);
     letter-spacing: -1px;
 }
 .lh-why-stat-lbl {
@@ -1313,7 +1319,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     margin-bottom: 10px;
     text-align: center;
 }
-.lh-community-hero-sub strong { color: var(--brand); }
+.lh-community-hero-sub strong { color: var(--brand-ink); }
 
 /* Gallery Carousel */
 .lh-gallery-carousel {
@@ -1464,26 +1470,28 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     border: 2px solid var(--border);
     transition: all 0.2s ease;
     position: relative;
-    cursor: pointer;
-    text-decoration: none;
-    color: inherit;
 }
-.lh-for-card-primary:hover {
+.lh-for-card:hover {
     border-color: var(--brand);
     box-shadow: 0 12px 40px rgba(255,80,0,0.12);
     transform: translateY(-4px);
 }
+.lh-for-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+/* No tinted swatch behind the mark — the brandmark art is high-contrast and
+   colorful enough on its own; a background frame here just repeated the
+   orange the logo already carries. */
 .lh-for-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 200px;
-    height: 160px;
-    margin: 0 auto 28px;
-    background: linear-gradient(135deg, #fff8f5 0%, #fff5f0 100%);
-    border-radius: 20px;
-    border: 1.5px solid rgba(255,80,0,0.1);
-    padding: 20px;
+    width: 108px;
+    height: 108px;
+    margin: 0 auto 24px;
 }
 .lh-for-img {
     width: 100%;
@@ -1504,16 +1512,26 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     line-height: 1.7;
     margin-bottom: 24px;
 }
+/* A plain status label, not a pill — the only element on this card meant to
+   read as a clickable button is .lh-for-alt-btn below. Giving both a filled
+   rounded-pill treatment made this one look interactive when it does nothing
+   on click. */
 .lh-for-tag {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: var(--brand);
-    background: var(--brand-ultra);
-    padding: 6px 18px;
-    border-radius: 100px;
+    color: var(--brand-ink);
+}
+.lh-for-tag::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--brand);
 }
 .lh-for-alt {
     display: flex;
@@ -1526,12 +1544,12 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-size: 12px;
     color: var(--muted);
 }
-.lh-for-card:hover .lh-for-alt-label { color: var(--brand); }
+.lh-for-card:hover .lh-for-alt-label { color: var(--brand-ink); }
 .lh-for-alt-btn {
     display: inline-block;
     font-size: 12px;
     font-weight: 700;
-    color: var(--brand);
+    color: var(--brand-ink);
     background: transparent;
     border: 1.5px solid var(--border);
     padding: 5px 14px;
@@ -1546,7 +1564,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--muted);
 }
 .lh-link {
-    color: var(--brand);
+    color: var(--brand-ink);
     font-weight: 600;
     text-decoration: underline;
     text-decoration-color: rgba(255,80,0,0.3);
@@ -1634,7 +1652,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     line-height: 1.7;
     margin-bottom: 12px;
 }
-.lh-where-lead strong { color: var(--brand); }
+.lh-where-lead strong { color: var(--brand-ink); }
 .lh-where-sub {
     font-size: 14.5px;
     color: var(--muted);
@@ -1659,7 +1677,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .lh-city-chip:hover {
     border-color: var(--brand);
-    color: var(--brand);
+    color: var(--brand-ink);
     background: var(--brand-ultra);
 }
 .lh-city-chip-more {
@@ -1712,24 +1730,30 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     color: var(--muted);
     margin-bottom: 8px;
 }
-.lh-growth-pct { color: var(--brand); font-weight: 700; }
+.lh-growth-pct { color: var(--brand-ink); font-weight: 700; }
 .lh-growth-bar-track {
     height: 8px;
     background: var(--border);
     border-radius: 100px;
     overflow: hidden;
 }
+/* Animated via transform: scaleX() rather than width — width changes
+   trigger layout on every frame, transform is compositor-only. JS
+   (initGrowthBar in script.js) sets the --pct custom property to the real
+   value instead of an inline width. */
 .lh-growth-bar-fill {
     height: 100%;
+    width: 100%;
     background: linear-gradient(90deg, var(--brand) 0%, var(--brand-light) 100%);
     border-radius: 100px;
-    width: 0%;
-    transition: width 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: transform 1.4s cubic-bezier(0.4, 0, 0.2, 1);
     animation: growBar 1.5s ease forwards 0.8s;
 }
 @keyframes growBar {
-    from { width: 0%; }
-    to   { width: 35%; }
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(var(--pct, 0.35)); }
 }
 .lh-growth-milestones {
     display: flex;
@@ -1756,7 +1780,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     box-shadow: 0 0 0 3px rgba(255,80,0,0.2);
     animation: pulseGlow 2s infinite;
 }
-.lh-milestone-active { color: var(--brand); font-weight: 600; }
+.lh-milestone-active { color: var(--brand-ink); font-weight: 600; }
 
 /* ══════════════════════════════════════════════════════
    SECTION 8 — BECOME HUB LEADER
@@ -1777,7 +1801,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .lh-tag-light {
     background: var(--brand-ultra);
-    color: var(--brand);
+    color: var(--brand-ink);
 }
 .lh-title-light { color: var(--dark); }
 .lh-sub-light { color: var(--muted); }
@@ -1811,10 +1835,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     transform: translateY(-2px);
 }
 .lh-elig-num {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 2px;
-    color: var(--brand);
+    color: var(--brand-ink);
     margin-bottom: 6px;
     display: block;
 }
@@ -1825,7 +1849,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     margin-bottom: 5px;
 }
 .lh-elig-card p {
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--muted);
     line-height: 1.5;
 }
@@ -1858,7 +1882,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .lh-when-day {
     font-size: 72px;
     font-weight: 800;
-    color: var(--brand);
+    color: var(--brand-ink);
     line-height: 1;
 }
 .lh-when-month {
@@ -1952,7 +1976,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 700;
     letter-spacing: 2.5px;
     text-transform: uppercase;
-    color: var(--brand);
+    color: var(--brand-ink);
     margin-bottom: 20px;
 }
 .lh-final-title {
@@ -1960,7 +1984,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 700;
     color: var(--dark);
     line-height: 1.12;
-    letter-spacing: -1px;
+    letter-spacing: -0.5px;
     margin-bottom: 20px;
 }
 .lh-final-desc {
