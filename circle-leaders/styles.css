@@ -2339,6 +2339,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     gap: 16px;
     width: max-content;
     animation: lh-edition-scroll 55s linear infinite;
+    animation-play-state: paused;
+}
+.lh-edition-viewport.ready .lh-edition-track {
+    animation-play-state: running;
 }
 .lh-edition-viewport:hover .lh-edition-track,
 .lh-edition-viewport.paused .lh-edition-track {

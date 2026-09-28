@@ -77,13 +77,19 @@ function initEditionCarousel() {
     // Duplicate the image set once so the marquee can loop seamlessly at -50%/0%.
     track.innerHTML += track.innerHTML;
 
+    let lastWidth = 0;
     const sizeColumns = () => {
-        const gap = 16;
         const w = viewport.clientWidth;
+        if (Math.abs(w - lastWidth) < 2) return; // ignore no-op resizes (e.g. mobile toolbar show/hide)
+        lastWidth = w;
+        const gap = 16;
         const colW = Math.max(180, (w - gap * 2) / 3);
         viewport.style.setProperty('--col-w', colW + 'px');
     };
+    // Size and duplicate before the animation starts, so it never has to
+    // jump mid-loop from the CSS default width to the computed one.
     sizeColumns();
+    viewport.classList.add('ready');
     window.addEventListener('resize', sizeColumns);
 }
 
