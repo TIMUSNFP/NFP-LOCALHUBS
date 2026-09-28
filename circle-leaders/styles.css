@@ -896,14 +896,16 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 @media (max-width: 640px) {
     .launch-banner { font-size: 12px; padding: 8px 14px; }
 }
+/* Not uppercase like the shorter section tags elsewhere — at 51 characters
+   this is a full sentence, not a short label, and all-caps on a run that
+   long strips the word shapes readers actually scan by. */
 .lh-hero-eyebrow {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
+    letter-spacing: 0.2px;
     color: var(--primary);
     margin-bottom: 14px;
 }
