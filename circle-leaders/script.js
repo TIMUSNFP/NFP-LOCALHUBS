@@ -115,11 +115,57 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeEditionLightbox();
 });
 
-function initGrowthBar() {
-    const bar = document.querySelector('.lh-growth-bar-fill');
+// "A Growing Network" card — was static placeholder copy (always the same
+// ~35% bar and the same two milestones marked done, regardless of reality).
+// Now driven by the real approved-hub count and the same /api/settings the
+// rest of the page already reads, so it actually reflects where the program
+// is at whenever someone loads the page.
+const GROWTH_TARGET = 100;
+
+async function initGrowthBar() {
+    const bar = document.getElementById('lhGrowthBarFill');
+    const pctEl = document.getElementById('lhGrowthPct');
+    const milestonesEl = document.getElementById('lhGrowthMilestones');
     if (!bar) return;
-    const pct = parseFloat(bar.dataset.width) || 35; // dataset.width was a "NN%" string; now a 0-1 fraction for scaleX
-    setTimeout(() => { bar.style.setProperty('--pct', pct / 100); }, 600);
+
+    let approvedCount = 0;
+    let settings = { hubFormOpen: true, participantFormOpen: false };
+    try {
+        const [hubsRes, settingsRes] = await Promise.all([
+            fetch(`${API_BASE}/api/hubs?status=Approved&edition=all`),
+            fetch(`${API_BASE}/api/settings`),
+        ]);
+        if (hubsRes.ok) approvedCount = (await hubsRes.json()).length;
+        if (settingsRes.ok) settings = await settingsRes.json();
+    } catch (e) { /* fall back to the zero/open defaults above */ }
+
+    const pct = Math.min(approvedCount / GROWTH_TARGET, 1);
+    setTimeout(() => { bar.style.setProperty('--pct', pct); }, 600);
+    if (pctEl) pctEl.textContent = `${approvedCount} / ${GROWTH_TARGET}`;
+
+    // Each milestone is "reached" once its real condition is true. The first
+    // one NOT yet reached is the current, in-progress step; everything
+    // before it is done; everything after is still upcoming.
+    const reached = {
+        launched: true,
+        applicationsOpen: approvedCount > 0 || settings.hubFormOpen,
+        hundredCircles: approvedCount >= GROWTH_TARGET,
+        memberPortal: !!settings.participantFormOpen,
+    };
+    const order = ['launched', 'applicationsOpen', 'hundredCircles', 'memberPortal'];
+    // First not-yet-reached step in sequence is "active"; everything strictly
+    // before it is "done" — based on position, not each key's own reached
+    // flag alone, so a later milestone that happens to be true too (e.g.
+    // the member portal opening before 100 circles are hit) doesn't render
+    // as "done" while an earlier, still-unreached one sits active above it.
+    const activeIndex = order.findIndex((key) => !reached[key]);
+    if (milestonesEl) {
+        milestonesEl.querySelectorAll('.lh-milestone').forEach((el, i) => {
+            const isDone = activeIndex === -1 ? true : i < activeIndex;
+            el.classList.toggle('lh-milestone-done', isDone);
+            el.classList.toggle('lh-milestone-active', i === activeIndex);
+        });
+    }
 }
 
 // handleNavbarScroll, toggleMenu, closeMenu, isValidEmail, formatDate, escHtml,
