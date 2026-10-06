@@ -184,7 +184,7 @@ ul { list-style: none; }
 /* === BUTTONS === */
 .btn-primary {
     background: var(--primary);
-    color: var(--dark);
+    color: var(--white);
     padding: 10px 22px;
     border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
@@ -193,7 +193,7 @@ ul { list-style: none; }
     letter-spacing: .1px;
     box-shadow: var(--shadow-xs);
 }
-.btn-primary:hover { background: var(--brand-light); box-shadow: var(--shadow-sm); }
+.btn-primary:hover { background: var(--primary-dark); box-shadow: var(--shadow-sm); }
 .btn-primary:active { transform: translateY(1px); box-shadow: none; }
 .btn-outline {
     background: transparent;

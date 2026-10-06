@@ -204,7 +204,7 @@ ul { list-style: none; }
 /* === BUTTONS === */
 .btn-primary {
     background: var(--primary);
-    color: var(--dark);
+    color: var(--white);
     padding: 10px 22px;
     border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
@@ -212,7 +212,7 @@ ul { list-style: none; }
     transition: all var(--transition);
     letter-spacing: .3px;
 }
-.btn-primary:hover { background: var(--brand-light); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 .btn-outline {
     background: transparent;
@@ -1451,7 +1451,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     letter-spacing: 0 !important;
 }
 .lh-cta-primary:hover {
-    background: var(--brand-light) !important;
+    background: var(--brand-dark) !important;
     transform: translateY(-2px) !important;
 }
 .lh-hero-stats {
@@ -2207,7 +2207,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 
 /* Disabled primary button (declaration not yet accepted) */
 .btn-primary:disabled,
-.btn-primary[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none;filter:grayscale(15%);}
+.btn-primary[disabled] {opacity:.5;cursor:not-allowed;box-shadow:none;filter:grayscale(15%);}
 
 /* Sticky location search bar — stays pinned below the navbar while browsing Circles */
 .hub-search-sticky {
