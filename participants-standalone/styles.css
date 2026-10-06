@@ -203,8 +203,8 @@ ul { list-style: none; }
 
 /* === BUTTONS === */
 .btn-primary {
-    background: var(--brand-ink);
-    color: var(--white);
+    background: var(--primary);
+    color: var(--dark);
     padding: 10px 22px;
     border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
@@ -212,7 +212,7 @@ ul { list-style: none; }
     transition: all var(--transition);
     letter-spacing: .3px;
 }
-.btn-primary:hover { background: var(--brand-ink-deep); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--brand-light); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 .btn-outline {
     background: transparent;
@@ -1444,14 +1444,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     margin-bottom: 48px;
 }
 .lh-cta-primary {
-    background: var(--brand-ink) !important;
+    background: var(--primary) !important;
     font-size: var(--fs-base) !important;
     padding: 15px 30px !important;
     border-radius: 10px !important;
     letter-spacing: 0 !important;
 }
 .lh-cta-primary:hover {
-    background: var(--brand-ink-deep) !important;
+    background: var(--brand-light) !important;
     transform: translateY(-2px) !important;
 }
 .lh-hero-stats {

@@ -199,8 +199,8 @@ ul { list-style: none; }
 
 /* === BUTTONS === */
 .btn-primary {
-    background: var(--brand-ink);
-    color: var(--white);
+    background: var(--primary);
+    color: var(--dark);
     padding: 10px 22px;
     border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
@@ -208,7 +208,7 @@ ul { list-style: none; }
     transition: all var(--transition);
     letter-spacing: .3px;
 }
-.btn-primary:hover { background: var(--brand-ink-deep); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--brand-light); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 .btn-outline {
     background: transparent;
@@ -956,14 +956,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     margin-bottom: 24px;
 }
 .lh-cta-primary {
-    background: var(--brand-ink) !important;
+    background: var(--primary) !important;
     font-size: var(--fs-base) !important;
     padding: 15px 30px !important;
     border-radius: 10px !important;
     letter-spacing: 0 !important;
 }
 .lh-cta-primary:hover {
-    background: var(--brand-ink-deep) !important;
+    background: var(--brand-light) !important;
     transform: translateY(-2px) !important;
 }
 .lh-hero-stats {
@@ -1929,14 +1929,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-weight: 500;
 }
 .lh-apply-btn {
-    background: var(--brand-ink) !important;
+    background: var(--primary) !important;
     padding: 17px 40px !important;
     font-size: var(--fs-base) !important;
     border-radius: 12px !important;
     letter-spacing: 0 !important;
 }
 .lh-apply-btn:hover {
-    background: var(--brand-ink-deep) !important;
+    background: var(--brand-light) !important;
     transform: translateY(-2px) !important;
 }
 .lh-apply-note {
@@ -2009,14 +2009,14 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     border-radius: 12px;
     font-size: var(--fs-base);
     font-weight: 700;
-    background: var(--brand-ink);
-    color: #fff;
+    background: var(--primary);
+    color: var(--dark);
     border: none;
     cursor: pointer;
     transition: all 0.25s;
 }
 .lh-final-btn-primary:hover {
-    background: var(--brand-ink-deep);
+    background: var(--brand-light);
     transform: translateY(-2px);
 }
 
