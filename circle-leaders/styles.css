@@ -294,9 +294,9 @@ ul { list-style: none; }
     flex-wrap: wrap;
     gap: 12px;
 }
-.footer-bottom p { font-size: 13px; color: rgba(255,255,255,.4); }
+.footer-bottom p { font-size: 13px; color: rgba(255,255,255,.72); }
 .footer-bottom-links { display: flex; gap: 24px; }
-.footer-bottom-links a { font-size: 13px; color: rgba(255,255,255,.4); transition: color var(--transition); }
+.footer-bottom-links a { font-size: 13px; color: rgba(255,255,255,.72); transition: color var(--transition); }
 .footer-bottom-links a:hover { color: var(--primary); }
 
 /* ══════════════════════════════════════════════════════
@@ -318,13 +318,7 @@ ul { list-style: none; }
     border-right: 1px solid var(--border);
     padding: 48px 32px;
     color: var(--dark);
-    position: sticky;
-    top: calc(var(--nav-height) + 57px);
-    height: calc(100vh - var(--nav-height) - 57px);
-    overflow-y: auto;
 }
-.rs-logo { font-size: 22px; font-weight: 800; margin-bottom: 24px; }
-.rs-logo .logo-network { color: var(--dark); }
 .reg-sidebar h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
 .reg-sidebar > p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 40px; }
 .rs-checklist { display: flex; flex-direction: column; gap: 0; }
@@ -374,8 +368,8 @@ ul { list-style: none; }
 .rs-note strong { color: var(--dark); display: block; margin-bottom: 4px; }
 
 .reg-form-area {
-    padding: 48px;
-    max-width: 700px;
+    padding: 56px 64px;
+    max-width: 820px;
 }
 .form-step { display: block; }
 .form-step.hidden { display: none; }
@@ -801,7 +795,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 
 .lh-section-header {
     text-align: center;
-    margin-bottom: 56px;
+    margin-bottom: 44px;
 }
 .lh-section-tag {
     display: inline-block;
@@ -920,12 +914,12 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     50%       { opacity: 0.5; }
 }
 .lh-hero-title {
-    font-size: clamp(38px, 5vw, 64px);
-    font-weight: 700;
+    font-size: clamp(42px, 6vw, 84px);
+    font-weight: 800;
     color: var(--dark);
-    line-height: 1.1;
-    letter-spacing: -0.8px;
-    margin-bottom: 10px;
+    line-height: 1.02;
+    letter-spacing: -1.6px;
+    margin-bottom: 18px;
 }
 .lh-hero-accent {
     color: var(--brand-ink);
