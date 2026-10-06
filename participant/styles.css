@@ -2348,3 +2348,23 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .decl-check { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
 
 .lh-community-photos { margin-top: 48px; }
+
+/* Modern nav: frosted bar, slimmer logo, pill links and CTA */
+.navbar {
+    background: rgba(255, 255, 255, 0.86);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: none;
+}
+.navbar.scrolled { box-shadow: 0 6px 24px -12px rgba(0, 0, 0, 0.18); }
+@media (min-width: 769px) { .logo-img-nav { height: 52px; } }
+.nav-link {
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-weight: 500;
+    color: var(--dark);
+    opacity: 0.78;
+}
+.nav-link:hover { background: rgba(255, 80, 0, 0.08); color: var(--brand-ink); opacity: 1; }
+.nav-cta .btn-primary { border-radius: 999px; padding: 9px 20px; box-shadow: 0 8px 18px -10px rgba(255, 80, 0, 0.7); }
