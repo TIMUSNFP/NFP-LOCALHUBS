@@ -69,14 +69,14 @@
                 <span class="lh-hero-accent">Grow Together.</span>
             </h1>
             <p class="lh-hero-mission">Independent, Not Alone.</p>
+            <div class="lh-hero-actions">
+                <button class="btn-primary btn-lg lh-cta-primary" onclick="showSection('participantReg')">
+                    Find a Circle &rarr;
+                </button>
+            </div>
             <p class="lh-hero-sub">
                 Connect with QPFP&reg;-certified Personal Finance Professionals hosting local meetups in your city. Join an NFP Circle and never practice in isolation again.
             </p>
-            <div class="lh-hero-actions">
-                <button class="btn-primary btn-lg lh-cta-primary" onclick="showSection('participantReg')">
-                    Find a Circle Near You &rarr;
-                </button>
-            </div>
             <div class="lh-hero-stats">
                 <div class="lh-stat">
                     <span class="lh-stat-num">22,000+</span>
@@ -360,7 +360,7 @@
             <h2 class="lh-next-circle-title">The Next NFP Circle is on 28 Oct 2026</h2>
             <p class="lh-next-circle-sub">Don't sit this one out. Join a local Circle near you, meet fellow Personal Finance Professionals, and take one more step out of isolation.</p>
             <div class="lh-next-circle-actions">
-                <button class="btn-primary btn-lg lh-cta-primary" onclick="showSection('participantReg')">Register as Participant &rarr;</button>
+                <button class="btn-primary btn-lg lh-cta-primary" onclick="showSection('participantReg')">Find a Circle &rarr;</button>
                 <a class="btn-outline btn-lg" href="../circle-leaders/">Register as Circle Leader</a>
             </div>
         </div>
@@ -402,7 +402,7 @@
                 <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>
                 <a href="https://www.networkfp.com" target="_blank" rel="noopener">www.networkfp.com</a>
                 <p>Mumbai, Maharashtra</p>
-                <p style="font-size:0.78rem;color:var(--light-text);margin-top:8px;">Serving India's PFP community since 1995</p>
+                <p class="footer-tagline">Serving India's PFP community since 1995</p>
             </div>
         </div>
         <div class="footer-bottom">
@@ -429,7 +429,7 @@
             <span class="rcs-pill">28 OCT 2026</span>
         </header>
         <div class="rcs-main">
-            <h1 class="rcs-title fade-in">Thanks for participating!</h1>
+            <h2 class="rcs-title fade-in">Thanks for participating!</h2>
             <p class="rcs-sub fade-in">Circle registrations for this edition have closed. See you at the next NFP Circle &mdash; 28th October 2026.</p>
         </div>
     </div>
@@ -536,13 +536,13 @@
                             <label for="pNote">Why do you want to join? <span class="opt-label">(Optional)</span></label>
                             <textarea id="pNote" class="form-input form-textarea" rows="3" placeholder="Tell the Circle Host a bit about yourself..."></textarea>
                         </div>
-                        <div class="form-group" style="margin-top:4px;border-top:1px solid #eee;padding-top:16px;">
-                            <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:0.9rem;line-height:1.5;cursor:pointer;">
-                                <input type="checkbox" id="pDecl1" onchange="updateParticipantSubmitGate()" style="margin-top:3px;width:18px;height:18px;flex-shrink:0;cursor:pointer;">
+                        <div class="form-group" class="decl-group">
+                            <label class="decl-label decl-label-gap">
+                                <input type="checkbox" id="pDecl1" onchange="updateParticipantSubmitGate()" class="decl-check">
                                 <span>I understand that registering here does not guarantee a confirmed seat, and that my registration is subject to the Circle Host's confirmation and availability.</span>
                             </label>
-                            <label style="display:flex;gap:10px;align-items:flex-start;font-size:0.9rem;line-height:1.5;cursor:pointer;">
-                                <input type="checkbox" id="pDecl2" onchange="updateParticipantSubmitGate()" style="margin-top:3px;width:18px;height:18px;flex-shrink:0;cursor:pointer;">
+                            <label class="decl-label">
+                                <input type="checkbox" id="pDecl2" onchange="updateParticipantSubmitGate()" class="decl-check">
                                 <span>I confirm that the details I have provided are accurate, and I agree to be contacted by NetworkFP and the Circle Host regarding this registration.</span>
                             </label>
                         </div>
@@ -567,7 +567,7 @@
             <div class="ppage-title-row">
                 <div>
                     <span class="section-tag">Our Community</span>
-                    <h1 class="ppage-title">NFP Circle Participants &mdash; 28 Oct</h1>
+                    <h2 class="ppage-title">NFP Circle Participants &mdash; 28 Oct</h2>
                     <p class="ppage-sub">This is the list of everyone who has registered to join an NFP Circle. All Participants can now check their name simply by searching and checking the status of their application.</p>
                     <p class="ppage-sub">Once you are approved, you will be added by your Circle Lead to a WhatsApp group of your circle within 48 hours.</p>
                 </div>
