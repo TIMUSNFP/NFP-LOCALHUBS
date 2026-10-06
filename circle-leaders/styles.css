@@ -2579,3 +2579,5 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 .decl-label { display: flex; gap: 10px; align-items: flex-start; font-size: var(--fs-sm); line-height: 1.5; cursor: pointer; }
 .decl-label-gap { margin-bottom: 12px; }
 .decl-check { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+
+.lh-community-photos { margin-top: 72px; }
