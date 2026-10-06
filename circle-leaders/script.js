@@ -74,8 +74,14 @@ function initEditionCarousel() {
     const track = document.getElementById('editionTrack');
     if (!viewport || !track) return;
 
-    // Duplicate the image set once so the marquee can loop seamlessly at -50%/0%.
-    track.innerHTML += track.innerHTML;
+    // An odd photo count leaves the second copy half a column off the two-row grid.
+    if (track.children.length % 2) {
+        const spacer = document.createElement('span');
+        spacer.className = 'lh-edition-spacer';
+        spacer.setAttribute('aria-hidden', 'true');
+        track.appendChild(spacer);
+    }
+    [...track.children].forEach(node => track.appendChild(node.cloneNode(true)));
 
     let lastWidth = 0;
     const sizeColumns = () => {
@@ -85,6 +91,8 @@ function initEditionCarousel() {
         const gap = 16;
         const colW = Math.max(180, (w - gap * 2) / 3);
         viewport.style.setProperty('--col-w', colW + 'px');
+        const columnGap = parseFloat(getComputedStyle(track).columnGap) || gap;
+        viewport.style.setProperty('--loop-shift', (track.scrollWidth + columnGap) / 2 + 'px');
     };
     // Size and duplicate before the animation starts, so it never has to
     // jump mid-loop from the CSS default width to the computed one.

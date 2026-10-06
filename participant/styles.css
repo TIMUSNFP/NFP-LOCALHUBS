@@ -2066,9 +2066,10 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     animation-play-state: paused;
 }
 @keyframes lh-edition-scroll {
-    from { transform: translateX(-50%); }
+    from { transform: translateX(calc(var(--loop-shift, 50%) * -1)); }
     to   { transform: translateX(0); }
 }
+.lh-edition-spacer { display: block; }
 .lh-edition-track img {
     width: var(--col-w);
     height: 260px;
