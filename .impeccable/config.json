@@ -156,6 +156,15 @@
           "circle-leaders/index.html"
         ],
         "createdAt": "2026-09-28T11:20:34.674Z"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "participants-standalone/styles.css"
+        ],
+        "createdAt": "2026-10-06T05:00:02.553Z",
+        "reason": "Dev review: .pb-list-col .reg-form-panel sets border-radius:0, so the top accent border is on a square panel; false positive"
       }
     ]
   }
