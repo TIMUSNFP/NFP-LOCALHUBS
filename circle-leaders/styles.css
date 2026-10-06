@@ -208,7 +208,7 @@ ul { list-style: none; }
     transition: all var(--transition);
     letter-spacing: .3px;
 }
-.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--brand-ink-deep); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 .btn-outline {
     background: transparent;

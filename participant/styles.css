@@ -233,35 +233,29 @@ ul { list-style: none; }
    solid orange .btn-primary for the one primary action, and a ghost/outline
    variant for everything secondary. */
 .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     background: var(--brand-ink);
     color: var(--white);
     padding: 10px 22px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
     font-weight: 600;
     transition: all var(--transition);
     letter-spacing: .3px;
 }
-.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--brand-ink-deep); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 .btn-outline {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     background: transparent;
     color: var(--primary);
     border: 2px solid var(--primary);
     padding: 10px 22px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
     font-weight: 600;
     transition: all var(--transition);
 }
 .btn-outline:hover { background: var(--secondary); }
-.btn-lg { padding: 14px 28px; font-size: var(--fs-base); }
+.btn-lg { padding: 14px 28px; font-size: var(--fs-base); border-radius: var(--radius-md); }
 .full-w { width: 100%; justify-content: center; }
 
 .btn-back {
