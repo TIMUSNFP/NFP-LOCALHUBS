@@ -106,17 +106,26 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/hubs/check — real-time duplicate check before submit (called on field blur).
-// Returns { emailExists, mobileExists } without exposing any personal data.
+// Returns { emailExists, mobileExists } without exposing any personal data. Scoped
+// to the current edition, same as the POST duplicate check above — a past edition's
+// email/mobile must not be flagged as already registered this edition.
 router.get('/check', async (req, res) => {
   const { email, mobile } = req.query;
   const result = { emailExists: false, mobileExists: false };
   try {
+    const { activeEdition } = await readFormSettings();
     if (email && String(email).trim()) {
-      const row = await db.get('SELECT id FROM hubs WHERE lower(email) = lower($1)', [String(email).trim()]);
+      const row = await db.get(
+        'SELECT id FROM hubs WHERE lower(email) = lower($1) AND edition = $2',
+        [String(email).trim(), activeEdition]
+      );
       result.emailExists = !!row;
     }
     if (mobile && String(mobile).trim()) {
-      const row = await db.get('SELECT id FROM hubs WHERE mobile = $1', [String(mobile).trim()]);
+      const row = await db.get(
+        'SELECT id FROM hubs WHERE mobile = $1 AND edition = $2',
+        [String(mobile).trim(), activeEdition]
+      );
       result.mobileExists = !!row;
     }
   } catch (e) { /* DB error — return false so we never block a legitimate new user */ }

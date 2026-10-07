@@ -9,16 +9,25 @@ const router = express.Router();
 const REQUIRED_FIELDS = ['fullName', 'email', 'mobile', 'membership', 'hubId'];
 
 // GET /api/participants/check — real-time duplicate check before submit (called on field blur).
+// Scoped to the current edition, same as the POST duplicate check below — a past
+// edition's email/mobile must not be flagged as already registered this edition.
 router.get('/check', async (req, res) => {
   const { email, mobile } = req.query;
   const result = { emailExists: false, mobileExists: false };
   try {
+    const { activeEdition } = await readFormSettings();
     if (email && String(email).trim()) {
-      const row = await db.get('SELECT id FROM participants WHERE lower(email) = lower($1)', [String(email).trim()]);
+      const row = await db.get(
+        'SELECT id FROM participants WHERE lower(email) = lower($1) AND edition = $2',
+        [String(email).trim(), activeEdition]
+      );
       result.emailExists = !!row;
     }
     if (mobile && String(mobile).trim()) {
-      const row = await db.get('SELECT id FROM participants WHERE mobile = $1', [String(mobile).trim()]);
+      const row = await db.get(
+        'SELECT id FROM participants WHERE mobile = $1 AND edition = $2',
+        [String(mobile).trim(), activeEdition]
+      );
       result.mobileExists = !!row;
     }
   } catch (e) { /* DB error — return false so we never block a legitimate new user */ }
