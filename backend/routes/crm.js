@@ -8,7 +8,7 @@ const XLSX = require('xlsx');
 const db = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { generateCrmContactId, generateCrmCampaignId, normalizeCityKey, hubRowToJson, sleep } = require('../utils');
-const { buildCircleCrmEmailHtml, sendCrmCampaignEmail } = require('../mailer');
+const { buildCircleCrmEmailHtml, buildLeaderOfficeEmailHtml, sendCrmCampaignEmail } = require('../mailer');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -58,7 +58,19 @@ const HEADER_ALIASES = {
   batch: ['their batch', 'batch', 'qpfp batch'],
   batchStatus: ['batch status'],
   membership: ['membership type', 'membership'],
+  officePoll: ['office poll?', 'office poll', 'office space', 'office'],
 };
+
+// Campaign templates. 'circle' is the original city outreach about open Circles;
+// 'leader-office' invites contacts who answered the office-space poll to apply as
+// Circle Leaders (see buildLeaderOfficeEmailHtml in mailer.js).
+const TEMPLATE_CIRCLE = 'circle';
+const TEMPLATE_LEADER_OFFICE = 'leader-office';
+
+function normalizeOfficePoll(raw) {
+  const v = String(raw || '').trim().replace(/\s*:\s*/, ': ');
+  return /^yes\b/i.test(v) ? v : null;
+}
 
 function contactRowToJson(row) {
   return {
@@ -72,6 +84,7 @@ function contactRowToJson(row) {
     batch: row.batch,
     batchStatus: row.batch_status,
     source: row.source,
+    officePoll: row.office_poll,
     importedAt: row.imported_at,
     unsubscribedAt: row.unsubscribed_at,
     createdAt: row.created_at,
@@ -84,6 +97,7 @@ function campaignRowToJson(row) {
     id: row.id,
     name: row.name,
     status: row.status,
+    template: row.template || TEMPLATE_CIRCLE,
     targetMode: row.target_mode || 'manual',
     targetCities: row.target_cities || [],
     hubIds: row.hub_ids || [],
@@ -185,6 +199,23 @@ function appendRegisteredParticipantExclusion(conditions, excludeRegisteredParti
       `NOT EXISTS (SELECT 1 FROM participants p WHERE lower(p.email) = lower(crm_contacts.email) AND p.status != 'Cancelled')`
     );
   }
+}
+
+// Recipient conditions for the 'leader-office' template: contacts who answered the
+// office-space poll, optionally limited to some cities. No open-circle lookup — the
+// email invites them to host one rather than to join one. Returns { conditions, params }
+// in the same shape the circle template builds inline, so the three call sites
+// (create / preview / start) can share the rest of their code.
+function buildLeaderOfficeConditions(targetCities, excludeHubLeaders, excludeRegisteredParticipants) {
+  const conditions = ['unsubscribed_at IS NULL', "office_poll IS NOT NULL AND office_poll <> ''"];
+  const params = [];
+  if (Array.isArray(targetCities) && targetCities.length > 0) {
+    params.push(targetCities);
+    conditions.push(`city = ANY($${params.length}::text[])`);
+  }
+  appendHubLeaderExclusion(conditions, excludeHubLeaders);
+  appendRegisteredParticipantExclusion(conditions, excludeRegisteredParticipants);
+  return { conditions, params };
 }
 
 // ─── Campaign batch processing — server-side scheduler ─────────────────────────
@@ -328,6 +359,7 @@ async function runCampaignBatchInner(campaignId) {
           subject: renderCrmSubject(campaign.subject, contact.city),
           introHtml: campaign.intro_html,
           targetCities: mode === 'auto' ? [] : targetCities,
+          template: campaign.template || TEMPLATE_CIRCLE,
         }
       );
       await db.run(
@@ -544,6 +576,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   const batchKey = resolveKey(HEADER_ALIASES.batch);
   const batchStatusKey = resolveKey(HEADER_ALIASES.batchStatus);
   const membershipKey = resolveKey(HEADER_ALIASES.membership);
+  const officePollKey = resolveKey(HEADER_ALIASES.officePoll);
 
   if (!nameKey || !emailKey) {
     return res.status(400).json({ error: 'Could not find a Name and Email ID column in the uploaded file.' });
@@ -555,7 +588,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   // otherwise upserting a column-light file would blank out real data (e.g.
   // wipe someone's known membership just because this particular sheet never
   // mentioned it).
-  const hasField = { mobile: !!mobileKey, city: !!cityKey, membership: !!membershipKey, batch: !!batchKey, batchStatus: !!batchStatusKey };
+  const hasField = { mobile: !!mobileKey, city: !!cityKey, membership: !!membershipKey, batch: !!batchKey, batchStatus: !!batchStatusKey, officePoll: !!officePollKey };
 
   const now = new Date().toISOString();
   const skippedReasons = [];
@@ -583,6 +616,9 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
       membership: membershipKey ? normalizeCrmMembership(String(row[membershipKey] || '').trim()) || null : null,
       batch: batchKey ? String(row[batchKey] || '').trim() || null : null,
       batchStatus: batchStatusKey ? String(row[batchStatusKey] || '').trim() || null : null,
+      // Only a "Yes..." answer means the contact has an office; "Yes : Co-working
+      // space" and "Yes: Co-working space" are the same answer, so tidy the colon.
+      officePoll: officePollKey ? normalizeOfficePoll(row[officePollKey]) : null,
       source: req.file.originalname,
     });
   }
@@ -600,6 +636,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   if (hasField.membership) cols.push('membership');
   if (hasField.batch) cols.push('batch');
   if (hasField.batchStatus) cols.push('batch_status');
+  if (hasField.officePoll) cols.push('office_poll');
   cols.push('source', 'imported_at', 'created_at', 'updated_at');
 
   const setClauses = ['full_name = EXCLUDED.full_name'];
@@ -608,6 +645,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   if (hasField.membership) setClauses.push('membership = EXCLUDED.membership');
   if (hasField.batch) setClauses.push('batch = EXCLUDED.batch');
   if (hasField.batchStatus) setClauses.push('batch_status = EXCLUDED.batch_status');
+  if (hasField.officePoll) setClauses.push('office_poll = EXCLUDED.office_poll');
   setClauses.push('source = EXCLUDED.source', 'updated_at = EXCLUDED.updated_at');
 
   for (let i = 0; i < contacts.length; i += CHUNK_SIZE) {
@@ -620,6 +658,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
       if (hasField.membership) row.push(c.membership);
       if (hasField.batch) row.push(c.batch);
       if (hasField.batchStatus) row.push(c.batchStatus);
+      if (hasField.officePoll) row.push(c.officePoll);
       row.push(c.source, now, now, now);
       const base = values.length;
       values.push(...row);
@@ -721,51 +760,65 @@ router.patch('/campaigns/:id', asyncHandler(async (req, res) => {
 // excludeRegisteredParticipants both default to true — set false to
 // deliberately include Circle Leaders / already-registered Participants.
 router.post('/campaigns', asyncHandler(async (req, res) => {
-  const { name, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
-  const mode = targetMode === 'auto' ? 'auto' : 'manual';
+  const { name, template: templateRaw, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
+  const template = templateRaw === TEMPLATE_LEADER_OFFICE ? TEMPLATE_LEADER_OFFICE : TEMPLATE_CIRCLE;
+  const isLeaderOffice = template === TEMPLATE_LEADER_OFFICE;
+  // The leader invitation is a fixed, hub-less email: no auto/manual city-to-circle
+  // matching, so it always runs in 'manual' mode with no hubs, and the city list
+  // is an optional narrowing filter rather than a requirement.
+  const mode = !isLeaderOffice && targetMode === 'auto' ? 'auto' : 'manual';
   const batches = Array.isArray(targetBatches) ? targetBatches : [];
   const memberships = Array.isArray(targetMemberships) ? targetMemberships : [];
   const batchStatuses = Array.isArray(targetBatchStatuses) ? targetBatchStatuses : [];
   const excludeLeaders = excludeHubLeaders !== false;
-  const excludeParticipants = excludeRegisteredParticipants !== false;
+  // Registered Participants are fair game for a Circle Leader invitation, so that
+  // exclusion is opt-in for this template (the circle template keeps it opt-out).
+  const excludeParticipants = isLeaderOffice ? excludeRegisteredParticipants === true : excludeRegisteredParticipants !== false;
+  const cityList = Array.isArray(targetCities) ? targetCities : [];
   if (!name || !subject) {
     return res.status(400).json({ error: 'name and subject are required.' });
   }
-  if (mode === 'manual' && (!Array.isArray(targetCities) || targetCities.length === 0)) {
+  if (mode === 'manual' && !isLeaderOffice && cityList.length === 0) {
     return res.status(400).json({ error: 'targetCities[] is required for a manual campaign.' });
   }
 
   const id = generateCrmCampaignId();
   const now = new Date().toISOString();
 
-  const conditions = ['unsubscribed_at IS NULL'];
-  const params = [];
-  if (mode === 'auto') {
-    const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
-    params.push(Array.from(openMap.keys()));
-    conditions.push(`city_key = ANY($${params.length}::text[])`);
+  let conditions;
+  let params;
+  if (isLeaderOffice) {
+    ({ conditions, params } = buildLeaderOfficeConditions(cityList, excludeLeaders, excludeParticipants));
   } else {
-    params.push(targetCities);
-    conditions.push(`city = ANY($${params.length}::text[])`);
+    conditions = ['unsubscribed_at IS NULL'];
+    params = [];
+    if (mode === 'auto') {
+      const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+      params.push(Array.from(openMap.keys()));
+      conditions.push(`city_key = ANY($${params.length}::text[])`);
+    } else {
+      params.push(cityList);
+      conditions.push(`city = ANY($${params.length}::text[])`);
+    }
+    appendOptionalFilters(conditions, params, batches, memberships, batchStatuses);
+    appendHubLeaderExclusion(conditions, excludeLeaders);
+    appendRegisteredParticipantExclusion(conditions, excludeParticipants);
   }
-  appendOptionalFilters(conditions, params, batches, memberships, batchStatuses);
-  appendHubLeaderExclusion(conditions, excludeLeaders);
-  appendRegisteredParticipantExclusion(conditions, excludeParticipants);
   const totalRow = await db.get(`SELECT COUNT(*)::int AS count FROM crm_contacts WHERE ${conditions.join(' AND ')}`, params);
 
   await db.run(
     `INSERT INTO crm_campaigns
-       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, exclude_registered_participants, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at)
-     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, exclude_registered_participants, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at, template)
+     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
     [
       id, name, mode,
-      JSON.stringify(mode === 'manual' ? targetCities : []),
-      JSON.stringify(mode === 'manual' && Array.isArray(hubIds) ? hubIds : []),
-      JSON.stringify(batches), JSON.stringify(memberships), JSON.stringify(batchStatuses), excludeLeaders, excludeParticipants,
-      subject, introHtml || null,
+      JSON.stringify(mode === 'manual' ? cityList : []),
+      JSON.stringify(mode === 'manual' && !isLeaderOffice && Array.isArray(hubIds) ? hubIds : []),
+      JSON.stringify(isLeaderOffice ? [] : batches), JSON.stringify(isLeaderOffice ? [] : memberships), JSON.stringify(isLeaderOffice ? [] : batchStatuses), excludeLeaders, excludeParticipants,
+      subject, isLeaderOffice ? null : (introHtml || null),
       Number.isFinite(Number(batchSize)) && Number(batchSize) > 0 ? Number(batchSize) : 25,
       Number.isFinite(Number(intervalMinutes)) && Number(intervalMinutes) > 0 ? Number(intervalMinutes) : 15,
-      totalRow.count, now,
+      totalRow.count, now, template,
     ]
   );
 
@@ -781,6 +834,33 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
 router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
   const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+  if (campaign.template === TEMPLATE_LEADER_OFFICE) {
+    const { conditions, params } = buildLeaderOfficeConditions(
+      campaign.target_cities, campaign.exclude_hub_leaders, campaign.exclude_registered_participants
+    );
+    const requestedLeaderCity = (req.query.sampleCity || '').trim();
+    if (requestedLeaderCity) {
+      params.push(requestedLeaderCity);
+      conditions.push(`lower(city) = lower($${params.length})`);
+    }
+    const sample = (await db.get(
+      `SELECT * FROM crm_contacts WHERE ${conditions.join(' AND ')} ORDER BY full_name ASC LIMIT 1`,
+      params
+    )) || { id: 'SAMPLE', full_name: 'Sample Member', email: 'sample@example.com', city: requestedLeaderCity || 'your city' };
+    const html = await buildLeaderOfficeEmailHtml(
+      { id: sample.id, full_name: sample.full_name, email: sample.email, city: sample.city }
+    );
+    return res.json({
+      html,
+      subject: renderCrmSubject(campaign.subject, sample.city),
+      sampleContactEmail: sample.email,
+      sampleContactCity: sample.city,
+      hubCount: 0,
+      totalRecipients: campaign.total_recipients,
+      targetMode: 'manual',
+    });
+  }
 
   const mode = campaign.target_mode || 'manual';
   const requestedCity = (req.query.sampleCity || '').trim();
@@ -874,22 +954,30 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
   const targetBatches = campaign.target_batches || [];
   const targetMemberships = campaign.target_memberships || [];
   const targetBatchStatuses = campaign.target_batch_statuses || [];
-  const conditions = ['unsubscribed_at IS NULL'];
-  const params = [];
-  if (mode === 'auto') {
-    // Recomputed fresh at start time (not from campaign creation) in case hub
-    // approvals/fills changed in between — a circle that filled up since the
-    // campaign was drafted should not pull in contacts from its city.
-    const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
-    params.push(Array.from(openMap.keys()));
-    conditions.push(`city_key = ANY($${params.length}::text[])`);
+  let conditions;
+  let params;
+  if (campaign.template === TEMPLATE_LEADER_OFFICE) {
+    ({ conditions, params } = buildLeaderOfficeConditions(
+      campaign.target_cities, campaign.exclude_hub_leaders, campaign.exclude_registered_participants
+    ));
   } else {
-    params.push(campaign.target_cities || []);
-    conditions.push(`city = ANY($${params.length}::text[])`);
+    conditions = ['unsubscribed_at IS NULL'];
+    params = [];
+    if (mode === 'auto') {
+      // Recomputed fresh at start time (not from campaign creation) in case hub
+      // approvals/fills changed in between — a circle that filled up since the
+      // campaign was drafted should not pull in contacts from its city.
+      const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+      params.push(Array.from(openMap.keys()));
+      conditions.push(`city_key = ANY($${params.length}::text[])`);
+    } else {
+      params.push(campaign.target_cities || []);
+      conditions.push(`city = ANY($${params.length}::text[])`);
+    }
+    appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
+    appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
+    appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
   }
-  appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
-  appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
-  appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
   await db.run(
     `INSERT INTO crm_campaign_recipients (campaign_id, contact_id)
      SELECT $${params.length + 1}, id FROM crm_contacts WHERE ${conditions.join(' AND ')}

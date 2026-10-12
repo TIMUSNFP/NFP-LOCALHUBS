@@ -169,6 +169,12 @@ alter table crm_campaigns add column if not exists target_memberships jsonb not 
 alter table crm_campaigns add column if not exists target_batch_statuses jsonb not null default '[]'::jsonb;
 alter table crm_campaigns add column if not exists exclude_hub_leaders boolean not null default true;
 alter table crm_campaigns add column if not exists exclude_registered_participants boolean not null default true;
+-- 'circle' = the original city outreach email; 'leader-office' = Circle Leader invitation
+-- sent to contacts who answered the office-space poll (crm_contacts.office_poll is set).
+alter table crm_campaigns add column if not exists template text not null default 'circle';
+
+-- Answer from the office-space poll sheet (e.g. 'Yes: 300-1000 SqFt'); null = never polled.
+alter table crm_contacts add column if not exists office_poll text;
 
 create table if not exists crm_campaign_recipients (
   id bigserial primary key,

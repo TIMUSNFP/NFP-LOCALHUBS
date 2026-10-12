@@ -3942,6 +3942,13 @@ async function openCrmCampaignModal() {
     }
 
     content.innerHTML = `
+        <div class="detail-item" style="margin-bottom:14px">
+            <label>Campaign Type</label>
+            <select id="crmCTemplate" class="form-input" onchange="toggleCrmCampaignTemplate()">
+                <option value="circle">Circle outreach: tell contacts about open Circles in their city</option>
+                <option value="leader-office">Circle Leader invitation: contacts who have an office (from the office poll)</option>
+            </select>
+        </div>
         <div class="detail-grid">
             <div class="detail-item">
                 <label>Campaign Name (internal)</label>
@@ -3956,7 +3963,15 @@ async function openCrmCampaignModal() {
             Use <code>{city}</code> anywhere in the subject to insert each recipient's own city — e.g. it becomes
             "NFP Circles are open in Mumbai!" for a Mumbai contact and "...in Delhi!" for a Delhi contact.
         </p>
-        <div class="detail-item" style="margin-top:14px">
+        <div id="crmCLeaderNote" class="detail-item hidden" style="margin-top:14px">
+            <p style="color:var(--muted);font-size:13px;margin:0">
+                Sends the Circle Leader invitation to every contact imported with an office poll answer of "Yes"
+                (upload the poll sheet with <strong>Import Contacts</strong> first). It does not list any circles.
+                Tick cities below only if you want to limit the send; leave them all unticked to email everyone.
+                Unsubscribed contacts are always skipped, and so are existing Circle Leaders unless you untick that box below.
+            </p>
+        </div>
+        <div id="crmCTargetWrap" class="detail-item" style="margin-top:14px">
             <label>Target</label>
             <select id="crmCTargetMode" class="form-input" onchange="toggleCrmCampaignTargetMode()">
                 <option value="auto">Every contact — each person only sees the open circle(s) in THEIR OWN city</option>
@@ -3983,16 +3998,17 @@ async function openCrmCampaignModal() {
                     `).join('')}
                 </div>
             </div>
-            <div class="detail-item" style="margin-top:14px">
-                <label>Circles to Feature <span style="text-transform:none;font-weight:400;color:var(--muted)">(auto-suggested from the cities checked above — untick any you don't want mentioned)</span></label>
+            <div id="crmCHubsWrap" class="detail-item" style="margin-top:14px">
+                <label>Circles to Feature<span style="text-transform:none;font-weight:400;color:var(--muted)">(auto-suggested from the cities checked above — untick any you don't want mentioned)</span></label>
                 <div id="crmCHubs" style="max-height:220px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
                     <p style="color:var(--muted);font-size:13px">Check a city above to see its open circles.</p>
                 </div>
             </div>
         </div>
+        <div id="crmCNarrowWrap">
         <div class="detail-grid" style="margin-top:14px">
             <div class="detail-item">
-                <label>Narrow by Membership <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional)</span></label>
+                <label>Narrow by Membership<span style="text-transform:none;font-weight:400;color:var(--muted)">(optional)</span></label>
                 <div id="crmCMemberships" style="max-height:140px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
                     ${memberships.length === 0 ? '<p style="color:var(--muted);font-size:13px">No CRM contacts imported yet.</p>' : memberships.map(m => `
                         <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;cursor:pointer">
@@ -4029,6 +4045,7 @@ async function openCrmCampaignModal() {
             Leave all blank to include everyone matching the target above. Check any boxes to further restrict to
             just those membership types, batches, and/or batch statuses — works with either targeting mode.
         </p>
+        </div>
         <div class="detail-item" style="margin-top:14px">
             <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:600;cursor:pointer">
                 <input type="checkbox" id="crmCExcludeLeaders" checked>
@@ -4049,8 +4066,8 @@ async function openCrmCampaignModal() {
                 Confirmed) won't be re-emailed to join one (matched by email against participant registrations).
             </p>
         </div>
-        <div class="detail-item" style="margin-top:14px">
-            <label>Intro Text <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional — leave blank to use the default "what is an NFP Circle / why join" copy)</span></label>
+        <div id="crmCIntroWrap" class="detail-item" style="margin-top:14px">
+            <label>Intro Text<span style="text-transform:none;font-weight:400;color:var(--muted)">(optional — leave blank to use the default "what is an NFP Circle / why join" copy)</span></label>
             <textarea id="crmCIntro" class="form-input" rows="4" placeholder="Leave blank for the default explainer..."></textarea>
         </div>
         <div class="detail-grid" style="margin-top:14px">
@@ -4073,9 +4090,33 @@ async function openCrmCampaignModal() {
 
 function toggleCrmCampaignTargetMode() {
     const mode = document.getElementById('crmCTargetMode')?.value || 'auto';
-    document.getElementById('crmCManualSection')?.classList.toggle('hidden', mode !== 'manual');
-    document.getElementById('crmCAutoNote')?.classList.toggle('hidden', mode !== 'auto');
+    const isLeader = document.getElementById('crmCTemplate')?.value === 'leader-office';
+    // The leader invitation always shows the city list (optional), never the auto note.
+    document.getElementById('crmCManualSection')?.classList.toggle('hidden', !isLeader && mode !== 'manual');
+    document.getElementById('crmCAutoNote')?.classList.toggle('hidden', isLeader || mode !== 'auto');
     updateCrmCampaignRecipientHint();
+}
+
+// Swaps the form between the two campaign types. The leader invitation has no
+// circles to feature, no membership/batch narrowing and no intro text, and
+// registered Participants are fair game for it, so that exclusion starts unticked.
+const CRM_DEFAULT_SUBJECT_CIRCLE = 'Final Hours: NFP Circles in {city} close registration at 4 PM today!';
+const CRM_DEFAULT_SUBJECT_LEADER = 'Do you have an office to host an NFP Circle on 28th Oct?';
+
+function toggleCrmCampaignTemplate() {
+    const isLeader = document.getElementById('crmCTemplate')?.value === 'leader-office';
+    document.getElementById('crmCLeaderNote')?.classList.toggle('hidden', !isLeader);
+    document.getElementById('crmCTargetWrap')?.classList.toggle('hidden', isLeader);
+    document.getElementById('crmCHubsWrap')?.classList.toggle('hidden', isLeader);
+    document.getElementById('crmCNarrowWrap')?.classList.toggle('hidden', isLeader);
+    document.getElementById('crmCIntroWrap')?.classList.toggle('hidden', isLeader);
+    const participants = document.getElementById('crmCExcludeParticipants');
+    if (participants) participants.checked = !isLeader;
+    const subject = document.getElementById('crmCSubject');
+    if (subject && [CRM_DEFAULT_SUBJECT_CIRCLE, CRM_DEFAULT_SUBJECT_LEADER].includes(subject.value.trim())) {
+        subject.value = isLeader ? CRM_DEFAULT_SUBJECT_LEADER : CRM_DEFAULT_SUBJECT_CIRCLE;
+    }
+    toggleCrmCampaignTargetMode();
 }
 
 function getCheckedCrmCities() {
@@ -4101,6 +4142,12 @@ function getCheckedCrmBatchStatuses() {
 function updateCrmCampaignRecipientHint() {
     const hint = document.getElementById('crmCRecipientHint');
     if (!hint) return;
+    if (document.getElementById('crmCTemplate')?.value === 'leader-office') {
+        hint.textContent = getCheckedCrmCities().length > 0
+            ? 'Limited to the ticked cities. The exact recipient count is shown after you save.'
+            : 'Everyone with an office poll answer. The exact recipient count is shown after you save.';
+        return;
+    }
     const mode = document.getElementById('crmCTargetMode')?.value || 'auto';
     const narrowingActive = getCheckedCrmBatches().length > 0 || getCheckedCrmMemberships().length > 0 || getCheckedCrmBatchStatuses().length > 0;
 
@@ -4154,7 +4201,9 @@ async function updateCrmCampaignHubSuggestions() {
 async function submitCrmCampaign() {
     const name = document.getElementById('crmCName')?.value.trim();
     const subject = document.getElementById('crmCSubject')?.value.trim();
-    const targetMode = document.getElementById('crmCTargetMode')?.value || 'auto';
+    const template = document.getElementById('crmCTemplate')?.value === 'leader-office' ? 'leader-office' : 'circle';
+    const isLeaderTemplate = template === 'leader-office';
+    const targetMode = isLeaderTemplate ? 'manual' : (document.getElementById('crmCTargetMode')?.value || 'auto');
     const introHtmlRaw = document.getElementById('crmCIntro')?.value.trim();
     const batchSize = parseInt(document.getElementById('crmCBatchSize')?.value, 10) || 25;
     const intervalMinutes = parseInt(document.getElementById('crmCInterval')?.value, 10) || 15;
@@ -4163,7 +4212,9 @@ async function submitCrmCampaign() {
 
     let targetCities = [];
     let hubIds = [];
-    if (targetMode === 'manual') {
+    if (isLeaderTemplate) {
+        targetCities = getCheckedCrmCities(); // optional narrowing; empty = everyone with an office poll answer
+    } else if (targetMode === 'manual') {
         targetCities = getCheckedCrmCities();
         hubIds = Array.from(document.querySelectorAll('.crm-hub-check:checked')).map(el => el.value);
         if (targetCities.length === 0) { showToast('Please select at least one target city.', 'error'); return; }
@@ -4181,7 +4232,7 @@ async function submitCrmCampaign() {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, subject, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, introHtml, batchSize, intervalMinutes }),
+            body: JSON.stringify({ name, subject, template, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, introHtml, batchSize, intervalMinutes }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Could not create campaign.', 'error'); return; }
