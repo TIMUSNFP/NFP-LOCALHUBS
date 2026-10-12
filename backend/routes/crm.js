@@ -126,8 +126,15 @@ function campaignRowToJson(row) {
 // (not one COUNT query per hub) — used both by hubs-for-cities (manual mode's
 // suggestion list, which shows full hubs too so an admin can still pick one) and
 // by groupOpenHubsByCityKey below (auto mode, which must never feature a full one).
+// SQL for "the active edition" — the same settings.active_edition value that
+// readFormSettings() reads (defaults to 1, like it does). Used inline so every
+// hub/participant lookup below is scoped to the edition being run: without it,
+// past editions' Approved circles would be featured as "open near you", and
+// past editions' leaders and participants would be excluded from this one.
+const ACTIVE_EDITION_SQL = `COALESCE((SELECT NULLIF(value, '')::int FROM settings WHERE key = 'active_edition'), 1)`;
+
 async function getApprovedHubsWithCounts() {
-  const hubs = await db.all("SELECT * FROM hubs WHERE status = 'Approved' ORDER BY city ASC, area ASC");
+  const hubs = await db.all(`SELECT * FROM hubs WHERE status = 'Approved' AND edition = ${ACTIVE_EDITION_SQL} ORDER BY city ASC, area ASC`);
   const countRows = await db.all(
     "SELECT hub_id, COUNT(*)::int AS cnt FROM participants WHERE status != 'Cancelled' GROUP BY hub_id"
   );
@@ -176,14 +183,15 @@ function appendOptionalFilters(conditions, params, targetBatches, targetMembersh
   }
 }
 
-// A CRM contact who is themselves an Approved Circle Leader would otherwise
-// get "a circle is open near you, register as a participant!" — confusing,
-// since they're the one running it. On by default; each campaign can opt out
-// via excludeHubLeaders. No params needed (static subquery, matched by email).
+// A CRM contact who is themselves an Approved Circle Leader THIS edition would
+// otherwise get "a circle is open near you, register as a participant!" —
+// confusing, since they're the one running it. On by default; each campaign can
+// opt out via excludeHubLeaders. No params needed (static subquery, matched by
+// email). Past editions' leaders stay eligible, like past editions' participants.
 function appendHubLeaderExclusion(conditions, excludeHubLeaders) {
   if (excludeHubLeaders !== false) {
     conditions.push(
-      `NOT EXISTS (SELECT 1 FROM hubs h WHERE h.status = 'Approved' AND h.email = crm_contacts.email)`
+      `NOT EXISTS (SELECT 1 FROM hubs h WHERE h.status = 'Approved' AND h.edition = ${ACTIVE_EDITION_SQL} AND h.email = crm_contacts.email)`
     );
   }
 }
@@ -196,7 +204,7 @@ function appendHubLeaderExclusion(conditions, excludeHubLeaders) {
 function appendRegisteredParticipantExclusion(conditions, excludeRegisteredParticipants) {
   if (excludeRegisteredParticipants !== false) {
     conditions.push(
-      `NOT EXISTS (SELECT 1 FROM participants p WHERE lower(p.email) = lower(crm_contacts.email) AND p.status != 'Cancelled')`
+      `NOT EXISTS (SELECT 1 FROM participants p WHERE lower(p.email) = lower(crm_contacts.email) AND p.status != 'Cancelled' AND p.edition = ${ACTIVE_EDITION_SQL})`
     );
   }
 }
