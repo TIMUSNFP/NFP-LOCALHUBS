@@ -756,7 +756,7 @@ async function buildLeaderOfficeEmailHtml(contact, edition) {
   const info = await getEditionInfo(editionNumber);
   const H = LEADER_OFFICE_FONT_HEADING;
   const B = LEADER_OFFICE_FONT_BODY;
-  const firstName = escHtml(String(contact.full_name || '').trim().split(/\s+/)[0] || 'there');
+  const fullName = escHtml(String(contact.full_name || '').trim().replace(/\s+/g, ' ') || 'there');
   const city = escHtml(String(contact.city || '').trim());
   const inCity = city ? `in ${city}` : 'in your city';
   const dateFull = info.date ? escHtml(info.date.full) : 'To be announced';
@@ -817,7 +817,7 @@ async function buildLeaderOfficeEmailHtml(contact, edition) {
     </table>
   </td></tr>
   <tr><td style="padding:32px 36px 0 36px;">
-    <p class="t-main" style="${p(';margin-bottom:16px')}">Hi ${firstName},</p>
+    <p class="t-main" style="${p(';margin-bottom:16px')}">Hi ${fullName},</p>
     <p class="t-main" style="${p(';margin-bottom:16px')}">Your answer to our office poll says you have space ${inCity}. We are looking for Members who can open an office to their peers for one evening, and yours sounds like a fit.</p>
     <p class="t-main" style="${p(';margin-bottom:16px')}">A Circle Leader hosts a small group of NFP Members in their own city. If your office can seat four or more people, you can apply to lead a Circle there.</p>
     <p class="t-main" style="${p()}">Our first edition on 5 August brought together more than 700 people across cities, with 100 Circle Leaders and 630+ participants. Applications for ${editionLabel} are open now, and the form takes a few minutes.</p>
