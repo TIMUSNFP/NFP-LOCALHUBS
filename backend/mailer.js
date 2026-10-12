@@ -751,12 +751,23 @@ async function getLatestEditionNumber() {
   return row && row.edition != null ? row.edition : undefined;
 }
 
+// Greeting name: tidy spacing, turn ALL CAPS / all lowercase sheet entries into proper
+// case, and keep professional prefixes (CA, CFP, CS, CMA) upper-case ("Ca Neerja" -> "CA Neerja").
+function formatGreetingName(raw) {
+  let name = String(raw || '').trim().replace(/\s+/g, ' ');
+  const letters = name.replace(/[^A-Za-z]/g, '');
+  if (letters.length > 3 && (name === name.toUpperCase() || name === name.toLowerCase())) {
+    name = name.toLowerCase().replace(/(^|[\s.'-])([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase());
+  }
+  return name.replace(/^(ca|cfp|cs|cma)\b/i, (m) => m.toUpperCase());
+}
+
 async function buildLeaderOfficeEmailHtml(contact, edition) {
   const editionNumber = edition !== undefined ? edition : await getLatestEditionNumber();
   const info = await getEditionInfo(editionNumber);
   const H = LEADER_OFFICE_FONT_HEADING;
   const B = LEADER_OFFICE_FONT_BODY;
-  const fullName = escHtml(String(contact.full_name || '').trim().replace(/\s+/g, ' ') || 'there');
+  const fullName = escHtml(formatGreetingName(contact.full_name) || 'there');
   const city = escHtml(String(contact.city || '').trim());
   const inCity = city ? `in ${city}` : 'in your city';
   const dateFull = info.date ? escHtml(info.date.full) : 'To be announced';
