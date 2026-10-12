@@ -44,7 +44,20 @@ function renderCrmSubject(template, city) {
 // "Member" vs "Member + QPFP", not a third category. Applied at import time so
 // re-importing the same source sheet later doesn't undo the merge.
 function normalizeCrmMembership(raw) {
-  return raw === 'QPFP' ? 'Member + QPFP' : raw;
+  // Member Database sheets label the same two groups differently
+  // ("Qualified member" / "Non Qualified" are plain Members; "QPFP Member" is Member + QPFP).
+  const key = String(raw || '').trim().toLowerCase();
+  if (key === 'qpfp' || key === 'qpfp member') return 'Member + QPFP';
+  if (key === 'qualified member' || key === 'non qualified') return 'Member';
+  return raw;
+}
+
+// "Active Member" / "Ex-Member" (any casing or spacing) -> the two stored values.
+function normalizeMembershipStatus(raw) {
+  const key = String(raw || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+  if (key === 'activemember' || key === 'active') return 'Active Member';
+  if (key === 'exmember' || key === 'expired' || key === 'inactive') return 'Ex-Member';
+  return null;
 }
 
 // Column-header aliases so a re-export with slightly different wording/column
@@ -59,6 +72,7 @@ const HEADER_ALIASES = {
   batchStatus: ['batch status'],
   membership: ['membership type', 'membership'],
   officePoll: ['office poll?', 'office poll', 'office space', 'office'],
+  membershipStatus: ['membership status'],
 };
 
 // Campaign templates. 'circle' is the original city outreach about open Circles;
@@ -85,6 +99,7 @@ function contactRowToJson(row) {
     batchStatus: row.batch_status,
     source: row.source,
     officePoll: row.office_poll,
+    membershipStatus: row.membership_status,
     importedAt: row.imported_at,
     unsubscribedAt: row.unsubscribed_at,
     createdAt: row.created_at,
@@ -104,6 +119,7 @@ function campaignRowToJson(row) {
     targetBatches: row.target_batches || [],
     targetMemberships: row.target_memberships || [],
     targetBatchStatuses: row.target_batch_statuses || [],
+    targetMembershipStatuses: row.target_membership_statuses || [],
     excludeHubLeaders: row.exclude_hub_leaders !== false,
     excludeRegisteredParticipants: row.exclude_registered_participants !== false,
     subject: row.subject,
@@ -168,7 +184,7 @@ function groupOpenHubsByCityKey(hubsWithCounts) {
 // recipient count, the preview sample, and the /start snapshot, in both manual
 // and auto mode — these are optional narrowing filters on top of city
 // targeting, e.g. "auto-personalize by city, but only Batch 11/12, QPFP only".
-function appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses) {
+function appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses) {
   if (Array.isArray(targetBatches) && targetBatches.length > 0) {
     params.push(targetBatches);
     conditions.push(`batch = ANY($${params.length}::text[])`);
@@ -180,6 +196,15 @@ function appendOptionalFilters(conditions, params, targetBatches, targetMembersh
   if (Array.isArray(targetBatchStatuses) && targetBatchStatuses.length > 0) {
     params.push(targetBatchStatuses);
     conditions.push(`batch_status = ANY($${params.length}::text[])`);
+  }
+  // The Circle is members-only, so a campaign that doesn't name a membership status
+  // skips Ex-Members (contacts with no status, from older imports, are still included).
+  // Target 'Ex-Member' explicitly to reach them (e.g. a renew-your-membership send).
+  if (Array.isArray(targetMembershipStatuses) && targetMembershipStatuses.length > 0) {
+    params.push(targetMembershipStatuses);
+    conditions.push(`membership_status = ANY($${params.length}::text[])`);
+  } else {
+    conditions.push(`(membership_status IS NULL OR membership_status <> 'Ex-Member')`);
   }
 }
 
@@ -528,6 +553,19 @@ router.get('/batch-statuses', asyncHandler(async (req, res) => {
   res.json(rows);
 }));
 
+// GET /api/admin/crm/membership-statuses — Active Member / Ex-Member counts for the
+// campaign builder's optional "narrow by membership status" filter.
+router.get('/membership-statuses', asyncHandler(async (req, res) => {
+  const rows = await db.all(
+    `SELECT membership_status, COUNT(*)::int AS count
+     FROM crm_contacts
+     WHERE membership_status IS NOT NULL AND membership_status <> '' AND unsubscribed_at IS NULL
+     GROUP BY membership_status
+     ORDER BY count DESC, membership_status ASC`
+  );
+  res.json(rows);
+}));
+
 // GET /api/admin/crm/memberships — distinct membership types for the campaign
 // builder's optional "narrow by membership" filter.
 router.get('/memberships', asyncHandler(async (req, res) => {
@@ -585,6 +623,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   const batchStatusKey = resolveKey(HEADER_ALIASES.batchStatus);
   const membershipKey = resolveKey(HEADER_ALIASES.membership);
   const officePollKey = resolveKey(HEADER_ALIASES.officePoll);
+  const membershipStatusKey = resolveKey(HEADER_ALIASES.membershipStatus);
 
   if (!nameKey || !emailKey) {
     return res.status(400).json({ error: 'Could not find a Name and Email ID column in the uploaded file.' });
@@ -596,7 +635,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   // otherwise upserting a column-light file would blank out real data (e.g.
   // wipe someone's known membership just because this particular sheet never
   // mentioned it).
-  const hasField = { mobile: !!mobileKey, city: !!cityKey, membership: !!membershipKey, batch: !!batchKey, batchStatus: !!batchStatusKey, officePoll: !!officePollKey };
+  const hasField = { mobile: !!mobileKey, city: !!cityKey, membership: !!membershipKey, batch: !!batchKey, batchStatus: !!batchStatusKey, officePoll: !!officePollKey, membershipStatus: !!membershipStatusKey };
 
   const now = new Date().toISOString();
   const skippedReasons = [];
@@ -627,6 +666,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
       // Only a "Yes..." answer means the contact has an office; "Yes : Co-working
       // space" and "Yes: Co-working space" are the same answer, so tidy the colon.
       officePoll: officePollKey ? normalizeOfficePoll(row[officePollKey]) : null,
+      membershipStatus: membershipStatusKey ? normalizeMembershipStatus(row[membershipStatusKey]) : null,
       source: req.file.originalname,
     });
   }
@@ -645,15 +685,19 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
   if (hasField.batch) cols.push('batch');
   if (hasField.batchStatus) cols.push('batch_status');
   if (hasField.officePoll) cols.push('office_poll');
+  if (hasField.membershipStatus) cols.push('membership_status');
   cols.push('source', 'imported_at', 'created_at', 'updated_at');
 
   const setClauses = ['full_name = EXCLUDED.full_name'];
-  if (hasField.mobile) setClauses.push('mobile = EXCLUDED.mobile');
-  if (hasField.city) setClauses.push('city = EXCLUDED.city', 'city_key = EXCLUDED.city_key');
-  if (hasField.membership) setClauses.push('membership = EXCLUDED.membership');
-  if (hasField.batch) setClauses.push('batch = EXCLUDED.batch');
-  if (hasField.batchStatus) setClauses.push('batch_status = EXCLUDED.batch_status');
-  if (hasField.officePoll) setClauses.push('office_poll = EXCLUDED.office_poll');
+  // COALESCE: an empty cell in the sheet keeps what the CRM already knows instead of blanking it.
+  const keep = (col) => `${col} = COALESCE(EXCLUDED.${col}, crm_contacts.${col})`;
+  if (hasField.mobile) setClauses.push(keep('mobile'));
+  if (hasField.city) setClauses.push(keep('city'), keep('city_key'));
+  if (hasField.membership) setClauses.push(keep('membership'));
+  if (hasField.batch) setClauses.push(keep('batch'));
+  if (hasField.batchStatus) setClauses.push(keep('batch_status'));
+  if (hasField.officePoll) setClauses.push(keep('office_poll'));
+  if (hasField.membershipStatus) setClauses.push(keep('membership_status'));
   setClauses.push('source = EXCLUDED.source', 'updated_at = EXCLUDED.updated_at');
 
   for (let i = 0; i < contacts.length; i += CHUNK_SIZE) {
@@ -667,6 +711,7 @@ router.post('/import', upload.single('file'), asyncHandler(async (req, res) => {
       if (hasField.batch) row.push(c.batch);
       if (hasField.batchStatus) row.push(c.batchStatus);
       if (hasField.officePoll) row.push(c.officePoll);
+      if (hasField.membershipStatus) row.push(c.membershipStatus);
       row.push(c.source, now, now, now);
       const base = values.length;
       values.push(...row);
@@ -768,7 +813,7 @@ router.patch('/campaigns/:id', asyncHandler(async (req, res) => {
 // excludeRegisteredParticipants both default to true — set false to
 // deliberately include Circle Leaders / already-registered Participants.
 router.post('/campaigns', asyncHandler(async (req, res) => {
-  const { name, template: templateRaw, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
+  const { name, template: templateRaw, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
   const template = templateRaw === TEMPLATE_LEADER_OFFICE ? TEMPLATE_LEADER_OFFICE : TEMPLATE_CIRCLE;
   const isLeaderOffice = template === TEMPLATE_LEADER_OFFICE;
   // The leader invitation is a fixed, hub-less email: no auto/manual city-to-circle
@@ -778,6 +823,7 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
   const batches = Array.isArray(targetBatches) ? targetBatches : [];
   const memberships = Array.isArray(targetMemberships) ? targetMemberships : [];
   const batchStatuses = Array.isArray(targetBatchStatuses) ? targetBatchStatuses : [];
+  const membershipStatuses = Array.isArray(targetMembershipStatuses) ? targetMembershipStatuses : [];
   const excludeLeaders = excludeHubLeaders !== false;
   // Registered Participants are fair game for a Circle Leader invitation, so that
   // exclusion is opt-in for this template (the circle template keeps it opt-out).
@@ -808,7 +854,7 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
       params.push(cityList);
       conditions.push(`city = ANY($${params.length}::text[])`);
     }
-    appendOptionalFilters(conditions, params, batches, memberships, batchStatuses);
+    appendOptionalFilters(conditions, params, batches, memberships, batchStatuses, membershipStatuses);
     appendHubLeaderExclusion(conditions, excludeLeaders);
     appendRegisteredParticipantExclusion(conditions, excludeParticipants);
   }
@@ -816,8 +862,8 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
 
   await db.run(
     `INSERT INTO crm_campaigns
-       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, exclude_registered_participants, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at, template)
-     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, exclude_registered_participants, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at, template, target_membership_statuses)
+     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
     [
       id, name, mode,
       JSON.stringify(mode === 'manual' ? cityList : []),
@@ -826,7 +872,7 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
       subject, isLeaderOffice ? null : (introHtml || null),
       Number.isFinite(Number(batchSize)) && Number(batchSize) > 0 ? Number(batchSize) : 25,
       Number.isFinite(Number(intervalMinutes)) && Number(intervalMinutes) > 0 ? Number(intervalMinutes) : 15,
-      totalRow.count, now, template,
+      totalRow.count, now, template, JSON.stringify(isLeaderOffice ? [] : membershipStatuses),
     ]
   );
 
@@ -879,6 +925,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
   const targetBatches = campaign.target_batches || [];
   const targetMemberships = campaign.target_memberships || [];
   const targetBatchStatuses = campaign.target_batch_statuses || [];
+  const targetMembershipStatuses = campaign.target_membership_statuses || [];
 
   if (mode === 'auto') {
     const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
@@ -891,7 +938,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
     }
     params.push(openCityKeys);
     conditions.push(`city_key = ANY($${params.length}::text[])`);
-    appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
+    appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses);
     appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
     appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
     sampleContact = await db.get(
@@ -912,7 +959,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
       const conditions = ['unsubscribed_at IS NULL'];
       const params = [targetCities];
       conditions.push(`city = ANY($${params.length}::text[])`);
-      appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
+      appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses);
       appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
       appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
       sampleContact = await db.get(
@@ -962,6 +1009,7 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
   const targetBatches = campaign.target_batches || [];
   const targetMemberships = campaign.target_memberships || [];
   const targetBatchStatuses = campaign.target_batch_statuses || [];
+  const targetMembershipStatuses = campaign.target_membership_statuses || [];
   let conditions;
   let params;
   if (campaign.template === TEMPLATE_LEADER_OFFICE) {
@@ -982,7 +1030,7 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
       params.push(campaign.target_cities || []);
       conditions.push(`city = ANY($${params.length}::text[])`);
     }
-    appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses);
+    appendOptionalFilters(conditions, params, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses);
     appendHubLeaderExclusion(conditions, campaign.exclude_hub_leaders);
     appendRegisteredParticipantExclusion(conditions, campaign.exclude_registered_participants);
   }

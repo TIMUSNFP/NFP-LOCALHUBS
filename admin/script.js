@@ -3924,18 +3924,20 @@ async function openCrmCampaignModal() {
     content.innerHTML = `<p style="color:var(--muted)">Loading cities…</p>`;
     openDetailsOverlay();
 
-    let cities = [], batches = [], memberships = [], batchStatuses = [];
+    let cities = [], batches = [], memberships = [], batchStatuses = [], membershipStatuses = [];
     try {
-        const [citiesRes, batchesRes, membershipsRes, batchStatusesRes] = await Promise.all([
+        const [citiesRes, batchesRes, membershipsRes, batchStatusesRes, membershipStatusesRes] = await Promise.all([
             adminFetch(`${API_BASE}/api/admin/crm/cities`),
             adminFetch(`${API_BASE}/api/admin/crm/batches`),
             adminFetch(`${API_BASE}/api/admin/crm/memberships`),
             adminFetch(`${API_BASE}/api/admin/crm/batch-statuses`),
+            adminFetch(`${API_BASE}/api/admin/crm/membership-statuses`),
         ]);
         cities = await citiesRes.json();
         batches = await batchesRes.json();
         memberships = await membershipsRes.json();
         batchStatuses = await batchStatusesRes.json();
+        membershipStatuses = await membershipStatusesRes.json();
     } catch (e) {
         if (e.message !== 'Unauthorized') content.innerHTML = `<p style="color:var(--danger)">Could not load cities.</p>`;
         return;
@@ -4040,6 +4042,18 @@ async function openCrmCampaignModal() {
                     `).join('')}
                 </div>
             </div>
+            <div class="detail-item">
+                <label>Narrow by Membership Status <span style="text-transform:none;font-weight:400;color:var(--muted)">(optional)</span></label>
+                <div id="crmCMembershipStatuses" style="max-height:140px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px">
+                    ${membershipStatuses.length === 0 ? '<p style="color:var(--muted);font-size:13px">No membership status data imported yet.</p>' : membershipStatuses.map(m => `
+                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px;cursor:pointer">
+                            <input type="checkbox" class="crm-membership-status-check" value="${escHtml(m.membership_status)}" onchange="updateCrmCampaignRecipientHint()">
+                            ${escHtml(m.membership_status)} <span style="color:var(--muted);font-size:12px">(${m.count})</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <p style="color:var(--muted);font-size:12px;margin:6px 0 0">Leave blank to skip Ex-Members: the Circle is members-only. Tick Ex-Member only for a membership-renewal send.</p>
+            </div>
         </div>
         <p style="color:var(--muted);font-size:12px;margin:-8px 0 0">
             Leave all blank to include everyone matching the target above. Check any boxes to further restrict to
@@ -4135,6 +4149,10 @@ function getCheckedCrmBatchStatuses() {
     return Array.from(document.querySelectorAll('.crm-batch-status-check:checked')).map(el => el.value);
 }
 
+function getCheckedCrmMembershipStatuses() {
+    return Array.from(document.querySelectorAll('.crm-membership-status-check:checked')).map(el => el.value);
+}
+
 // Manual mode can estimate a recipient count client-side (city checkboxes carry
 // their own contact counts). Auto mode can't — "every city with an open circle"
 // isn't known until save — so it just flags whether a narrowing filter is on;
@@ -4149,7 +4167,7 @@ function updateCrmCampaignRecipientHint() {
         return;
     }
     const mode = document.getElementById('crmCTargetMode')?.value || 'auto';
-    const narrowingActive = getCheckedCrmBatches().length > 0 || getCheckedCrmMemberships().length > 0 || getCheckedCrmBatchStatuses().length > 0;
+    const narrowingActive = getCheckedCrmBatches().length > 0 || getCheckedCrmMemberships().length > 0 || getCheckedCrmBatchStatuses().length > 0 || getCheckedCrmMembershipStatuses().length > 0;
 
     if (mode === 'auto') {
         hint.textContent = narrowingActive
@@ -4225,6 +4243,7 @@ async function submitCrmCampaign() {
     const targetBatches = getCheckedCrmBatches();
     const targetMemberships = getCheckedCrmMemberships();
     const targetBatchStatuses = getCheckedCrmBatchStatuses();
+    const targetMembershipStatuses = getCheckedCrmMembershipStatuses();
     const excludeHubLeaders = document.getElementById('crmCExcludeLeaders')?.checked !== false;
     const excludeRegisteredParticipants = document.getElementById('crmCExcludeParticipants')?.checked !== false;
 
@@ -4232,7 +4251,7 @@ async function submitCrmCampaign() {
         const res = await adminFetch(`${API_BASE}/api/admin/crm/campaigns`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, subject, template, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, excludeHubLeaders, excludeRegisteredParticipants, introHtml, batchSize, intervalMinutes }),
+            body: JSON.stringify({ name, subject, template, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses, excludeHubLeaders, excludeRegisteredParticipants, introHtml, batchSize, intervalMinutes }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Could not create campaign.', 'error'); return; }

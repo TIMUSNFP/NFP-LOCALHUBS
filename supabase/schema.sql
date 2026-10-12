@@ -176,6 +176,11 @@ alter table crm_campaigns add column if not exists template text not null defaul
 -- Answer from the office-space poll sheet (e.g. 'Yes: 300-1000 SqFt'); null = never polled.
 alter table crm_contacts add column if not exists office_poll text;
 
+-- 'Active Member' | 'Ex-Member' from the member database sheet; null = unknown (older imports).
+-- Circle campaigns skip Ex-Members unless they are explicitly targeted: the Circle is members-only.
+alter table crm_contacts add column if not exists membership_status text;
+alter table crm_campaigns add column if not exists target_membership_statuses jsonb not null default '[]'::jsonb;
+
 create table if not exists crm_campaign_recipients (
   id bigserial primary key,
   campaign_id text not null references crm_campaigns(id) on delete cascade,
