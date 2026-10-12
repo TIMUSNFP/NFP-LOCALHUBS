@@ -21,12 +21,18 @@ const SMTP_PASS = (process.env.SMTP_PASS || '').trim();
 
 // FROM_EMAIL should match the authenticated mailbox (or a permitted alias),
 // otherwise most SMTP providers reject or rewrite the From header.
-const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>` : 'NFP Circles <noreply@networkfp.com>');
+const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>` : 'NFP Circles <circles@networkfp.com>');
 
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
 const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/L2G7DQQgWDcCiqV85giWtA?s=sh&p=i&ilr=1&amv=2';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
 const CRM_UNSUBSCRIBE_BASE_URL = 'https://nfp-circles.vercel.app/api/crm/unsubscribe';
+
+// circles.networkfp.com is the custom-domain alias of the same deployment as
+// nfp-circles.vercel.app above — used here (rather than the vercel.app URL) to
+// match the real outreach copy these two recruitment emails are built from.
+const CIRCLE_LEADERS_REG_URL = 'https://circles.networkfp.com/circle-leaders/';
+const PARTICIPANT_REG_URL = 'https://circles.networkfp.com/participant/';
 
 // Read once at startup and sent as a CID attachment (not a hosted <img src>) so
 // it always renders regardless of whether Images/ is served publicly.
@@ -36,6 +42,17 @@ try {
   scheduleImageBuffer = fs.readFileSync(SCHEDULE_IMAGE_PATH);
 } catch (e) {
   console.warn('[mailer] Schedule image not found at', SCHEDULE_IMAGE_PATH, '— reminder emails will send without it.');
+}
+
+// Same CID-attachment approach as the schedule image above, for the recruitment
+// emails' header wordmark (the Grey + Orange variant reads correctly on the
+// white header background these emails use).
+const RECRUIT_LOGO_PATH = path.join(__dirname, '..', 'Brand Kit', 'Logos', 'Network FP Logos', 'NFP Wordmark Grey + Orange.png');
+let recruitLogoBuffer = null;
+try {
+  recruitLogoBuffer = fs.readFileSync(RECRUIT_LOGO_PATH);
+} catch (e) {
+  console.warn('[mailer] Recruitment logo not found at', RECRUIT_LOGO_PATH, '— recruitment emails will send without it.');
 }
 
 // Full mailing address for a hub — "Street, Area, City - PIN Code", skipping any
@@ -213,7 +230,7 @@ async function sendHubApproved(hub) {
       <li>Network FP will have the final standing on dissolving or merging any Circles as per the requirement of the city, and will have the final call around participants and leaders.</li>
       <li>NFP Circles are meant for peer learning and knowledge sharing only. Circle Leads and Members are expected to refrain from using these sessions for direct product sales, solicitation, or promotion of personal business interests.</li>
     </ol>
-    <p>If you have any questions, please reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>If you have any questions, please reach out to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
     <p>Thank you for being a part of the NFP community!</p>
   `);
 
@@ -243,7 +260,7 @@ async function sendHubCarriedToNextEdition(hub) {
     </div>
     <p>Your circle is live again and open for participants to register. Since registrations reset each edition, participants — including anyone who joined you last time — will need to register again for this edition.</p>
     <p>We'll be in touch with further details as the date approaches.</p>
-    <p>If you have any questions, please reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>If you have any questions, please reach out to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
     <p>Thank you for continuing to be part of the NFP community!</p>
   `);
 
@@ -270,7 +287,7 @@ async function sendHubRejected(hub) {
     <div class="btn-wrap">
       <a class="btn" href="${PARTICIPANT_URL}">Find a Circle Near You</a>
     </div>
-    <p>If you have any questions, feel free to reach out to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>If you have any questions, feel free to reach out to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
     <p>Once again, we're sorry we couldn't say yes this time, and we truly appreciate your enthusiasm for the NFP Circles programme.</p>
   `);
 
@@ -315,7 +332,7 @@ async function sendParticipantConfirmed(participant, hub) {
     </ul>
     <p class="section-heading">Please Note</p>
     <p>NFP Circles are a space for open peer learning. We request all participants to keep sessions free of solicitation, direct sales pitches, or promotion of personal business interests.</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
     <p>Welcome to the NFP Circles community! 🙌</p>
   `);
 
@@ -342,7 +359,7 @@ async function sendParticipantCancelled(participant, hub) {
     <div class="btn-wrap">
       <a class="btn" href="${PARTICIPANT_URL}">Find a Circle Near You</a>
     </div>
-    <p>For any queries, contact us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, contact us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
     <p>We hope to have you back in an NFP Circle soon.</p>
   `);
 
@@ -413,7 +430,7 @@ async function sendHubRosterUpdate(hub, participants) {
     </ul>
     <p>This will be the main channel for coordinating your Circle Meet, so please <strong>set it up at the earliest</strong>.</p>
     <p>Feel free to reach out to your participants ahead of time to introduce yourself and share any last-minute details.</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a> or call us at <a href="tel:+917208931022">7208931022</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a> or call us at <a href="tel:+917208931022">7208931022</a>.</p>
     <p>Looking forward to a great Circle Meet! 🙌</p>
   `);
 
@@ -450,7 +467,7 @@ async function sendHubDetailsUpdated(participant, hub, changes) {
     </div>
     ` : ''}
     <p>No action is needed from you — just make a note of the change ahead of your Circle Meet.</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
   `);
 
   await send({
@@ -486,7 +503,7 @@ async function sendParticipantTransferred(participant, oldHub, newHub) {
       <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p>No action is needed from you — your registration is already confirmed with your new Circle Leader.</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
   `);
 
   await send({
@@ -527,7 +544,7 @@ async function sendParticipantEventReminder(participant, hub) {
       <p><strong>${hub.full_name}</strong> — <a href="tel:${hub.mobile}">${hub.mobile}</a></p>
     </div>
     <p>More details on participant guidelines will be shared shortly — stay tuned!</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
     <p>See you there! 🙌</p>
   `);
 
@@ -567,7 +584,7 @@ async function sendParticipantCircleCombined(participant, oldHub, newHub) {
       <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p>Your registration is already confirmed with your new Circle Leader — just show up at the address above.</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
   `);
 
   await send({
@@ -594,7 +611,7 @@ async function sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount) {
     </div>
     <p>Thank you for hosting with NFP Circles — if you'd like to host again in the future,
     just reach out to us.</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
   `);
 
   await send({
@@ -622,7 +639,7 @@ async function sendParticipantCircleMergeReverted(participant, fromHub, toHub) {
       <p><strong>Venue Type:</strong> ${toHub.venue_type || '—'}</p>
       <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
   `);
 
   await send({
@@ -640,7 +657,7 @@ async function sendHubLeaderCircleMergeReverted(restoredHub, formerSurvivingHub,
     <p>Your Circle's combination with ${formerSurvivingHub.full_name}'s Circle has been undone.
     Your Circle is reopened, and ${restoredCount} participant${restoredCount === 1 ? '' : 's'}
     ${restoredCount === 1 ? 'has' : 'have'} moved back to you automatically.</p>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
   `);
 
   await send({
@@ -727,7 +744,7 @@ async function buildCircleCrmEmailHtml(contact, hubs, campaign) {
       <li>Type your city into the search box.</li>
       <li>The Circle(s) open near you will show up on the right-hand side — pick one and register before the deadline.</li>
     </ol>
-    <p>For any queries, write to us at <a href="mailto:sumit@networkfp.com">sumit@networkfp.com</a>.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
     <p style="font-size:12px;color:#6A7D8B;text-align:center;margin-top:24px">
       Don't want these emails? <a href="${crmUnsubscribeUrl(contact.id)}">Unsubscribe</a>
     </p>
@@ -880,6 +897,174 @@ async function sendCrmCampaignEmail(contact, hubs, campaign) {
   await transporter.sendMail({ from: FROM, to: contact.email, subject: campaign.subject, html });
 }
 
+// ─── Edition Launch — Circle Leader / Participant recruitment ─────────────────
+// Bold, poster-style wrapper distinct from wrap() above — built to match a
+// specific outreach graphic/WhatsApp broadcast used to launch a new edition.
+// Used only by the two recruitment emails below, not the transactional ones.
+
+// First edition's real result, quoted as social proof in the recruitment copy.
+// This is a fixed historical fact about one specific past edition — if a future
+// edition's launch email should instead cite its own prior edition's turnout,
+// this line needs updating by hand, it won't update itself.
+const FIRST_EDITION_RESULT = 'Our first NFP Circle on 5th Aug was a huge hit — 700+ people took part across cities (100 Circle Leaders and 630+ participants).';
+
+function recruitmentWrap({ badgeLabel, headline, tagline, dateLine, timeLine, ctaLabel, ctaUrl, bodyHtml }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { margin: 0; padding: 0; background: #F3EDE3; font-family: Arial, sans-serif; color: #222222; }
+    .container { max-width: 600px; margin: 40px auto; background: #FFFFFF; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .header { padding: 28px 32px 8px; text-align: right; }
+    .header img { width: 160px; height: auto; display: inline-block; }
+    .hero { padding: 8px 32px 28px; }
+    .badge { display: inline-block; background: #FF5000; color: #FFFFFF; border-radius: 20px; padding: 7px 18px; font-size: 13px; font-weight: bold; letter-spacing: 0.2px; margin-bottom: 18px; }
+    .headline { font-family: Arial Black, Arial, sans-serif; font-size: 34px; line-height: 1.12; font-weight: 900; color: #1A1A1A; margin: 0 0 14px; }
+    .tagline { font-size: 16px; font-style: italic; color: #4A4A4A; margin: 0 0 20px; line-height: 1.5; }
+    .when-row { font-size: 15px; color: #1A1A1A; margin: 0 0 24px; }
+    .when-row span { display: inline-block; margin-right: 18px; }
+    .body p { margin: 0 0 14px; font-size: 15px; line-height: 1.65; color: #333333; }
+    .body strong { color: #1A1A1A; }
+    .cta-wrap { text-align: left; margin: 26px 0 8px; }
+    .cta { display: inline-block; background: #1A1A1A; color: #FFFFFF !important; text-decoration: none; padding: 16px 26px; border-radius: 10px; font-size: 14px; font-weight: bold; letter-spacing: 0.4px; text-transform: uppercase; }
+    .cta .arrow { display: inline-block; background: #FF5000; color: #FFFFFF; border-radius: 50%; width: 22px; height: 22px; text-align: center; line-height: 22px; margin-left: 10px; font-size: 13px; }
+    .experience { background: #F3EDE3; border-radius: 10px; padding: 24px 28px; margin: 28px 32px; }
+    .experience .badge { margin-bottom: 14px; }
+    .experience ul { list-style: none; margin: 0; padding: 0; }
+    .experience li { font-size: 15px; font-weight: bold; color: #1A1A1A; padding: 9px 0; border-bottom: 1px dotted #D8CFBC; }
+    .experience li:last-child { border-bottom: none; }
+    .footer { padding: 20px 32px 28px; text-align: center; font-size: 12px; color: #6A7D8B; }
+    .footer a { color: #FF5000; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="cid:nfp-recruit-logo" alt="Network FP" width="160" height="auto" />
+    </div>
+    <div class="hero">
+      <div class="badge">${badgeLabel}</div>
+      <h1 class="headline">${headline}</h1>
+      ${tagline ? `<p class="tagline">${tagline}</p>` : ''}
+      <p class="when-row"><span>📅 ${dateLine}</span><span>🕐 ${timeLine}</span></p>
+      <div class="body">${bodyHtml}</div>
+      <div class="cta-wrap">
+        <a class="cta" href="${ctaUrl}">${ctaLabel}<span class="arrow">→</span></a>
+      </div>
+    </div>
+    <div class="experience">
+      <div class="badge">Your NFP Circle Experience</div>
+      <ul>
+        <li>1️⃣ Build Your Team</li>
+        <li>2️⃣ Learn from Peers</li>
+        <li>3️⃣ Vote Live</li>
+        <li>4️⃣ Ask Anything</li>
+        <li>5️⃣ Keynote Address</li>
+      </ul>
+    </div>
+    <div class="footer">
+      Network FP &nbsp;|&nbsp; <a href="https://www.networkfp.com">www.networkfp.com</a><br/>
+      This is an automated message — please do not reply to this email.
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+// ─── Circle Leader Recruitment ─────────────────────────────────────────────
+// Sent to NFP ProMembers to recruit them as hosts for a new edition — content
+// matches the "Inviting NFP ProMembers to Lead Circles" WhatsApp broadcast.
+
+async function buildCircleLeaderRecruitmentHtml(contact, edition) {
+  const info = await getEditionInfo(edition);
+  const dateLine = info.date ? info.date.full : 'Date to be announced';
+  const timeLine = (info.timeStart && info.timeEnd) ? `${info.timeStart} to ${info.timeEnd}` : 'Time to be announced';
+  const themeTitle = info.themeTitle || 'NFP Circles';
+
+  const bodyHtml = `
+    <p>Dear ${contact.full_name || 'Member'},</p>
+    <p>${FIRST_EDITION_RESULT}</p>
+    <p>We're back with the next edition — theme <strong>${themeTitle}</strong> — and inviting Members across the country to host a Circle and make a difference in their city.</p>
+    <p>If you're an office owner with a space that can host <strong>4+ members</strong>, and you'd like to bring your city's NFP community together, we'd love to have you lead a Circle.</p>
+    <p>Circle Leader registrations are now open. Participant registrations will open soon after.</p>
+    <p>Be Independent, but never alone 🙌</p>
+  `;
+
+  return recruitmentWrap({
+    badgeLabel: `NFP Circles | ${themeTitle}`,
+    headline: themeTitle,
+    tagline: info.themeTagline,
+    dateLine,
+    timeLine,
+    ctaLabel: 'Apply to be a Circle Leader',
+    ctaUrl: CIRCLE_LEADERS_REG_URL,
+    bodyHtml,
+  });
+}
+
+async function sendCircleLeaderRecruitment(contact, edition) {
+  const html = await buildCircleLeaderRecruitmentHtml(contact, edition);
+  const info = await getEditionInfo(edition);
+  const dateShort = info.date ? info.date.short : 'soon';
+  await send({
+    to: contact.email,
+    subject: `⭕ NFP Circle on ${dateShort} — Do you have a space to host peers?`,
+    html,
+    attachments: recruitLogoBuffer
+      ? [{ filename: 'NFP-Logo.png', content: recruitLogoBuffer, cid: 'nfp-recruit-logo' }]
+      : undefined,
+  });
+}
+
+// ─── Participant Recruitment ───────────────────────────────────────────────
+// Companion to the Circle Leader recruitment email above — same launch, same
+// visual language, but inviting Members to register as attendees once Circle
+// Leader applications (above) have opened up circles in their city.
+
+async function buildParticipantRecruitmentHtml(contact, edition) {
+  const info = await getEditionInfo(edition);
+  const dateLine = info.date ? info.date.full : 'Date to be announced';
+  const timeLine = (info.timeStart && info.timeEnd) ? `${info.timeStart} to ${info.timeEnd}` : 'Time to be announced';
+  const themeTitle = info.themeTitle || 'NFP Circles';
+
+  const bodyHtml = `
+    <p>Dear ${contact.full_name || 'Member'},</p>
+    <p>${FIRST_EDITION_RESULT}</p>
+    <p>We're back with the next edition — theme <strong>${themeTitle}</strong> — and Circles are now open for registration in cities across India.</p>
+    <p>NFP Circles are small, in-person peer-learning meetups built for NFP Members — a few hours to connect with peers in your city, discuss real challenges, and walk away with practical ideas you can use right away.</p>
+    <p>They're free to attend, run by fellow NFP Members and QPFP Certificants, and built purely for peer learning — no sales pitches, no solicitation.</p>
+    <p>Spots in each city are limited, so register early to secure yours.</p>
+    <p>Be Independent, but never alone 🙌</p>
+  `;
+
+  return recruitmentWrap({
+    badgeLabel: `NFP Circles | ${themeTitle}`,
+    headline: themeTitle,
+    tagline: info.themeTagline,
+    dateLine,
+    timeLine,
+    ctaLabel: 'Register as a Participant',
+    ctaUrl: PARTICIPANT_REG_URL,
+    bodyHtml,
+  });
+}
+
+async function sendParticipantRecruitment(contact, edition) {
+  const html = await buildParticipantRecruitmentHtml(contact, edition);
+  const info = await getEditionInfo(edition);
+  const dateShort = info.date ? info.date.short : 'soon';
+  await send({
+    to: contact.email,
+    subject: `⭕ NFP Circle on ${dateShort} — Join peers in your city`,
+    html,
+    attachments: recruitLogoBuffer
+      ? [{ filename: 'NFP-Logo.png', content: recruitLogoBuffer, cid: 'nfp-recruit-logo' }]
+      : undefined,
+  });
+}
+
 module.exports = {
   sendHubApproved,
   sendHubCarriedToNextEdition,
@@ -898,4 +1083,8 @@ module.exports = {
   buildLeaderOfficeEmailHtml,
   sendCrmCampaignEmail,
   crmUnsubscribeUrl,
+  buildCircleLeaderRecruitmentHtml,
+  sendCircleLeaderRecruitment,
+  buildParticipantRecruitmentHtml,
+  sendParticipantRecruitment,
 };

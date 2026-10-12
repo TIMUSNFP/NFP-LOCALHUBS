@@ -165,6 +165,24 @@
         ],
         "createdAt": "2026-10-06T05:00:02.553Z",
         "reason": "Dev review: .pb-list-col .reg-form-panel sets border-radius:0, so the top accent border is on a square panel; false positive"
+      },
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "files": [
+          "backend/mailer.js"
+        ],
+        "createdAt": "2026-10-07T07:49:19.279Z",
+        "reason": "email clients need web-safe fonts; Arial is the correct cross-client choice for transactional HTML email, not an AI-slop default"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "backend/mailer.js"
+        ],
+        "createdAt": "2026-10-07T07:49:20.203Z",
+        "reason": "pre-existing brand orange (#FF5000) left-border accent used consistently across all email templates in this file; matches project's established brand styling, not introduced by this change"
       }
     ]
   }
