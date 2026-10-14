@@ -3949,6 +3949,7 @@ async function openCrmCampaignModal() {
             <select id="crmCTemplate" class="form-input" onchange="toggleCrmCampaignTemplate()">
                 <option value="circle">Circle outreach: tell contacts about open Circles in their city</option>
                 <option value="leader-office">Circle Leader invitation: contacts who have an office (from the office poll)</option>
+                <option value="leader-invite">Circle Leader invitation: all Active Members</option>
             </select>
         </div>
         <div class="detail-grid">
@@ -3967,8 +3968,9 @@ async function openCrmCampaignModal() {
         </p>
         <div id="crmCLeaderNote" class="detail-item hidden" style="margin-top:14px">
             <p style="color:var(--muted);font-size:13px;margin:0">
-                Sends the Circle Leader invitation to every contact imported with an office poll answer of "Yes"
-                (upload the poll sheet with <strong>Import Contacts</strong> first). It does not list any circles.
+                Sends the Circle Leader invitation. "Office poll" campaigns go to every contact imported with an office poll
+                answer of "Yes"; "all Active Members" campaigns go to everyone marked Active Member (import the sheet with
+                <strong>Import Contacts</strong> first). It does not list any circles.
                 Tick cities below only if you want to limit the send; leave them all unticked to email everyone.
                 Unsubscribed contacts are always skipped, and so are existing Circle Leaders unless you untick that box below.
             </p>
@@ -4104,7 +4106,7 @@ async function openCrmCampaignModal() {
 
 function toggleCrmCampaignTargetMode() {
     const mode = document.getElementById('crmCTargetMode')?.value || 'auto';
-    const isLeader = document.getElementById('crmCTemplate')?.value === 'leader-office';
+    const isLeader = isCrmLeaderTemplate(document.getElementById('crmCTemplate')?.value);
     // The leader invitation always shows the city list (optional), never the auto note.
     document.getElementById('crmCManualSection')?.classList.toggle('hidden', !isLeader && mode !== 'manual');
     document.getElementById('crmCAutoNote')?.classList.toggle('hidden', isLeader || mode !== 'auto');
@@ -4114,11 +4116,19 @@ function toggleCrmCampaignTargetMode() {
 // Swaps the form between the two campaign types. The leader invitation has no
 // circles to feature, no membership/batch narrowing and no intro text, and
 // registered Participants are fair game for it, so that exclusion starts unticked.
+// 'leader-office' (office-poll respondents) and 'leader-invite' (all Active Members) share the
+// same form: no circles to feature, no membership/batch narrowing, no intro text.
+function isCrmLeaderTemplate(value) {
+    return value === 'leader-office' || value === 'leader-invite';
+}
+
 const CRM_DEFAULT_SUBJECT_CIRCLE = 'Final Hours: NFP Circles in {city} close registration at 4 PM today!';
 const CRM_DEFAULT_SUBJECT_LEADER = 'Do you have an office to host an NFP Circle on 28th Oct?';
+const CRM_DEFAULT_SUBJECT_INVITE = 'Lead an NFP Circle in your city on 28 October';
 
 function toggleCrmCampaignTemplate() {
-    const isLeader = document.getElementById('crmCTemplate')?.value === 'leader-office';
+    const templateValue = document.getElementById('crmCTemplate')?.value;
+    const isLeader = isCrmLeaderTemplate(templateValue);
     document.getElementById('crmCLeaderNote')?.classList.toggle('hidden', !isLeader);
     document.getElementById('crmCTargetWrap')?.classList.toggle('hidden', isLeader);
     document.getElementById('crmCHubsWrap')?.classList.toggle('hidden', isLeader);
@@ -4127,8 +4137,9 @@ function toggleCrmCampaignTemplate() {
     const participants = document.getElementById('crmCExcludeParticipants');
     if (participants) participants.checked = !isLeader;
     const subject = document.getElementById('crmCSubject');
-    if (subject && [CRM_DEFAULT_SUBJECT_CIRCLE, CRM_DEFAULT_SUBJECT_LEADER].includes(subject.value.trim())) {
-        subject.value = isLeader ? CRM_DEFAULT_SUBJECT_LEADER : CRM_DEFAULT_SUBJECT_CIRCLE;
+    if (subject && [CRM_DEFAULT_SUBJECT_CIRCLE, CRM_DEFAULT_SUBJECT_LEADER, CRM_DEFAULT_SUBJECT_INVITE].includes(subject.value.trim())) {
+        subject.value = templateValue === 'leader-invite' ? CRM_DEFAULT_SUBJECT_INVITE
+            : templateValue === 'leader-office' ? CRM_DEFAULT_SUBJECT_LEADER : CRM_DEFAULT_SUBJECT_CIRCLE;
     }
     toggleCrmCampaignTargetMode();
 }
@@ -4160,7 +4171,7 @@ function getCheckedCrmMembershipStatuses() {
 function updateCrmCampaignRecipientHint() {
     const hint = document.getElementById('crmCRecipientHint');
     if (!hint) return;
-    if (document.getElementById('crmCTemplate')?.value === 'leader-office') {
+    if (isCrmLeaderTemplate(document.getElementById('crmCTemplate')?.value)) {
         hint.textContent = getCheckedCrmCities().length > 0
             ? 'Limited to the ticked cities. The exact recipient count is shown after you save.'
             : 'Everyone with an office poll answer. The exact recipient count is shown after you save.';
@@ -4219,8 +4230,9 @@ async function updateCrmCampaignHubSuggestions() {
 async function submitCrmCampaign() {
     const name = document.getElementById('crmCName')?.value.trim();
     const subject = document.getElementById('crmCSubject')?.value.trim();
-    const template = document.getElementById('crmCTemplate')?.value === 'leader-office' ? 'leader-office' : 'circle';
-    const isLeaderTemplate = template === 'leader-office';
+    const templateValue = document.getElementById('crmCTemplate')?.value;
+    const template = isCrmLeaderTemplate(templateValue) ? templateValue : 'circle';
+    const isLeaderTemplate = template !== 'circle';
     const targetMode = isLeaderTemplate ? 'manual' : (document.getElementById('crmCTargetMode')?.value || 'auto');
     const introHtmlRaw = document.getElementById('crmCIntro')?.value.trim();
     const batchSize = parseInt(document.getElementById('crmCBatchSize')?.value, 10) || 25;

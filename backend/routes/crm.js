@@ -8,7 +8,7 @@ const XLSX = require('xlsx');
 const db = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { generateCrmContactId, generateCrmCampaignId, normalizeCityKey, hubRowToJson, sleep } = require('../utils');
-const { buildCircleCrmEmailHtml, buildLeaderOfficeEmailHtml, sendCrmCampaignEmail } = require('../mailer');
+const { buildCircleCrmEmailHtml, buildLeaderOfficeEmailHtml, buildLeaderInviteEmailHtml, sendCrmCampaignEmail } = require('../mailer');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -80,6 +80,10 @@ const HEADER_ALIASES = {
 // Circle Leaders (see buildLeaderOfficeEmailHtml in mailer.js).
 const TEMPLATE_CIRCLE = 'circle';
 const TEMPLATE_LEADER_OFFICE = 'leader-office';
+// 'leader-invite' = the general Circle Leader invitation for Active Members (no office-poll line).
+const TEMPLATE_LEADER_INVITE = 'leader-invite';
+const isLeaderTemplate = (t) => t === TEMPLATE_LEADER_OFFICE || t === TEMPLATE_LEADER_INVITE;
+const buildLeaderHtmlFor = (t) => (t === TEMPLATE_LEADER_INVITE ? buildLeaderInviteEmailHtml : buildLeaderOfficeEmailHtml);
 
 function normalizeOfficePoll(raw) {
   const v = String(raw || '').trim().replace(/\s*:\s*/, ': ');
@@ -120,6 +124,7 @@ function campaignRowToJson(row) {
     targetMemberships: row.target_memberships || [],
     targetBatchStatuses: row.target_batch_statuses || [],
     targetMembershipStatuses: row.target_membership_statuses || [],
+    targetContactIds: row.target_contact_ids || [],
     excludeHubLeaders: row.exclude_hub_leaders !== false,
     excludeRegisteredParticipants: row.exclude_registered_participants !== false,
     subject: row.subject,
@@ -234,14 +239,24 @@ function appendRegisteredParticipantExclusion(conditions, excludeRegisteredParti
   }
 }
 
-// Recipient conditions for the 'leader-office' template: contacts who answered the
-// office-space poll, optionally limited to some cities. No open-circle lookup — the
-// email invites them to host one rather than to join one. Returns { conditions, params }
-// in the same shape the circle template builds inline, so the three call sites
-// (create / preview / start) can share the rest of their code.
-function buildLeaderOfficeConditions(targetCities, excludeHubLeaders, excludeRegisteredParticipants) {
-  const conditions = ['unsubscribed_at IS NULL', "office_poll IS NOT NULL AND office_poll <> ''"];
+// Recipient conditions for the two Circle Leader templates. 'leader-office' goes to contacts
+// who answered the office-space poll; 'leader-invite' goes to Active Members. Either can be
+// limited to some cities, or to an explicit list of contact ids (a hand-picked audience, e.g. a
+// shortlist of replacement leaders). No open-circle lookup: the email invites people to host
+// one, not to join one. Returns { conditions, params } in the same shape the circle template
+// builds inline, so the three call sites (create / preview / start) share the rest of their code.
+function buildLeaderConditions(template, targetCities, targetContactIds, excludeHubLeaders, excludeRegisteredParticipants) {
+  const conditions = ['unsubscribed_at IS NULL'];
   const params = [];
+  if (template === TEMPLATE_LEADER_INVITE) {
+    conditions.push("membership_status = 'Active Member'");
+  } else {
+    conditions.push("office_poll IS NOT NULL AND office_poll <> ''");
+  }
+  if (Array.isArray(targetContactIds) && targetContactIds.length > 0) {
+    params.push(targetContactIds);
+    conditions.push(`id = ANY($${params.length}::text[])`);
+  }
   if (Array.isArray(targetCities) && targetCities.length > 0) {
     params.push(targetCities);
     conditions.push(`city = ANY($${params.length}::text[])`);
@@ -813,13 +828,14 @@ router.patch('/campaigns/:id', asyncHandler(async (req, res) => {
 // excludeRegisteredParticipants both default to true — set false to
 // deliberately include Circle Leaders / already-registered Participants.
 router.post('/campaigns', asyncHandler(async (req, res) => {
-  const { name, template: templateRaw, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
-  const template = templateRaw === TEMPLATE_LEADER_OFFICE ? TEMPLATE_LEADER_OFFICE : TEMPLATE_CIRCLE;
-  const isLeaderOffice = template === TEMPLATE_LEADER_OFFICE;
+  const { name, template: templateRaw, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses, targetContactIds, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
+  const template = isLeaderTemplate(templateRaw) ? templateRaw : TEMPLATE_CIRCLE;
+  const contactIdList = Array.isArray(targetContactIds) ? targetContactIds.filter((x) => typeof x === 'string') : [];
+  const isLeaderType = template === TEMPLATE_LEADER_OFFICE;
   // The leader invitation is a fixed, hub-less email: no auto/manual city-to-circle
   // matching, so it always runs in 'manual' mode with no hubs, and the city list
   // is an optional narrowing filter rather than a requirement.
-  const mode = !isLeaderOffice && targetMode === 'auto' ? 'auto' : 'manual';
+  const mode = !isLeaderType && targetMode === 'auto' ? 'auto' : 'manual';
   const batches = Array.isArray(targetBatches) ? targetBatches : [];
   const memberships = Array.isArray(targetMemberships) ? targetMemberships : [];
   const batchStatuses = Array.isArray(targetBatchStatuses) ? targetBatchStatuses : [];
@@ -827,12 +843,12 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
   const excludeLeaders = excludeHubLeaders !== false;
   // Registered Participants are fair game for a Circle Leader invitation, so that
   // exclusion is opt-in for this template (the circle template keeps it opt-out).
-  const excludeParticipants = isLeaderOffice ? excludeRegisteredParticipants === true : excludeRegisteredParticipants !== false;
+  const excludeParticipants = isLeaderType ? excludeRegisteredParticipants === true : excludeRegisteredParticipants !== false;
   const cityList = Array.isArray(targetCities) ? targetCities : [];
   if (!name || !subject) {
     return res.status(400).json({ error: 'name and subject are required.' });
   }
-  if (mode === 'manual' && !isLeaderOffice && cityList.length === 0) {
+  if (mode === 'manual' && !isLeaderType && cityList.length === 0) {
     return res.status(400).json({ error: 'targetCities[] is required for a manual campaign.' });
   }
 
@@ -841,8 +857,8 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
 
   let conditions;
   let params;
-  if (isLeaderOffice) {
-    ({ conditions, params } = buildLeaderOfficeConditions(cityList, excludeLeaders, excludeParticipants));
+  if (isLeaderType) {
+    ({ conditions, params } = buildLeaderConditions(template, cityList, contactIdList, excludeLeaders, excludeParticipants));
   } else {
     conditions = ['unsubscribed_at IS NULL'];
     params = [];
@@ -862,17 +878,17 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
 
   await db.run(
     `INSERT INTO crm_campaigns
-       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, exclude_registered_participants, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at, template, target_membership_statuses)
-     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+       (id, name, status, target_mode, target_cities, hub_ids, target_batches, target_memberships, target_batch_statuses, exclude_hub_leaders, exclude_registered_participants, subject, intro_html, batch_size, interval_minutes, total_recipients, created_at, template, target_membership_statuses, target_contact_ids)
+     VALUES ($1,$2,'Draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
     [
       id, name, mode,
       JSON.stringify(mode === 'manual' ? cityList : []),
-      JSON.stringify(mode === 'manual' && !isLeaderOffice && Array.isArray(hubIds) ? hubIds : []),
-      JSON.stringify(isLeaderOffice ? [] : batches), JSON.stringify(isLeaderOffice ? [] : memberships), JSON.stringify(isLeaderOffice ? [] : batchStatuses), excludeLeaders, excludeParticipants,
-      subject, isLeaderOffice ? null : (introHtml || null),
+      JSON.stringify(mode === 'manual' && !isLeaderType && Array.isArray(hubIds) ? hubIds : []),
+      JSON.stringify(isLeaderType ? [] : batches), JSON.stringify(isLeaderType ? [] : memberships), JSON.stringify(isLeaderType ? [] : batchStatuses), excludeLeaders, excludeParticipants,
+      subject, isLeaderType ? null : (introHtml || null),
       Number.isFinite(Number(batchSize)) && Number(batchSize) > 0 ? Number(batchSize) : 25,
       Number.isFinite(Number(intervalMinutes)) && Number(intervalMinutes) > 0 ? Number(intervalMinutes) : 15,
-      totalRow.count, now, template, JSON.stringify(isLeaderOffice ? [] : membershipStatuses),
+      totalRow.count, now, template, JSON.stringify(isLeaderType ? [] : membershipStatuses), JSON.stringify(isLeaderType ? contactIdList : []),
     ]
   );
 
@@ -889,9 +905,9 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
   const campaign = await db.get('SELECT * FROM crm_campaigns WHERE id = $1', [req.params.id]);
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-  if (campaign.template === TEMPLATE_LEADER_OFFICE) {
-    const { conditions, params } = buildLeaderOfficeConditions(
-      campaign.target_cities, campaign.exclude_hub_leaders, campaign.exclude_registered_participants
+  if (isLeaderTemplate(campaign.template)) {
+    const { conditions, params } = buildLeaderConditions(
+      campaign.template, campaign.target_cities, campaign.target_contact_ids, campaign.exclude_hub_leaders, campaign.exclude_registered_participants
     );
     const requestedLeaderCity = (req.query.sampleCity || '').trim();
     if (requestedLeaderCity) {
@@ -902,7 +918,7 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
       `SELECT * FROM crm_contacts WHERE ${conditions.join(' AND ')} ORDER BY full_name ASC LIMIT 1`,
       params
     )) || { id: 'SAMPLE', full_name: 'Sample Member', email: 'sample@example.com', city: requestedLeaderCity || 'your city' };
-    const html = await buildLeaderOfficeEmailHtml(
+    const html = await buildLeaderHtmlFor(campaign.template)(
       { id: sample.id, full_name: sample.full_name, email: sample.email, city: sample.city }
     );
     return res.json({
@@ -1012,9 +1028,9 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
   const targetMembershipStatuses = campaign.target_membership_statuses || [];
   let conditions;
   let params;
-  if (campaign.template === TEMPLATE_LEADER_OFFICE) {
-    ({ conditions, params } = buildLeaderOfficeConditions(
-      campaign.target_cities, campaign.exclude_hub_leaders, campaign.exclude_registered_participants
+  if (isLeaderTemplate(campaign.template)) {
+    ({ conditions, params } = buildLeaderConditions(
+      campaign.template, campaign.target_cities, campaign.target_contact_ids, campaign.exclude_hub_leaders, campaign.exclude_registered_participants
     ));
   } else {
     conditions = ['unsubscribed_at IS NULL'];
