@@ -24,7 +24,7 @@ const SMTP_PASS = (process.env.SMTP_PASS || '').trim();
 const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>` : 'NFP Circles <circles@networkfp.com>');
 
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
-const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/L2G7DQQgWDcCiqV85giWtA?s=sh&p=i&ilr=1&amv=2';
+const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/D7vMp9xxt4XElJZ0dRW09c';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
 const CRM_UNSUBSCRIBE_BASE_URL = 'https://nfp-circles.vercel.app/api/crm/unsubscribe';
 
