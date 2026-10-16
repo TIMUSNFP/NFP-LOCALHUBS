@@ -975,6 +975,26 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-size: var(--fs-base);
     line-height: 1;
 }
+/* Small dots shown when the map is zoomed out (full pins appear from zoom 13) */
+.hub-dot-hit {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.hub-dot {
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid var(--white);
+    box-shadow: var(--shadow-md);
+    box-sizing: border-box;
+    transition: background var(--transition);
+}
+.hub-dot-hit:hover .hub-dot { background: var(--primary-dark); }
+.hub-dot.selected-pin { background: var(--info); }
+.hub-dot.pending-pin { background: var(--warning); }
 /* Leaflet popup */
 .leaflet-popup-content-wrapper {
     border-radius: var(--radius-md) !important;

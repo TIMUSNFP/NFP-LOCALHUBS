@@ -443,7 +443,7 @@ function initMap() {
 
     leafletMap = L.map('hubMap', {
         zoomControl:     true,
-        scrollWheelZoom: false,
+        scrollWheelZoom: true,   // scrolling over the map zooms it
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -458,6 +458,7 @@ function initMap() {
     leafletMap.invalidateSize();
     fitIndiaView(leafletMap, false);
 
+    leafletMap.on('zoomend', refreshHubMarkerIcons);
     refreshMapMarkers();
 
     // Re-measure and re-frame after the container has fully settled — a late
@@ -469,14 +470,43 @@ function initMap() {
     }, 300);
 }
 
+// Zoomed out, a 38px pin covers kilometres of ground, so nearby circles sit on top of each
+// other. Below PIN_FULL_ZOOM each circle is a small dot centred on its real coordinate;
+// zooming in swaps the dots for the full pins (whose tip marks the exact spot). The
+// selected circle is always a full pin so it stands out. The dot sits inside a 32px
+// invisible hit area so it is still easy to tap.
+const PIN_FULL_ZOOM = 13;
+function hubDotSize(zoom) { return zoom <= 7 ? 12 : zoom <= 10 ? 14 : 16; }
+
 function createHubPinIcon(isSelected, isPending) {
     const cls = isSelected ? ' selected-pin' : (isPending ? ' pending-pin' : '');
+    const zoom = leafletMap ? Math.round(leafletMap.getZoom()) : 5;
+    if (!isSelected && zoom < PIN_FULL_ZOOM) {
+        const size = hubDotSize(zoom);
+        return L.divIcon({
+            html: `<div class="hub-dot-hit"><div class="hub-dot${cls}" style="width:${size}px;height:${size}px"></div></div>`,
+            className: '',
+            iconSize:   [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor:[0, -10],
+        });
+    }
     return L.divIcon({
         html: `<div class="hub-pin${cls}"><span class="hub-pin-inner">&#127968;</span></div>`,
         className: '',
         iconSize:   [38, 38],
         iconAnchor: [19, 38],
         popupAnchor:[0, -42],
+    });
+}
+
+// Re-style every marker for the current zoom and selection (dot or full pin, selected on top).
+function refreshHubMarkerIcons() {
+    hubMarkers.forEach(m => {
+        const selected = m._hubId === selectedHubId;
+        m.setIcon(createHubPinIcon(selected, m._isPending));
+        m.setOpacity(m.options.opacity);   // a new icon element would otherwise lose the filter's dimming
+        m.setZIndexOffset(selected ? 1000 : 0);
     });
 }
 
@@ -616,8 +646,7 @@ function filterHubs() {
     hubMarkers.forEach(m => {
         const hub   = allApprovedHubs.find(h => h.id === m._hubId);
         const match = !hasFilter || filteredHubs.includes(hub);
-        if (m._icon) m._icon.style.opacity = match ? '1' : '.25';
-        else m.setOpacity(match ? 1 : 0.25);
+        m.setOpacity(match ? 1 : 0.25);
     });
     const badge = document.getElementById('mapCountBadge');
     if (badge) badge.textContent = `${filteredHubs.length} circle${filteredHubs.length !== 1 ? 's' : ''}`;
@@ -626,7 +655,7 @@ function filterHubs() {
     // If narrowed down by city/search, zoom there
     if (filteredHubs.length > 0 && (q || cityFilter)) {
         const coords = getHubCoords(filteredHubs[0]);
-        if (coords && leafletMap) leafletMap.flyTo(coords, 11, { duration: 1.2 });
+        if (coords && leafletMap) leafletMap.flyTo(coords, 12, { duration: 1.2 });
     }
 }
 
@@ -705,7 +734,7 @@ function highlightHubOnMap(hubId) {
     const hub = allApprovedHubs.find(h => h.id === hubId);
     if (!hub || hub.status === 'Pending') return;
     selectedHubId = hubId;
-    hubMarkers.forEach(m => m.setIcon(createHubPinIcon(m._hubId === hubId, m._isPending)));
+    refreshHubMarkerIcons();
     renderHubCards(filteredHubs);
     const coords = getHubCoords(hub);
     if (coords && leafletMap) leafletMap.flyTo(coords, 14, { duration: 1 });
@@ -724,7 +753,7 @@ function selectHubById(hubId) {
     if (!hub) return;
     if (hub.status === 'Pending') return;
     selectedHubId = hubId;
-    hubMarkers.forEach(m => m.setIcon(createHubPinIcon(m._hubId === hubId, m._isPending)));
+    refreshHubMarkerIcons();
     // Show registration form panel
     const regPanel = document.getElementById('regFormPanel');
     const hubCard  = document.getElementById('selectedHubCard');
@@ -756,7 +785,7 @@ function selectHubById(hubId) {
 function deselectHub() {
     selectedHubId = null;
     document.getElementById('regFormPanel')?.classList.add('hidden');
-    hubMarkers.forEach(m => m.setIcon(createHubPinIcon(false, m._isPending)));
+    refreshHubMarkerIcons();
     renderHubCards(filteredHubs);
 }
 
@@ -797,7 +826,7 @@ function findNearMe() {
     navigator.geolocation.getCurrentPosition(
         pos => {
             const { latitude, longitude } = pos.coords;
-            if (leafletMap) leafletMap.flyTo([latitude, longitude], 11, { duration: 1.5 });
+            if (leafletMap) leafletMap.flyTo([latitude, longitude], 12, { duration: 1.5 });
 
             // Compute distance to every hub and refresh the list, nearest first —
             // mirrors the live-update behaviour of the city/area search box.
@@ -1034,8 +1063,6 @@ function resetParticipantForm() {
     updateParticipantSubmitGate();
     selectedHubId = null;
     document.getElementById('regFormPanel')?.classList.add('hidden');
-    if (leafletMap) {
-        hubMarkers.forEach(m => m.setIcon(createHubPinIcon(false, m._isPending)));
-    }
+    if (leafletMap) refreshHubMarkerIcons();
     renderHubCards(filteredHubs);
 }
