@@ -413,6 +413,7 @@ function getHubCoords(hub) {
 
 let leafletMap      = null;
 let hubMarkers      = [];
+let hubCluster      = null;   // marker cluster group (falls back to a plain layer group if the plugin fails to load)
 let selectedHubId   = null;
 let allApprovedHubs = [];
 let filteredHubs    = [];
@@ -450,6 +451,25 @@ function initMap() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 18,
     }).addTo(leafletMap);
+
+    // Circles that sit close together would otherwise stack their 38px pins on top of
+    // each other (at city zoom 38px is ~3 km of ground). Clustering merges them into a
+    // numbered bubble; clicking it zooms in, and circles on the exact same spot fan out
+    // at the closest zoom. Pins always stay at their true coordinates.
+    hubCluster = window.L.markerClusterGroup
+        ? L.markerClusterGroup({
+            maxClusterRadius: 45,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            spiderfyOnMaxZoom: true,
+            iconCreateFunction: (cluster) => L.divIcon({
+                html: `<div class="hub-cluster">${cluster.getChildCount()}</div>`,
+                className: '',
+                iconSize: [44, 44],
+            }),
+        })
+        : L.layerGroup();
+    leafletMap.addLayer(hubCluster);
 
     // Leaflet caches the container size at map-creation time; since the map is
     // created right as its parent section is switched from display:none to
@@ -496,7 +516,7 @@ async function fetchHubs() {
 
 async function refreshMapMarkers() {
     if (!leafletMap) return;
-    hubMarkers.forEach(m => leafletMap.removeLayer(m));
+    if (hubCluster) hubCluster.clearLayers();
     hubMarkers = [];
 
     // Only Approved circles are ever shown to participants — Pending and Rejected
@@ -510,33 +530,17 @@ async function refreshMapMarkers() {
     const badge = document.getElementById('mapCountBadge');
     if (badge) badge.textContent = `${allApprovedHubs.length} circle${allApprovedHubs.length !== 1 ? 's' : ''}`;
 
-    const placed = new Map();
-
     allApprovedHubs.forEach(hub => {
         const coords = getHubCoords(hub);
         if (!coords) return;
-        // Bucket by the hub's actual (rounded) coordinate, not by city name —
-        // jitter should only kick in for hubs that land on essentially the same
-        // point (e.g. several addresses that all geocoded to the city centroid),
-        // not for every hub that merely shares a city with others. The old
-        // per-city counter grew unboundedly (0.04 + count*0.015 degrees, tens of
-        // km for a city with many circles), which is how pins ended up on
-        // highways outside the city or in the sea for coastal cities like Mumbai.
-        const bucketKey = `${coords[0].toFixed(4)},${coords[1].toFixed(4)}`;
-        const count = placed.get(bucketKey) || 0;
-        placed.set(bucketKey, count + 1);
-        const angle  = count * (Math.PI * 2 / 6);
-        // Small, capped spiral (max ~330m) — enough to make overlapping pins
-        // individually clickable without flying them away from their real area.
-        const radius = count === 0 ? 0 : Math.min(0.0008 + count * 0.0006, 0.003);
-        const lat    = coords[0] + Math.sin(angle) * radius;
-        const lng    = coords[1] + Math.cos(angle) * radius;
-
+        // Pins sit at their real coordinates. Overlap between nearby circles (including
+        // several that share the exact same point) is handled by the cluster group, not
+        // by moving pins away from where the circle really is.
         const isPending = hub.status === 'Pending';
-        const marker = L.marker([lat, lng], {
+        const marker = L.marker([coords[0], coords[1]], {
             icon: createHubPinIcon(hub.id === selectedHubId, isPending),
         });
-        marker.addTo(leafletMap);
+        hubCluster.addLayer(marker);
         marker.bindPopup(buildHubPopupHTML(hub), { maxWidth: 280, minWidth: 260 });
         marker.on('click', () => { highlightHubCard(hub.id); });
         marker._hubId    = hub.id;
@@ -612,13 +616,14 @@ function filterHubs() {
         return true;
     });
 
-    // Dim non-matching markers on map
-    hubMarkers.forEach(m => {
-        const hub   = allApprovedHubs.find(h => h.id === m._hubId);
-        const match = !hasFilter || filteredHubs.includes(hub);
-        if (m._icon) m._icon.style.opacity = match ? '1' : '.25';
-        else m.setOpacity(match ? 1 : 0.25);
-    });
+    // Show only matching circles on the map. (They used to be dimmed, but a dimmed pin
+    // still counts toward a cluster's number, which would be misleading.)
+    if (hubCluster) {
+        hubCluster.clearLayers();
+        hubMarkers.forEach(m => {
+            if (!hasFilter || filteredHubs.some(h => h.id === m._hubId)) hubCluster.addLayer(m);
+        });
+    }
     const badge = document.getElementById('mapCountBadge');
     if (badge) badge.textContent = `${filteredHubs.length} circle${filteredHubs.length !== 1 ? 's' : ''}`;
     renderHubCards(filteredHubs);
@@ -709,6 +714,15 @@ function highlightHubOnMap(hubId) {
     renderHubCards(filteredHubs);
     const coords = getHubCoords(hub);
     if (coords && leafletMap) leafletMap.flyTo(coords, 14, { duration: 1 });
+    revealHubMarker(hubId);
+}
+
+// After flying to a circle, make sure its own pin is showing: a neighbouring circle can keep
+// both inside one cluster bubble even at zoom 14, so zoom/fan out until this one is visible.
+function revealHubMarker(hubId) {
+    const marker = hubMarkers.find(m => m._hubId === hubId);
+    if (!marker || !hubCluster || typeof hubCluster.zoomToShowLayer !== 'function' || !hubCluster.hasLayer(marker)) return;
+    setTimeout(() => hubCluster.zoomToShowLayer(marker, () => {}), 1100);
 }
 
 // Called from map marker click — highlight card and pan, no form
@@ -751,6 +765,7 @@ function selectHubById(hubId) {
     // Pan map to hub
     const coords = getHubCoords(hub);
     if (coords && leafletMap) leafletMap.flyTo(coords, 14, { duration: 1 });
+    revealHubMarker(hubId);
 }
 
 function deselectHub() {
@@ -771,7 +786,10 @@ function resetMapView() {
     const sortEl = document.getElementById('hubSortBy');
     if (sortEl) sortEl.value = 'city';
     filteredHubs = [...allApprovedHubs];
-    hubMarkers.forEach(m => m.setOpacity(1));
+    if (hubCluster) {
+        hubCluster.clearLayers();
+        hubMarkers.forEach(m => hubCluster.addLayer(m));
+    }
     renderHubCards(filteredHubs);
     const badge = document.getElementById('mapCountBadge');
     if (badge) badge.textContent = `${allApprovedHubs.length} circle${allApprovedHubs.length !== 1 ? 's' : ''}`;

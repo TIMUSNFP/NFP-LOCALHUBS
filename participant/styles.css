@@ -975,6 +975,25 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     font-size: var(--fs-base);
     line-height: 1;
 }
+/* Several circles close together merge into one numbered bubble (Leaflet.markercluster). */
+.hub-cluster {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary);
+    color: var(--white);
+    border: 3px solid var(--white);
+    box-shadow: var(--shadow-md);
+    font-weight: 700;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.hub-cluster:hover { background: var(--primary-dark); }
 /* Leaflet popup */
 .leaflet-popup-content-wrapper {
     border-radius: var(--radius-md) !important;
