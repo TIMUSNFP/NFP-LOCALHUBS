@@ -950,7 +950,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     display: inline-block;
 }
 .approved-dot { background: var(--primary); }
-.selected-dot  { background: var(--info); }
+.selected-dot  { background: var(--primary); box-shadow: 0 0 0 3px rgba(255, 80, 0, .35); }
 
 /* Leaflet custom hub marker */
 .hub-pin {
@@ -968,7 +968,8 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     transition: transform var(--transition), background var(--transition);
 }
 .hub-pin:hover { background: var(--primary-dark); }
-.hub-pin.selected-pin { background: var(--info); }
+/* The selected circle stays bright orange: a glow ring and a slightly larger pin mark it, not a colour change. */
+.hub-pin.selected-pin { background: var(--primary); box-shadow: 0 0 0 5px rgba(255, 80, 0, .35), var(--shadow-md); transform: rotate(-45deg) scale(1.15); }
 .hub-pin.pending-pin { background: var(--warning); }
 .hub-pin-inner {
     transform: rotate(45deg);
@@ -993,7 +994,7 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     transition: background var(--transition);
 }
 .hub-dot-hit:hover .hub-dot { background: var(--primary-dark); }
-.hub-dot.selected-pin { background: var(--info); }
+.hub-dot.selected-pin { background: var(--primary); }
 .hub-dot.pending-pin { background: var(--warning); }
 /* Leaflet popup */
 .leaflet-popup-content-wrapper {

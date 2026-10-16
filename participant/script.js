@@ -505,7 +505,6 @@ function refreshHubMarkerIcons() {
     hubMarkers.forEach(m => {
         const selected = m._hubId === selectedHubId;
         m.setIcon(createHubPinIcon(selected, m._isPending));
-        m.setOpacity(m.options.opacity);   // a new icon element would otherwise lose the filter's dimming
         m.setZIndexOffset(selected ? 1000 : 0);
     });
 }
@@ -625,7 +624,6 @@ function filterHubs() {
     const q = (document.getElementById('hubCitySearch')?.value || '').toLowerCase().trim();
     const cityFilter = document.getElementById('hubCityFilter')?.value || '';
     const availabilityFilter = document.getElementById('hubAvailabilityFilter')?.value || '';
-    const hasFilter = !!(q || cityFilter || availabilityFilter);
 
     filteredHubs = allApprovedHubs.filter(h => {
         if (q && !(
@@ -642,12 +640,8 @@ function filterHubs() {
         return true;
     });
 
-    // Dim non-matching markers on map
-    hubMarkers.forEach(m => {
-        const hub   = allApprovedHubs.find(h => h.id === m._hubId);
-        const match = !hasFilter || filteredHubs.includes(hub);
-        m.setOpacity(match ? 1 : 0.25);
-    });
+    // Every pin stays fully bright whatever the filter: only the card list narrows. (Faded
+    // pins read as broken, and the map flies to the matching city anyway.)
     const badge = document.getElementById('mapCountBadge');
     if (badge) badge.textContent = `${filteredHubs.length} circle${filteredHubs.length !== 1 ? 's' : ''}`;
     renderHubCards(filteredHubs);
@@ -800,7 +794,6 @@ function resetMapView() {
     const sortEl = document.getElementById('hubSortBy');
     if (sortEl) sortEl.value = 'city';
     filteredHubs = [...allApprovedHubs];
-    hubMarkers.forEach(m => m.setOpacity(1));
     renderHubCards(filteredHubs);
     const badge = document.getElementById('mapCountBadge');
     if (badge) badge.textContent = `${allApprovedHubs.length} circle${allApprovedHubs.length !== 1 ? 's' : ''}`;
