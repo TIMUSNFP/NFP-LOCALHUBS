@@ -158,6 +158,16 @@ function campaignRowToJson(row) {
 // past editions' leaders and participants would be excluded from this one.
 const ACTIVE_EDITION_SQL = `COALESCE((SELECT NULLIF(value, '')::int FROM settings WHERE key = 'active_edition'), 1)`;
 
+// True when the CRM contact is the same person as the circle leader row `h`. Leaders often fill the
+// leader form with a different email or different capitalisation than the CRM holds, so an exact
+// email match lets them through: also match on trimmed lower-case email, on the last 10 digits of the
+// mobile number, and on the same name in the same city. Used so leaders never get the participant email.
+const SAME_PERSON_AS_HUB_SQL = `lower(trim(h.email)) = lower(trim(crm_contacts.email))
+         OR (length(regexp_replace(coalesce(h.mobile, ''), '\D', '', 'g')) >= 10
+             AND right(regexp_replace(coalesce(h.mobile, ''), '\D', '', 'g'), 10) = right(regexp_replace(coalesce(crm_contacts.mobile, ''), '\D', '', 'g'), 10))
+         OR (lower(regexp_replace(h.full_name, '[^a-zA-Z]', '', 'g')) = lower(regexp_replace(coalesce(crm_contacts.full_name, ''), '[^a-zA-Z]', '', 'g'))
+             AND lower(trim(h.city)) = lower(trim(coalesce(crm_contacts.city, ''))))`;
+
 async function getApprovedHubsWithCounts() {
   const hubs = await db.all(`SELECT * FROM hubs WHERE status = 'Approved' AND edition = ${ACTIVE_EDITION_SQL} ORDER BY city ASC, area ASC`);
   const countRows = await db.all(
@@ -264,7 +274,8 @@ function appendOptionalFilters(conditions, params, targetBatches, targetMembersh
 function appendHubLeaderExclusion(conditions, excludeHubLeaders) {
   if (excludeHubLeaders !== false) {
     conditions.push(
-      `NOT EXISTS (SELECT 1 FROM hubs h WHERE h.status = 'Approved' AND h.edition = ${ACTIVE_EDITION_SQL} AND h.email = crm_contacts.email)`
+      `NOT EXISTS (SELECT 1 FROM hubs h WHERE h.status IN ('Approved', 'Pending') AND h.edition = ${ACTIVE_EDITION_SQL}
+         AND (${SAME_PERSON_AS_HUB_SQL}))`
     );
   }
 }
@@ -277,7 +288,10 @@ function appendHubLeaderExclusion(conditions, excludeHubLeaders) {
 function appendRegisteredParticipantExclusion(conditions, excludeRegisteredParticipants) {
   if (excludeRegisteredParticipants !== false) {
     conditions.push(
-      `NOT EXISTS (SELECT 1 FROM participants p WHERE lower(p.email) = lower(crm_contacts.email) AND p.status != 'Cancelled' AND p.edition = ${ACTIVE_EDITION_SQL})`
+      `NOT EXISTS (SELECT 1 FROM participants p WHERE p.status != 'Cancelled' AND p.edition = ${ACTIVE_EDITION_SQL}
+         AND (lower(trim(p.email)) = lower(trim(crm_contacts.email))
+              OR (length(regexp_replace(coalesce(p.mobile, ''), '\D', '', 'g')) >= 10
+                  AND right(regexp_replace(coalesce(p.mobile, ''), '\D', '', 'g'), 10) = right(regexp_replace(coalesce(crm_contacts.mobile, ''), '\D', '', 'g'), 10))))`
     );
   }
 }
