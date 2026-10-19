@@ -3948,7 +3948,7 @@ async function openCrmCampaignModal() {
             <label>Campaign Type</label>
             <select id="crmCTemplate" class="form-input" onchange="toggleCrmCampaignTemplate()">
                 <option value="circle">Circle outreach: tell contacts about open Circles in their city</option>
-                <option value="circle-open">Circle invitation: members join an open Circle in their city (or the nearest)</option>
+                <option value="circle-open">Participant invitation: join a Circle in your city, or lead one if there is none</option>
                 <option value="leader-office">Circle Leader invitation: contacts who have an office (from the office poll)</option>
                 <option value="leader-invite">Circle Leader invitation: all Active Members</option>
             </select>
@@ -4179,7 +4179,7 @@ function updateCrmCampaignRecipientHint() {
     const hint = document.getElementById('crmCRecipientHint');
     if (!hint) return;
     if (document.getElementById('crmCTemplate')?.value === 'circle-open') {
-        hint.textContent = 'Each member gets the open circles in their own city, or the nearest one within 50 km. Ex-Members are skipped automatically; tick Active Member under membership status to also leave out older contacts whose status is unknown. The exact count is shown after you save.';
+        hint.textContent = 'Sent to every matching member. Members whose city has an open circle get the join email; everyone else gets an email asking whether they could lead a Circle in their city. Ex-Members are skipped automatically; tick Active Member under membership status to also leave out older contacts whose status is unknown. The exact count is shown after you save.';
         return;
     }
     if (isCrmLeaderTemplate(document.getElementById('crmCTemplate')?.value)) {
