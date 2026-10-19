@@ -25,6 +25,8 @@ const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>`
 
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
 const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/D7vMp9xxt4XElJZ0dRW09c';
+// Shown in the participant confirmation email (sent when a participant is confirmed).
+const PARTICIPANTS_WHATSAPP_URL = 'https://chat.whatsapp.com/ELqTJO5YjDE5yH754l8rIO?s=cl&p=a&mlu=4&ilr=4';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
 const CRM_UNSUBSCRIBE_BASE_URL = 'https://nfp-circles.vercel.app/api/crm/unsubscribe';
 
@@ -321,6 +323,10 @@ async function sendParticipantConfirmed(participant, hub) {
       <p><strong>Date &amp; Time:</strong> ${when}</p>
     </div>
     <p>Your Circle Lead &amp; the NFP Team will be in touch with further steps.</p>
+    <div class="btn-wrap">
+      <a class="btn" href="${PARTICIPANTS_WHATSAPP_URL}">Join the Participants WhatsApp Group</a>
+    </div>
+    <p style="font-size:13px;color:#6A7D8B;text-align:center;margin-top:-4px">If you've already joined the group, please ignore this message.</p>
     <p>You'll soon receive the complete agenda for what's happening on ${shortDate}. Till then, stay tuned!</p>
     <p class="section-heading">Your NFP Circle Experience:</p>
     <ul class="next-steps" style="list-style:none;padding-left:0">
