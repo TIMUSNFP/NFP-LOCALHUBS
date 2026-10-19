@@ -184,6 +184,16 @@ alter table crm_campaigns add column if not exists target_membership_statuses js
 -- Optional hand-picked audience for the Circle Leader templates: when non-empty, only these crm_contacts ids are recipients.
 alter table crm_campaigns add column if not exists target_contact_ids jsonb not null default '[]'::jsonb;
 
+-- Coordinates for contacts' cities that the built-in city list does not know, so campaigns can
+-- find the nearest open Circle for them. Filled by looking each city up once (OpenStreetMap).
+create table if not exists city_geocodes (
+  city_key text primary key,           -- normalizeCityKey() of the city text
+  city text not null,
+  lat double precision not null,
+  lng double precision not null,
+  geocoded_at text not null
+);
+
 create table if not exists crm_campaign_recipients (
   id bigserial primary key,
   campaign_id text not null references crm_campaigns(id) on delete cascade,

@@ -206,8 +206,9 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 // For a member whose own city has no open circle: the open circles within maxKm of that city's
 // centre, nearest first (up to 3), with the distance to the nearest. null when none is that close
 // or the city isn't in the coordinate lookup (those members are simply skipped).
-function nearestOpenHubs(city, openHubs, maxKm) {
-  const c = getCityCoords(city);
+function nearestOpenHubs(city, openHubs, maxKm, extraCoords) {
+  // Built-in city list first; otherwise the looked-up coordinates stored in city_geocodes.
+  const c = getCityCoords(city) || (extraCoords && extraCoords.get(normalizeCityKey(city))) || null;
   if (!c) return null;
   const withDist = openHubs
     .filter((h) => h.lat != null && h.lng != null)
@@ -227,9 +228,10 @@ async function getAutoTargeting(template) {
   if (template === TEMPLATE_CIRCLE_OPEN) {
     const openHubs = Array.from(openMap.values()).flat();
     const cities = await db.all("SELECT DISTINCT city, city_key FROM crm_contacts WHERE city_key IS NOT NULL AND city_key <> '' AND city IS NOT NULL");
+    const geo = new Map((await db.all('SELECT city_key, lat, lng FROM city_geocodes')).map((g) => [g.city_key, [Number(g.lat), Number(g.lng)]]));
     for (const c of cities) {
       if (openMap.has(c.city_key) || nearMap.has(c.city_key)) continue;
-      const found = nearestOpenHubs(c.city, openHubs, CIRCLE_OPEN_NEAR_KM);
+      const found = nearestOpenHubs(c.city, openHubs, CIRCLE_OPEN_NEAR_KM, geo);
       if (found) nearMap.set(c.city_key, found);
     }
   }
