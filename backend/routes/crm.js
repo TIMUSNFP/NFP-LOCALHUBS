@@ -7,8 +7,8 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const db = require('../db');
 const { requireAdmin } = require('../middleware/auth');
-const { generateCrmContactId, generateCrmCampaignId, normalizeCityKey, hubRowToJson, sleep } = require('../utils');
-const { buildCircleCrmEmailHtml, buildLeaderOfficeEmailHtml, buildLeaderInviteEmailHtml, sendCrmCampaignEmail } = require('../mailer');
+const { generateCrmContactId, generateCrmCampaignId, normalizeCityKey, getCityCoords, hubRowToJson, sleep } = require('../utils');
+const { buildCircleCrmEmailHtml, buildCircleOpenEmailHtml, buildLeaderOfficeEmailHtml, buildLeaderInviteEmailHtml, sendCrmCampaignEmail } = require('../mailer');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -82,6 +82,10 @@ const TEMPLATE_CIRCLE = 'circle';
 const TEMPLATE_LEADER_OFFICE = 'leader-office';
 // 'leader-invite' = the general Circle Leader invitation for Active Members (no office-poll line).
 const TEMPLATE_LEADER_INVITE = 'leader-invite';
+// 'circle-open' = invite members to register for an open Circle in their own city, or the nearest one
+// within CIRCLE_OPEN_NEAR_KM. Always runs in auto mode (each person sees their own circles).
+const TEMPLATE_CIRCLE_OPEN = 'circle-open';
+const CIRCLE_OPEN_NEAR_KM = 50;
 const isLeaderTemplate = (t) => t === TEMPLATE_LEADER_OFFICE || t === TEMPLATE_LEADER_INVITE;
 const buildLeaderHtmlFor = (t) => (t === TEMPLATE_LEADER_INVITE ? buildLeaderInviteEmailHtml : buildLeaderOfficeEmailHtml);
 
@@ -181,6 +185,45 @@ function groupOpenHubsByCityKey(hubsWithCounts) {
     map.get(key).push(hub);
   }
   return map;
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const r = (x) => (x * Math.PI) / 180;
+  const a = Math.sin(r(lat2 - lat1) / 2) ** 2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(r(lng2 - lng1) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(a));
+}
+
+// For a member whose own city has no open circle: the open circles within maxKm of that city's
+// centre, nearest first (up to 3), with the distance to the nearest. null when none is that close
+// or the city isn't in the coordinate lookup (those members are simply skipped).
+function nearestOpenHubs(city, openHubs, maxKm) {
+  const c = getCityCoords(city);
+  if (!c) return null;
+  const withDist = openHubs
+    .filter((h) => h.lat != null && h.lng != null)
+    .map((h) => ({ hub: h, km: haversineKm(c[0], c[1], Number(h.lat), Number(h.lng)) }))
+    .filter((x) => x.km <= maxKm)
+    .sort((a, b) => a.km - b.km);
+  if (withDist.length === 0) return null;
+  return { hubs: withDist.slice(0, 3).map((x) => x.hub), km: Math.max(1, Math.round(withDist[0].km)) };
+}
+
+// Everything auto-mode targeting needs, in one place: city_key -> open circles for members whose
+// own city has one, and (for 'circle-open' only) city_key -> nearest circles for the rest.
+// `keys` is every city_key that should be a recipient.
+async function getAutoTargeting(template) {
+  const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+  const nearMap = new Map();
+  if (template === TEMPLATE_CIRCLE_OPEN) {
+    const openHubs = Array.from(openMap.values()).flat();
+    const cities = await db.all("SELECT DISTINCT city, city_key FROM crm_contacts WHERE city_key IS NOT NULL AND city_key <> '' AND city IS NOT NULL");
+    for (const c of cities) {
+      if (openMap.has(c.city_key) || nearMap.has(c.city_key)) continue;
+      const found = nearestOpenHubs(c.city, openHubs, CIRCLE_OPEN_NEAR_KM);
+      if (found) nearMap.set(c.city_key, found);
+    }
+  }
+  return { openMap, nearMap, keys: [...openMap.keys(), ...nearMap.keys()] };
 }
 
 // Appends "AND batch = ANY(...)" / "AND membership = ANY(...)" fragments (only
@@ -375,8 +418,9 @@ async function runCampaignBatchInner(campaignId) {
   // sees circles in their own city — this is the whole point of "auto" mode.
   let manualHubs = [];
   let openMap = null;
+  let nearMap = new Map();
   if (mode === 'auto') {
-    openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
+    ({ openMap, nearMap } = await getAutoTargeting(campaign.template));
   } else {
     const hubIds = campaign.hub_ids || [];
     manualHubs = hubIds.length ? await db.all('SELECT * FROM hubs WHERE id = ANY($1::text[])', [hubIds]) : [];
@@ -391,7 +435,8 @@ async function runCampaignBatchInner(campaignId) {
       continue;
     }
 
-    const hubs = mode === 'auto' ? (openMap.get(contact.city_key) || []) : manualHubs;
+    const nearInfo = mode === 'auto' && !openMap.has(contact.city_key) ? nearMap.get(contact.city_key) : null;
+    const hubs = mode === 'auto' ? (openMap.get(contact.city_key) || (nearInfo ? nearInfo.hubs : [])) : manualHubs;
     if (mode === 'auto' && hubs.length === 0) {
       // Their city no longer has an open circle (e.g. it filled up between start
       // and now) — nothing to tell them, so skip rather than send an empty email.
@@ -404,10 +449,12 @@ async function runCampaignBatchInner(campaignId) {
         { id: contact.id, full_name: contact.full_name, email: contact.email, city: contact.city },
         hubs,
         {
-          subject: renderCrmSubject(campaign.subject, contact.city),
+          // Someone served by a nearby city's circles must not read "open in <their own city>".
+          subject: renderCrmSubject(campaign.subject, nearInfo ? hubs[0].city : contact.city),
           introHtml: campaign.intro_html,
           targetCities: mode === 'auto' ? [] : targetCities,
           template: campaign.template || TEMPLATE_CIRCLE,
+          nearKm: nearInfo ? nearInfo.km : null,
         }
       );
       await db.run(
@@ -829,13 +876,13 @@ router.patch('/campaigns/:id', asyncHandler(async (req, res) => {
 // deliberately include Circle Leaders / already-registered Participants.
 router.post('/campaigns', asyncHandler(async (req, res) => {
   const { name, template: templateRaw, targetMode, targetCities, hubIds, targetBatches, targetMemberships, targetBatchStatuses, targetMembershipStatuses, targetContactIds, excludeHubLeaders, excludeRegisteredParticipants, subject, introHtml, batchSize, intervalMinutes } = req.body || {};
-  const template = isLeaderTemplate(templateRaw) ? templateRaw : TEMPLATE_CIRCLE;
+  const template = isLeaderTemplate(templateRaw) ? templateRaw : (templateRaw === TEMPLATE_CIRCLE_OPEN ? TEMPLATE_CIRCLE_OPEN : TEMPLATE_CIRCLE);
   const contactIdList = Array.isArray(targetContactIds) ? targetContactIds.filter((x) => typeof x === 'string') : [];
   const isLeaderType = template === TEMPLATE_LEADER_OFFICE;
   // The leader invitation is a fixed, hub-less email: no auto/manual city-to-circle
   // matching, so it always runs in 'manual' mode with no hubs, and the city list
   // is an optional narrowing filter rather than a requirement.
-  const mode = !isLeaderType && targetMode === 'auto' ? 'auto' : 'manual';
+  const mode = !isLeaderType && (targetMode === 'auto' || template === TEMPLATE_CIRCLE_OPEN) ? 'auto' : 'manual';
   const batches = Array.isArray(targetBatches) ? targetBatches : [];
   const memberships = Array.isArray(targetMemberships) ? targetMemberships : [];
   const batchStatuses = Array.isArray(targetBatchStatuses) ? targetBatchStatuses : [];
@@ -863,8 +910,8 @@ router.post('/campaigns', asyncHandler(async (req, res) => {
     conditions = ['unsubscribed_at IS NULL'];
     params = [];
     if (mode === 'auto') {
-      const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
-      params.push(Array.from(openMap.keys()));
+      const { keys } = await getAutoTargeting(template);
+      params.push(keys);
       conditions.push(`city_key = ANY($${params.length}::text[])`);
     } else {
       params.push(cityList);
@@ -943,9 +990,9 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
   const targetBatchStatuses = campaign.target_batch_statuses || [];
   const targetMembershipStatuses = campaign.target_membership_statuses || [];
 
+  let sampleNear = null;
   if (mode === 'auto') {
-    const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
-    const openCityKeys = Array.from(openMap.keys());
+    const { openMap, nearMap, keys: openCityKeys } = await getAutoTargeting(campaign.template);
     const conditions = ['unsubscribed_at IS NULL'];
     const params = [];
     if (requestedCity) {
@@ -965,7 +1012,8 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
       sampleContact = { id: 'SAMPLE', full_name: 'Sample Member', email: 'sample@example.com', city: requestedCity || '(no matching contact yet)' };
       hubs = [];
     } else {
-      hubs = openMap.get(sampleContact.city_key) || [];
+      sampleNear = openMap.has(sampleContact.city_key) ? null : (nearMap.get(sampleContact.city_key) || null);
+      hubs = openMap.get(sampleContact.city_key) || (sampleNear ? sampleNear.hubs : []);
     }
   } else {
     const targetCities = campaign.target_cities || [];
@@ -990,13 +1038,16 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
     }
   }
 
-  const renderedSubject = renderCrmSubject(campaign.subject, sampleContact.city);
+  const renderedSubject = renderCrmSubject(campaign.subject, sampleNear && hubs[0] ? hubs[0].city : sampleContact.city);
 
-  const html = await buildCircleCrmEmailHtml(
-    { id: sampleContact.id, full_name: sampleContact.full_name, email: sampleContact.email, city: sampleContact.city },
-    hubs,
-    { subject: renderedSubject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : (campaign.target_cities || []) }
-  );
+  const previewContact = { id: sampleContact.id, full_name: sampleContact.full_name, email: sampleContact.email, city: sampleContact.city };
+  const html = campaign.template === TEMPLATE_CIRCLE_OPEN
+    ? await buildCircleOpenEmailHtml(previewContact, hubs, { subject: renderedSubject, nearKm: sampleNear ? sampleNear.km : null })
+    : await buildCircleCrmEmailHtml(
+        previewContact,
+        hubs,
+        { subject: renderedSubject, introHtml: campaign.intro_html, targetCities: mode === 'auto' ? [] : (campaign.target_cities || []) }
+      );
 
   res.json({
     html,
@@ -1039,8 +1090,8 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
       // Recomputed fresh at start time (not from campaign creation) in case hub
       // approvals/fills changed in between — a circle that filled up since the
       // campaign was drafted should not pull in contacts from its city.
-      const openMap = groupOpenHubsByCityKey(await getApprovedHubsWithCounts());
-      params.push(Array.from(openMap.keys()));
+      const { keys } = await getAutoTargeting(campaign.template);
+      params.push(keys);
       conditions.push(`city_key = ANY($${params.length}::text[])`);
     } else {
       params.push(campaign.target_cities || []);

@@ -984,6 +984,156 @@ async function buildLeaderInviteEmailHtml(contact, edition) {
 </html>`;
 }
 
+// ─── NFP Circle CRM — "join an open Circle near you" (participant invitation) ─
+// Per-member email: the open circles in their own city (or, if there is none, the nearest
+// ones within range), the date and time, and a Register button. `hubs` are the circles for
+// THIS member; campaign.nearKm is set when they come from a different city.
+
+// "BORIVALI WEST" -> "Borivali West"; drops a trailing ", <city>" the leader typed into the area.
+function formatHubAreaForEmail(area, city) {
+  let a = String(area || '').trim().replace(/\s+/g, ' ');
+  if (a && a === a.toUpperCase()) a = a.toLowerCase().replace(/(^|[\s.'-])([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase());
+  const c = String(city || '').trim();
+  if (c) a = a.replace(new RegExp(',?\\s+' + c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i'), '');
+  return a;
+}
+
+async function buildCircleOpenEmailHtml(contact, hubs, campaign = {}) {
+  const H = LEADER_OFFICE_FONT_HEADING;
+  const B = LEADER_OFFICE_FONT_BODY;
+  const spotsLeft = (h) => { const cap = parseInt(h.capacity, 10); return cap > 0 ? cap - (h.participantCount || 0) : null; };
+  const sorted = [...(hubs || [])].sort((a, b) => (spotsLeft(b) || 0) - (spotsLeft(a) || 0));
+  const first = sorted[0];
+  const n = sorted.length;
+  const nearKm = campaign.nearKm || null;
+  const editionNumber = first ? first.edition : await getLatestEditionNumber();
+  const info = await getEditionInfo(editionNumber);
+
+  const name = escHtml(formatGreetingName(contact.full_name) || 'there');
+  const memberCity = escHtml(String(contact.city || '').trim() || 'your city');
+  const city = escHtml(first ? first.city : (contact.city || 'your city'));
+  const theme = escHtml(info.themeTitle || 'NFP Circles');
+  const tagline = escHtml(info.themeTagline || '');
+  const dateFull = info.date ? escHtml(info.date.full) : 'To be announced';
+  const dateShort = info.date ? escHtml(info.date.short) : 'soon';
+  const timeRange = (info.timeStart && info.timeEnd) ? escHtml(`${info.timeStart} to ${info.timeEnd}`) : 'To be announced';
+  const editionLabel = editionNumber !== undefined ? `edition ${escHtml(editionNumber)}` : 'the next edition';
+  const leaderName = first ? escHtml(formatGreetingName(first.full_name)) : '';
+  const firstArea = first ? escHtml(formatHubAreaForEmail(first.area, first.city)) : '';
+
+  let headlineA, headlineB, intro;
+  if (!nearKm) {
+    headlineA = n === 1 ? 'A Circle is open' : 'NFP Circles are open';
+    headlineB = `in ${city}.`;
+    intro = n === 1
+      ? `${leaderName} has opened a Circle in ${firstArea}, ${city}, for ${editionLabel} on ${theme}. Join them on ${dateShort}.`
+      : `${n} fellow NFP members have opened Circles in ${city} for ${editionLabel} on ${theme}. Pick the one closest to you and join them on ${dateShort}.`;
+  } else {
+    headlineA = n === 1 ? 'A Circle is open' : 'NFP Circles are open';
+    headlineB = 'near you.';
+    intro = n === 1
+      ? `${leaderName} has opened a Circle in ${firstArea}, ${city}, about ${nearKm} km from ${memberCity}. It is the closest one to you for ${editionLabel} on ${theme}, on ${dateShort}.`
+      : `The closest Circles to ${memberCity} are near ${city}, about ${nearKm} km away, for ${editionLabel} on ${theme}. Pick the one that suits you and join them on ${dateShort}.`;
+  }
+  const preheader = n
+    ? `${n} NFP Circle${n === 1 ? ' is' : 's are'} open ${nearKm ? 'near' : 'in'} ${nearKm ? memberCity : city}. Pick yours and register.`
+    : 'NFP Circles are open. Pick yours and register.';
+
+  const shown = sorted.slice(0, 5);
+  const cardsHtml = shown.map((h) => {
+    const left = spotsLeft(h);
+    const bits = [escHtml(formatHubAreaForEmail(h.area, h.city)), escHtml(h.venue_type || '')].filter(Boolean);
+    if (left && left > 0) bits.push(`${left} spot${left === 1 ? '' : 's'} left`);
+    return `<tr><td style="padding:0 0 12px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-soft" style="background:#EFE7DC;border-radius:10px;"><tr><td style="padding:16px 20px;"><div class="t-main" style="font-family:${H};font-size:19px;line-height:1.3;color:#333333;">${escHtml(formatGreetingName(h.full_name))}</div><div class="t-soft" style="font-family:${B};font-size:15px;line-height:1.6;color:#4A4A4A;padding-top:4px;">${bits.join(' &middot; ')}</div></td></tr></table></td></tr>`;
+  }).join('');
+  const moreHtml = n > shown.length
+    ? `<p class="t-main" style="margin:0;font-family:${B};font-size:16px;line-height:1.65;color:#333333;">and ${n - shown.length} more Circle${n - shown.length === 1 ? '' : 's'} ${nearKm ? 'nearby' : `in ${city}`}, all on the registration page.</p>`
+    : '';
+  const p = (extra) => `margin:0${extra || ''};font-family:${B};font-size:16px;line-height:1.65;color:#333333;`;
+  const label = `font-family:${B};font-size:13px;line-height:1.3;color:#5A6B77;`;
+  const value = `font-family:${H};font-size:22px;line-height:1.3;color:#333333;padding-top:4px;`;
+  const footLink = 'color:#5A6B77;text-decoration:underline;';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Join an NFP Circle</title>
+<style>
+@media (prefers-color-scheme: dark){
+  .bg-out{background:#14171A !important}
+  .bg-card{background:#1E2225 !important}
+  .bg-soft{background:#2A2F33 !important}
+  .t-main{color:#F1EEE9 !important}
+  .t-soft{color:#C3C9CE !important}
+  .t-foot{color:#A5AEB5 !important}
+  .t-accent{color:#FF7A33 !important}
+}
+</style>
+</head>
+<body style="margin:0;padding:0;">
+<div class="bg-out" style="margin:0;padding:24px 12px;background:#EFE7DC;color:#333333;font-family:${B};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">${preheader}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0 auto;">
+<tr><td class="bg-card" style="background:#FFFFFF;border-radius:10px;overflow:hidden;">
+ <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr><td style="padding:28px 36px 0 36px;"><img src="${LOGO_URL}" alt="Network FP" width="132" style="display:block;border:0;height:auto;width:132px;"></td></tr>
+  <tr><td style="padding:36px 36px 0 36px;">
+    <h1 class="t-main" style="margin:0;font-family:${H};font-weight:400;font-size:38px;line-height:1.14;letter-spacing:-0.5px;color:#333333;">${headlineA} <span class="t-accent" style="font-style:italic;color:#FF5000;">${headlineB}</span></h1>
+  </td></tr>
+  ${tagline ? `<tr><td style="padding:12px 36px 0 36px;">
+    <p class="t-soft" style="margin:0;font-family:${H};font-style:italic;font-size:18px;line-height:1.5;color:#4A4A4A;">${tagline}</p>
+  </td></tr>` : ''}
+  <tr><td style="padding:28px 36px 0 36px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-soft" style="background:#EFE7DC;border-radius:10px;">
+     <tr>
+      <td width="50%" style="padding:20px 24px;vertical-align:top;">
+        <div class="t-foot" style="${label}">Date</div>
+        <div class="t-main" style="${value}">${dateFull}</div>
+      </td>
+      <td width="50%" style="padding:20px 24px;vertical-align:top;">
+        <div class="t-foot" style="${label}">Time</div>
+        <div class="t-main" style="${value}">${timeRange}</div>
+      </td>
+     </tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:32px 36px 0 36px;">
+    <p class="t-main" style="${p(';margin-bottom:16px')}">Hi ${name},</p>
+    <p class="t-main" style="${p()}">${intro}</p>
+  </td></tr>
+  ${cardsHtml ? `<tr><td style="padding:20px 36px 0 36px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${cardsHtml}</table>
+    ${moreHtml}
+  </td></tr>` : ''}
+  <tr><td style="padding:24px 36px 0 36px;">
+    <p class="t-main" style="${p()}">NFP Circles are free to attend and built for peer learning, with no sales pitches. The main session is streamed to every Circle at once, then your group talks it through in person.</p>
+  </td></tr>
+  <tr><td style="padding:32px 36px 0 36px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td bgcolor="#FF5000" style="background:#FF5000;border-radius:10px;">
+        <a href="${PARTICIPANT_REG_URL}" style="display:inline-block;padding:16px 28px;font-family:${B};font-size:19px;font-weight:700;line-height:1.2;color:#FFFFFF;text-decoration:none;">Register for a Circle</a>
+      </td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:32px 36px 0 36px;">
+    <p class="t-main" style="margin:0;font-family:${H};font-style:italic;font-size:18px;line-height:1.5;color:#333333;">Be Independent, but never alone.</p>
+    <p class="t-soft" style="margin:6px 0 0 0;font-family:${B};font-size:15px;line-height:1.6;color:#4A4A4A;">Team NFP Circles</p>
+  </td></tr>
+  <tr><td style="padding:32px 36px 32px 36px;">
+    <p class="t-foot" style="margin:0;font-family:${B};font-size:13px;line-height:1.7;color:#5A6B77;border-top:1px solid #E3DED6;padding-top:20px;">Questions? Write to <a href="mailto:circles@networkfp.com" class="t-foot" style="${footLink}">circles@networkfp.com</a>.<br>Network FP, <a href="https://www.networkfp.com" class="t-foot" style="${footLink}">www.networkfp.com</a><br><a href="${crmUnsubscribeUrl(contact.id)}" class="t-foot" style="${footLink}">Unsubscribe</a> if you would rather not get these emails.</p>
+  </td></tr>
+ </table>
+</td></tr>
+</table>
+</div>
+</body>
+</html>`;
+}
+
 // Unlike send() above, this does NOT swallow errors — a campaign batch needs to
 // know exactly which contacts genuinely failed (vs. sent) so it can record it on
 // the recipient row and never silently claim "sent" for an email that wasn't.
@@ -998,7 +1148,9 @@ async function sendCrmCampaignEmail(contact, hubs, campaign) {
     await transporter.sendMail({ from: FROM, to: contact.email, subject: campaign.subject, html });
     return;
   }
-  const html = await buildCircleCrmEmailHtml(contact, hubs, campaign);
+  const html = campaign.template === 'circle-open'
+    ? await buildCircleOpenEmailHtml(contact, hubs, campaign)
+    : await buildCircleCrmEmailHtml(contact, hubs, campaign);
   await transporter.sendMail({ from: FROM, to: contact.email, subject: campaign.subject, html });
 }
 
@@ -1187,6 +1339,7 @@ module.exports = {
   buildCircleCrmEmailHtml,
   buildLeaderOfficeEmailHtml,
   buildLeaderInviteEmailHtml,
+  buildCircleOpenEmailHtml,
   sendCrmCampaignEmail,
   crmUnsubscribeUrl,
   buildCircleLeaderRecruitmentHtml,
