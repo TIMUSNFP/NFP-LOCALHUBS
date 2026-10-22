@@ -603,13 +603,39 @@ async function sendParticipantCircleCombined(participant, oldHub, newHub) {
 // Sent to the Circle Leader whose circle was closed in a combine (the surviving
 // leader doesn't need a separate email — nothing changes for them except a
 // bigger roster, which already shows up next time they view/receive it).
+// The other half of a merge: the leader whose circle stays open. The closing leader already
+// gets sendHubLeaderCircleMerged; without this one the surviving leader would not be told
+// that another circle (and its participants) was added to theirs.
+async function sendHubLeaderCircleMergedSurvivor(survivingHub, closingHub, movedCount) {
+  const html = wrap(`
+    <div class="badge">Another Circle Has Combined With Yours</div>
+    <h2>Hi ${survivingHub.full_name}, ${closingHub.full_name}'s Circle has combined with yours</h2>
+    <p>We have combined ${closingHub.full_name}'s NFP Circle with yours to bring together a bigger, more
+    active group. You remain the Circle Leader.${movedCount > 0 ? ` ${movedCount} participant${movedCount === 1 ? ' has' : 's have'} been added to your Circle.` : ''}</p>
+    <div class="info-box">
+      <p><strong>Circle Leader:</strong> ${survivingHub.full_name}</p>
+      <p><strong>Address:</strong> ${formatHubAddress(survivingHub)}</p>
+      <p><strong>Venue Type:</strong> ${survivingHub.venue_type || '—'}</p>
+      <p><strong>Capacity:</strong> ${survivingHub.capacity || '—'}</p>
+    </div>
+    <p>Your Circle keeps its current capacity. If your space can seat more people, write to us and we will raise it.</p>
+    <p>For any queries, write to us at <a href="mailto:circles@networkfp.com">circles@networkfp.com</a>.</p>
+  `);
+
+  await send({
+    to: survivingHub.email,
+    subject: `${closingHub.full_name}'s Circle has combined with yours`,
+    html,
+  });
+}
+
 async function sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount) {
   const html = wrap(`
     <div class="badge">🤝 Your Circle Has Combined With Another</div>
     <h2>Hi ${closingHub.full_name}, your NFP Circle has combined with another</h2>
     <p>Your NFP Circle has been combined with ${survivingHub.full_name}'s Circle to bring
-    together a bigger, more active group. ${movedCount} participant${movedCount === 1 ? '' : 's'}
-    from your Circle ${movedCount === 1 ? 'has' : 'have'} been moved over automatically.</p>
+    together a bigger, more active group.${movedCount > 0 ? ` ${movedCount} participant${movedCount === 1 ? '' : 's'}
+    from your Circle ${movedCount === 1 ? 'has' : 'have'} been moved over automatically.` : ''}</p>
     <div class="info-box">
       <p><strong>Combined Circle Leader:</strong> ${survivingHub.full_name}</p>
       <p><strong>Address:</strong> ${formatHubAddress(survivingHub)}</p>
@@ -1338,6 +1364,7 @@ module.exports = {
   sendParticipantEventReminder,
   sendParticipantCircleCombined,
   sendHubLeaderCircleMerged,
+  sendHubLeaderCircleMergedSurvivor,
   sendParticipantCircleMergeReverted,
   sendHubLeaderCircleMergeReverted,
   buildCircleCrmEmailHtml,

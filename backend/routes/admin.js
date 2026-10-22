@@ -18,6 +18,7 @@ const {
   sendParticipantEventReminder,
   sendParticipantCircleCombined,
   sendHubLeaderCircleMerged,
+  sendHubLeaderCircleMergedSurvivor,
   sendParticipantCircleMergeReverted,
   sendHubLeaderCircleMergeReverted,
 } = require('../mailer');
@@ -578,6 +579,8 @@ router.post('/hubs/:id/combine', async (req, res) => {
 
   // Let the closing circle's own Leader know — non-blocking, same as above.
   sendHubLeaderCircleMerged(closingHub, survivingHub, movedParticipantIds.length);
+  // ...and the leader whose circle stays open, who would otherwise hear nothing.
+  sendHubLeaderCircleMergedSurvivor(survivingHub, closingHub, movedParticipantIds.length);
 
   res.json({
     movedParticipants: movedParticipantIds.length,
