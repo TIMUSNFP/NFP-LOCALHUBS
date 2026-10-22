@@ -8,7 +8,7 @@ const XLSX = require('xlsx');
 const db = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { generateCrmContactId, generateCrmCampaignId, normalizeCityKey, hubRowToJson, sleep } = require('../utils');
-const { buildCircleCrmEmailHtml, buildCircleOpenEmailHtml, buildLeaderOfficeEmailHtml, buildLeaderInviteEmailHtml, sendCrmCampaignEmail } = require('../mailer');
+const { buildCircleCrmEmailHtml, buildCircleOpenEmailHtml, buildFollowupEmailHtml, buildLeaderOfficeEmailHtml, buildLeaderInviteEmailHtml, sendCrmCampaignEmail } = require('../mailer');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -86,6 +86,15 @@ const TEMPLATE_LEADER_INVITE = 'leader-invite';
 // members whose city has an open circle get Email A (join one of them); members whose city has none
 // get Email B (could you, or someone in your network, lead one there?). Always auto mode.
 const TEMPLATE_CIRCLE_OPEN = 'circle-open';
+// Follow-up emails (second touch, after the 19 Oct invitation) to Active Members who have not registered
+// for the active edition. Every member is in exactly one of the three:
+//   attendee-back : joined edition 1 and their own Circle Leader is hosting again (open circle)
+//   attendee-away : joined edition 1, their old leader is not hosting, and their city has an open circle
+//   missed-first  : did not attend edition 1 (and did not lead), and their city has an open circle
+const TEMPLATE_ATTENDEE_BACK = 'attendee-back';
+const TEMPLATE_ATTENDEE_AWAY = 'attendee-away';
+const TEMPLATE_MISSED_FIRST = 'missed-first';
+const isFollowupTemplate = (t) => t === TEMPLATE_ATTENDEE_BACK || t === TEMPLATE_ATTENDEE_AWAY || t === TEMPLATE_MISSED_FIRST;
 // Email B's subject is fixed (the campaign subject is Email A's), with {city} filled in per member.
 const CIRCLE_OPEN_SUBJECT_NO_CIRCLE = 'Could you lead an NFP Circle in {city}?';
 const isLeaderTemplate = (t) => t === TEMPLATE_LEADER_OFFICE || t === TEMPLATE_LEADER_INVITE;
@@ -259,12 +268,66 @@ function appendHubLeaderExclusion(conditions, excludeHubLeaders) {
 function appendRegisteredParticipantExclusion(conditions, excludeRegisteredParticipants) {
   if (excludeRegisteredParticipants !== false) {
     conditions.push(
-      `NOT EXISTS (SELECT 1 FROM participants p WHERE p.status != 'Cancelled' AND p.edition = ${ACTIVE_EDITION_SQL}
+      // Same person if: trimmed lower-case email, the last 10 digits of the mobile, or the same name in
+      // the same city (a registrant often uses a different email than the CRM holds; the city test is
+      // loose, "Delhi" matches "New Delhi", and needs 4+ letters so a short city never matches by accident).
+      `NOT EXISTS (SELECT 1 FROM participants p JOIN hubs ph ON ph.id = p.hub_id
+         WHERE p.status != 'Cancelled' AND p.edition = ${ACTIVE_EDITION_SQL}
          AND (lower(trim(p.email)) = lower(trim(crm_contacts.email))
-              OR (length(regexp_replace(coalesce(p.mobile, ''), '\D', '', 'g')) >= 10
-                  AND right(regexp_replace(coalesce(p.mobile, ''), '\D', '', 'g'), 10) = right(regexp_replace(coalesce(crm_contacts.mobile, ''), '\D', '', 'g'), 10))))`
+              OR (length(regexp_replace(coalesce(p.mobile, ''), '[^0-9]', '', 'g')) >= 10
+                  AND right(regexp_replace(coalesce(p.mobile, ''), '[^0-9]', '', 'g'), 10) = right(regexp_replace(coalesce(crm_contacts.mobile, ''), '[^0-9]', '', 'g'), 10))
+              OR (lower(regexp_replace(p.full_name, '[^a-zA-Z]', '', 'g')) = lower(regexp_replace(coalesce(crm_contacts.full_name, ''), '[^a-zA-Z]', '', 'g'))
+                  AND length(trim(coalesce(crm_contacts.city, ''))) >= 4
+                  AND (lower(ph.city) LIKE '%' || lower(trim(crm_contacts.city)) || '%' OR lower(trim(crm_contacts.city)) LIKE '%' || lower(ph.city) || '%'))))`
     );
   }
+}
+
+// ---- Follow-up audiences --------------------------------------------------------------------------------------
+const MOBILE10_SQL = (col) => `right(regexp_replace(coalesce(${col}, ''), '[^0-9]', '', 'g'), 10)`;
+// `alias` is a participants or hubs row; true when it is the same person as the CRM contact (email or mobile).
+const SAME_AS_CONTACT_SQL = (alias) => `(lower(trim(${alias}.email)) = lower(trim(crm_contacts.email)) OR (length(${MOBILE10_SQL(alias + '.mobile')}) = 10 AND ${MOBILE10_SQL(alias + '.mobile')} = ${MOBILE10_SQL('crm_contacts.mobile')}))`;
+const ATTENDED_ED1_SQL = `p1.edition = 1 AND p1.status = 'Confirmed' AND ${SAME_AS_CONTACT_SQL('p1')}`;
+const ATTENDED_FROM_SQL = 'participants p1 JOIN hubs h1 ON h1.id = p1.hub_id';
+// True when the returning leader's circle (alias h2) still has a seat (or has no seat limit set).
+const LEADER_HAS_SEATS_SQL = `(NULLIF(regexp_replace(h2.capacity, '[^0-9]', '', 'g'), '')::int IS NULL
+  OR (SELECT COUNT(*) FROM participants pp WHERE pp.hub_id = h2.id AND pp.status != 'Cancelled') < NULLIF(regexp_replace(h2.capacity, '[^0-9]', '', 'g'), '')::int)`;
+
+// Recipient conditions for the three follow-up templates (all Active Members, never leaders or registered).
+async function buildFollowupConditions(template) {
+  const conditions = ['unsubscribed_at IS NULL', "membership_status = 'Active Member'"];
+  const params = [];
+  appendHubLeaderExclusion(conditions, true);
+  appendRegisteredParticipantExclusion(conditions, true);
+  if (template === TEMPLATE_ATTENDEE_BACK) {
+    conditions.push(`EXISTS (SELECT 1 FROM ${ATTENDED_FROM_SQL} JOIN hubs h2 ON h2.carried_over_from_hub_id = h1.id WHERE ${ATTENDED_ED1_SQL} AND h2.edition = ${ACTIVE_EDITION_SQL} AND h2.status = 'Approved' AND ${LEADER_HAS_SEATS_SQL})`);
+  } else {
+    const { keys } = await getAutoTargeting();
+    params.push(keys);
+    conditions.push(`city_key = ANY($${params.length}::text[])`);
+    if (template === TEMPLATE_ATTENDEE_AWAY) {
+      conditions.push(`EXISTS (SELECT 1 FROM ${ATTENDED_FROM_SQL} WHERE ${ATTENDED_ED1_SQL})`);
+      conditions.push(`NOT EXISTS (SELECT 1 FROM ${ATTENDED_FROM_SQL} JOIN hubs h2 ON h2.carried_over_from_hub_id = h1.id WHERE ${ATTENDED_ED1_SQL} AND h2.edition = ${ACTIVE_EDITION_SQL} AND (h2.status = 'Pending' OR (h2.status = 'Approved' AND ${LEADER_HAS_SEATS_SQL})))`);
+    } else {
+      conditions.push(`NOT EXISTS (SELECT 1 FROM participants p1 WHERE ${ATTENDED_ED1_SQL})`);
+      conditions.push(`NOT EXISTS (SELECT 1 FROM hubs l1 WHERE l1.edition = 1 AND l1.status IN ('Approved', 'Merged') AND ${SAME_AS_CONTACT_SQL('l1')})`);
+    }
+  }
+  return { conditions, params };
+}
+
+// The edition 2 circle run by the leader of this contact's edition 1 circle (null if not hosting again).
+async function findReturningLeaderHub(contact) {
+  const mob = String(contact.mobile || '').replace(/[^0-9]/g, '').slice(-10);
+  return db.get(
+    `SELECT h2.*, (SELECT COUNT(*)::int FROM participants p WHERE p.hub_id = h2.id AND p.status != 'Cancelled') AS "participantCount"
+     FROM participants p1 JOIN hubs h1 ON h1.id = p1.hub_id JOIN hubs h2 ON h2.carried_over_from_hub_id = h1.id
+     WHERE p1.edition = 1 AND p1.status = 'Confirmed'
+       AND (lower(trim(p1.email)) = lower(trim($1)) OR ($2 <> '' AND right(regexp_replace(coalesce(p1.mobile, ''), '[^0-9]', '', 'g'), 10) = $2))
+       AND h2.edition = ${ACTIVE_EDITION_SQL} AND h2.status = 'Approved'
+     LIMIT 1`,
+    [contact.email, mob.length === 10 ? mob : '']
+  );
 }
 
 // Recipient conditions for the two Circle Leader templates. 'leader-office' goes to contacts
@@ -390,7 +453,7 @@ async function runCampaignBatchInner(campaignId) {
        )
        RETURNING id, contact_id
      )
-     SELECT claimed.id AS recipient_id, c.id, c.full_name, c.email, c.city, c.city_key, c.unsubscribed_at
+     SELECT claimed.id AS recipient_id, c.id, c.full_name, c.email, c.mobile, c.city, c.city_key, c.unsubscribed_at
      FROM claimed JOIN crm_contacts c ON c.id = claimed.contact_id`,
     [campaignId, campaign.batch_size]
   );
@@ -421,8 +484,14 @@ async function runCampaignBatchInner(campaignId) {
 
     const hubs = mode === 'auto' ? (openMap.get(contact.city_key) || []) : manualHubs;
     const isOpenInvite = campaign.template === TEMPLATE_CIRCLE_OPEN;
+    // Follow-up 'attendee-back': the member's own returning leader's circle (if it is no longer there, they
+    // fall back to their city's circles; if there are none either, they are skipped like any auto send).
+    const rawLeaderHub = campaign.template === TEMPLATE_ATTENDEE_BACK ? await findReturningLeaderHub(contact) : null;
+    const leaderCap = rawLeaderHub ? parseInt(rawLeaderHub.capacity, 10) : 0;
+    // A returning leader whose circle has filled up has no seat to offer, so treat it as "not there".
+    const leaderHub = rawLeaderHub && !(leaderCap > 0 && rawLeaderHub.participantCount >= leaderCap) ? rawLeaderHub : null;
     // For the open-circle invitation an empty list is not a reason to skip: that member gets Email B.
-    if (mode === 'auto' && hubs.length === 0 && !isOpenInvite) {
+    if (campaign.template === TEMPLATE_ATTENDEE_BACK ? !leaderHub : (mode === 'auto' && hubs.length === 0 && !isOpenInvite)) {
       // Their city no longer has an open circle (e.g. it filled up between start
       // and now) — nothing to tell them, so skip rather than send an empty email.
       await db.run(`UPDATE crm_campaign_recipients SET status = 'Skipped' WHERE id = $1`, [contact.recipient_id]);
@@ -440,6 +509,7 @@ async function runCampaignBatchInner(campaignId) {
           introHtml: campaign.intro_html,
           targetCities: mode === 'auto' ? [] : targetCities,
           template: campaign.template || TEMPLATE_CIRCLE,
+          leaderHub,
         }
       );
       await db.run(
@@ -966,6 +1036,34 @@ router.get('/campaigns/:id/preview', asyncHandler(async (req, res) => {
     });
   }
 
+  if (isFollowupTemplate(campaign.template)) {
+    const { conditions, params } = await buildFollowupConditions(campaign.template);
+    const wantedCity = (req.query.sampleCity || '').trim();
+    if (wantedCity) {
+      params.push(normalizeCityKey(wantedCity));
+      conditions.push(`city_key = $${params.length}`);
+    }
+    const sample = (await db.get(`SELECT * FROM crm_contacts WHERE ${conditions.join(' AND ')} ORDER BY full_name ASC LIMIT 1`, params))
+      || { id: 'SAMPLE', full_name: 'Sample Member', email: 'sample@example.com', mobile: '', city: wantedCity || 'your city', city_key: normalizeCityKey(wantedCity) };
+    const { openMap } = await getAutoTargeting();
+    const cityHubs = openMap.get(sample.city_key) || [];
+    const leaderHub = campaign.template === TEMPLATE_ATTENDEE_BACK && sample.id !== 'SAMPLE' ? await findReturningLeaderHub(sample) : null;
+    const html = await buildFollowupEmailHtml(
+      { id: sample.id, full_name: sample.full_name, email: sample.email, city: sample.city },
+      cityHubs,
+      { template: campaign.template, leaderHub }
+    );
+    return res.json({
+      html,
+      subject: renderCrmSubject(campaign.subject, sample.city),
+      sampleContactEmail: sample.email,
+      sampleContactCity: sample.city,
+      hubCount: cityHubs.length + (leaderHub ? 1 : 0),
+      totalRecipients: campaign.total_recipients,
+      targetMode: 'auto',
+    });
+  }
+
   const mode = campaign.target_mode || 'manual';
   const requestedCity = (req.query.sampleCity || '').trim();
 
@@ -1068,7 +1166,9 @@ router.post('/campaigns/:id/start', asyncHandler(async (req, res) => {
   const targetMembershipStatuses = campaign.target_membership_statuses || [];
   let conditions;
   let params;
-  if (isLeaderTemplate(campaign.template)) {
+  if (isFollowupTemplate(campaign.template)) {
+    ({ conditions, params } = await buildFollowupConditions(campaign.template));
+  } else if (isLeaderTemplate(campaign.template)) {
     ({ conditions, params } = buildLeaderConditions(
       campaign.template, campaign.target_cities, campaign.target_contact_ids, campaign.exclude_hub_leaders, campaign.exclude_registered_participants
     ));
