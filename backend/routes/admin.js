@@ -685,15 +685,16 @@ router.post('/hubs/:id/move-to-next-edition', async (req, res) => {
       `INSERT INTO hubs (
         id, submitted_at, last_updated, status, full_name, email, mobile, membership,
         city, area, address, pincode, venue_type, capacity, hosted_before, hosting_frequency,
-        poc_role, lat, lng, edition, carried_over_from_hub_id
+        poc_role, lat, lng, edition, carried_over_from_hub_id, cc_emails
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
       ) RETURNING *`,
       [
         newHubId, now, null, 'Approved', sourceHub.full_name, sourceHub.email, sourceHub.mobile,
         sourceHub.membership, sourceHub.city, sourceHub.area, sourceHub.address, sourceHub.pincode,
         sourceHub.venue_type, sourceHub.capacity, sourceHub.hosted_before, sourceHub.hosting_frequency,
         sourceHub.poc_role, sourceHub.lat, sourceHub.lng, targetEdition, sourceHubId,
+        JSON.stringify(sourceHub.cc_emails || []),
       ]
     );
 

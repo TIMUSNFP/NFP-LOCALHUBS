@@ -49,6 +49,8 @@ alter table hubs add column if not exists merged_at text;
 alter table hubs add column if not exists edition integer not null default 1;
 alter table hubs add column if not exists carried_over_from_hub_id text references hubs(id);
 alter table hubs add column if not exists carried_over_to_hub_id text references hubs(id);
+-- Extra addresses that receive every automated email addressed to this circle's leader (e.g. a co-host).
+alter table hubs add column if not exists cc_emails jsonb not null default '[]'::jsonb;
 
 -- One row per /hubs/:id/combine call — records exactly which participants moved
 -- so a later "Undo Merge" can move back precisely those still sitting in the

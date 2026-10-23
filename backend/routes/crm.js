@@ -174,6 +174,7 @@ const ACTIVE_EDITION_SQL = `COALESCE((SELECT NULLIF(value, '')::int FROM setting
 // email match lets them through: also match on trimmed lower-case email, on the last 10 digits of the
 // mobile number, and on the same name in the same city. Used so leaders never get the participant email.
 const SAME_PERSON_AS_HUB_SQL = `lower(trim(h.email)) = lower(trim(crm_contacts.email))
+         OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(h.cc_emails) ce WHERE lower(trim(ce)) = lower(trim(crm_contacts.email)))
          OR (length(regexp_replace(coalesce(h.mobile, ''), '\D', '', 'g')) >= 10
              AND right(regexp_replace(coalesce(h.mobile, ''), '\D', '', 'g'), 10) = right(regexp_replace(coalesce(crm_contacts.mobile, ''), '\D', '', 'g'), 10))
          OR (lower(regexp_replace(h.full_name, '[^a-zA-Z]', '', 'g')) = lower(regexp_replace(coalesce(crm_contacts.full_name, ''), '[^a-zA-Z]', '', 'g'))

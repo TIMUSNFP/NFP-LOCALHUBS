@@ -131,13 +131,27 @@ const transporter = (SMTP_HOST && SMTP_USER && SMTP_PASS)
     })
   : null;
 
-async function send({ to, subject, html, attachments }) {
+// Extra recipients for a circle leader's emails (hubs.cc_emails): co-hosts who should see everything the
+// leader sees. Invalid addresses and the leader's own address are dropped; duplicates removed.
+function hubCc(hub) {
+  const list = hub && Array.isArray(hub.cc_emails) ? hub.cc_emails : [];
+  const own = String((hub && hub.email) || '').trim().toLowerCase();
+  const seen = new Set();
+  return list.map((e) => String(e || '').trim()).filter((e) => {
+    const k = e.toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) || k === own || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+async function send({ to, cc, subject, html, attachments }) {
   if (!transporter) {
     console.log(`[mailer] SMTP not configured — skipping email to ${to}: "${subject}"`);
     return;
   }
   try {
-    await transporter.sendMail({ from: FROM, to, subject, html, ...(attachments ? { attachments } : {}) });
+    await transporter.sendMail({ from: FROM, to, ...(cc && cc.length ? { cc } : {}), subject, html, ...(attachments ? { attachments } : {}) });
   } catch (err) {
     // Never let an email failure break the API response.
     console.error(`[mailer] Failed to send "${subject}" to ${to}:`, err.message);
@@ -238,6 +252,7 @@ async function sendHubApproved(hub) {
 
   await send({
     to: hub.email,
+    cc: hubCc(hub),
     subject: `Your NFP Circle has been approved — Welcome, ${hub.full_name}!`,
     html,
   });
@@ -268,6 +283,7 @@ async function sendHubCarriedToNextEdition(hub) {
 
   await send({
     to: hub.email,
+    cc: hubCc(hub),
     subject: `You're set for the next edition of NFP Circles, ${hub.full_name}!`,
     html,
   });
@@ -295,6 +311,7 @@ async function sendHubRejected(hub) {
 
   await send({
     to: hub.email,
+    cc: hubCc(hub),
     subject: `Update on your NFP Circles application — ${hub.full_name}`,
     html,
   });
@@ -442,6 +459,7 @@ async function sendHubRosterUpdate(hub, participants) {
 
   await send({
     to: hub.email,
+    cc: hubCc(hub),
     subject: `Your NFP Circle Roster — ${hub.city}`,
     html,
   });
@@ -624,6 +642,7 @@ async function sendHubLeaderCircleMergedSurvivor(survivingHub, closingHub, moved
 
   await send({
     to: survivingHub.email,
+    cc: hubCc(survivingHub),
     subject: `${closingHub.full_name}'s Circle has combined with yours`,
     html,
   });
@@ -648,6 +667,7 @@ async function sendHubLeaderCircleMerged(closingHub, survivingHub, movedCount) {
 
   await send({
     to: closingHub.email,
+    cc: hubCc(closingHub),
     subject: `Your NFP Circle has combined with ${survivingHub.full_name}'s Circle`,
     html,
   });
@@ -694,6 +714,7 @@ async function sendHubLeaderCircleMergeReverted(restoredHub, formerSurvivingHub,
 
   await send({
     to: restoredHub.email,
+    cc: hubCc(restoredHub),
     subject: `Your NFP Circle has been restored`,
     html,
   });
