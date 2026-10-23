@@ -26,7 +26,7 @@ const FROM = process.env.FROM_EMAIL || (SMTP_USER ? `NFP Circles <${SMTP_USER}>`
 const PARTICIPANT_URL = 'https://nfp-circles.vercel.app/participant/';
 const HUB_LEADERS_WHATSAPP_URL = 'https://chat.whatsapp.com/D7vMp9xxt4XElJZ0dRW09c';
 // Shown in the participant confirmation email (sent when a participant is confirmed).
-const PARTICIPANTS_WHATSAPP_URL = 'https://chat.whatsapp.com/ELqTJO5YjDE5yH754l8rIO?s=cl&p=a&mlu=4&ilr=4';
+const PARTICIPANTS_WHATSAPP_URL = 'https://chat.whatsapp.com/E17KQN91YUk7WBsVGxOSYb';
 const LOGO_URL = 'https://nfp-circles.vercel.app/circle-leaders/Images/NetworkFP%20Logo.png';
 const CRM_UNSUBSCRIBE_BASE_URL = 'https://nfp-circles.vercel.app/api/crm/unsubscribe';
 
