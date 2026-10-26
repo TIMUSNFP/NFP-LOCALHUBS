@@ -10,8 +10,27 @@ const codeContinueBtn = document.getElementById('code-continue');
 const identifyBanner = document.getElementById('identify-banner');
 const identifySubmitBtn = document.getElementById('identify-submit');
 const pollTitleEyebrow = document.getElementById('poll-title-eyebrow');
+const circleSelect = document.getElementById('circle-select');
 
 let currentCode = null;
+let circlesLoaded = false;
+
+// Populated once per page load (the approved-Circles list barely changes
+// during a live event) — fetched lazily the first time step 2 is shown,
+// not on page load, so a phone that only ever fills in step 1 never pays
+// for it.
+async function loadCircles() {
+  if (circlesLoaded) return;
+  circlesLoaded = true;
+  try {
+    const leaders = await apiFetch('/api/leaders');
+    circleSelect.innerHTML = '<option value="">-- Select your Circle --</option>' +
+      leaders.map((l) => `<option value="${l.id}">${escapeHtml(l.fullName)} — ${escapeHtml(l.area ? `${l.area}, ` : '')}${escapeHtml(l.city)}</option>`).join('');
+  } catch (e) {
+    circleSelect.innerHTML = '<option value="">Could not load Circles — try refreshing</option>';
+    circlesLoaded = false; // allow a retry next time step 2 is shown
+  }
+}
 
 function setBanner(el, message, type) {
   el.innerHTML = message ? `<div class="banner banner-${type}">${escapeHtml(message)}</div>` : '';
@@ -62,6 +81,7 @@ async function tryEnterCode(code) {
     pollTitleEyebrow.textContent = state.title ? state.title : 'Step 2 of 2';
     stepCode.style.display = 'none';
     stepIdentify.style.display = '';
+    loadCircles();
   } catch (e) {
     setBanner(codeBanner, e.status === 404 ? 'No poll found for that code — check and try again.' : e.message, 'error');
   } finally {
@@ -89,11 +109,16 @@ identifySubmitBtn.addEventListener('click', async () => {
 
   const fullName = document.getElementById('full-name').value.trim();
   const phone = document.getElementById('phone').value.trim();
+  const circleLeaderHubId = circleSelect.value;
   if (!fullName || !phone) {
     setBanner(identifyBanner, 'Enter your name and phone number.', 'error');
     return;
   }
-  const payload = { fullName, phone };
+  if (!circleLeaderHubId) {
+    setBanner(identifyBanner, 'Select which Circle you\'re from.', 'error');
+    return;
+  }
+  const payload = { fullName, phone, circleLeaderHubId };
 
   const existingToken = getDeviceToken(currentCode);
   if (existingToken) payload.deviceToken = existingToken;
