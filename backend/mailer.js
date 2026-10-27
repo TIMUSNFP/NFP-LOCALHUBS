@@ -1242,6 +1242,13 @@ async function buildFollowupEmailHtml(contact, hubs, campaign = {}) {
   <tr><td style="padding:8px 36px 0 36px;">${para('We recommend you join the same Circle again. You need to register yourself again to book your seat.', others > 1 ? 16 : 0)}${others > 1 ? para(`There are ${others} Circles open in ${city} in total, all on the registration page.`) : ''}</td></tr>`;
     cta = [btn('Register again to book my seat')];
     preheader = `You joined in August. Edition 2 is on ${dateShort}. Register again to book your seat.`;
+  } else if (template === 'last-call') {
+    const shown = sorted.slice(0, 3);
+    headline = heading('Last call for', "tomorrow's NFP Circle.");
+    intro = `<tr><td style="padding:32px 36px 0 36px;">${para(`Hi ${name},`, 16)}${para("A quick reminder that registration for tomorrow's NFP Circle closes today at 6 PM.", 16)}${para(`There is a Circle open in ${city}, if you would like to join. You will sit with PFPs from your own city and build your Ideal 100 Client Funnel.`)}</td></tr>`;
+    middle = shown.length ? `<tr><td style="padding:24px 36px 0 36px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${shown.map((h) => hubCard(h)).join('')}</table>${sorted.length > shown.length ? para(`and ${sorted.length - shown.length} more in ${city}, all on the registration page.`) : ''}</td></tr>` : '';
+    cta = [btn('Register before 6 PM')];
+    preheader = `Registration closes today at 6 PM. There is a Circle open in ${city}.`;
   } else {
     const missed = template === 'missed-first';
     headline = missed ? heading('You missed the first NFP Circle.', "Don't miss this one.") : heading('You were part of the first NFP Circle.', 'Join the next one.');
@@ -1326,7 +1333,7 @@ async function sendCrmCampaignEmail(contact, hubs, campaign) {
     await transporter.sendMail({ from: FROM, to: contact.email, subject: campaign.subject, html });
     return;
   }
-  const isFollowup = ['attendee-back', 'attendee-away', 'missed-first'].includes(campaign.template);
+  const isFollowup = ['attendee-back', 'attendee-away', 'missed-first', 'last-call'].includes(campaign.template);
   const html = isFollowup
     ? await buildFollowupEmailHtml(contact, hubs, campaign)
     : campaign.template === 'circle-open'

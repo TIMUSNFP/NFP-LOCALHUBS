@@ -94,7 +94,9 @@ const TEMPLATE_CIRCLE_OPEN = 'circle-open';
 const TEMPLATE_ATTENDEE_BACK = 'attendee-back';
 const TEMPLATE_ATTENDEE_AWAY = 'attendee-away';
 const TEMPLATE_MISSED_FIRST = 'missed-first';
-const isFollowupTemplate = (t) => t === TEMPLATE_ATTENDEE_BACK || t === TEMPLATE_ATTENDEE_AWAY || t === TEMPLATE_MISSED_FIRST;
+// last-call      : a short reminder to every Active Member whose city has an open circle (registration closing)
+const TEMPLATE_LAST_CALL = 'last-call';
+const isFollowupTemplate = (t) => t === TEMPLATE_ATTENDEE_BACK || t === TEMPLATE_ATTENDEE_AWAY || t === TEMPLATE_MISSED_FIRST || t === TEMPLATE_LAST_CALL;
 // Email B's subject is fixed (the campaign subject is Email A's), with {city} filled in per member.
 const CIRCLE_OPEN_SUBJECT_NO_CIRCLE = 'Could you lead an NFP Circle in {city}?';
 const isLeaderTemplate = (t) => t === TEMPLATE_LEADER_OFFICE || t === TEMPLATE_LEADER_INVITE;
@@ -309,7 +311,7 @@ async function buildFollowupConditions(template) {
     if (template === TEMPLATE_ATTENDEE_AWAY) {
       conditions.push(`EXISTS (SELECT 1 FROM ${ATTENDED_FROM_SQL} WHERE ${ATTENDED_ED1_SQL})`);
       conditions.push(`NOT EXISTS (SELECT 1 FROM ${ATTENDED_FROM_SQL} JOIN hubs h2 ON h2.carried_over_from_hub_id = h1.id WHERE ${ATTENDED_ED1_SQL} AND h2.edition = ${ACTIVE_EDITION_SQL} AND (h2.status = 'Pending' OR (h2.status = 'Approved' AND ${LEADER_HAS_SEATS_SQL})))`);
-    } else {
+    } else if (template === TEMPLATE_MISSED_FIRST) {
       conditions.push(`NOT EXISTS (SELECT 1 FROM participants p1 WHERE ${ATTENDED_ED1_SQL})`);
       conditions.push(`NOT EXISTS (SELECT 1 FROM hubs l1 WHERE l1.edition = 1 AND l1.status IN ('Approved', 'Merged') AND ${SAME_AS_CONTACT_SQL('l1')})`);
     }
