@@ -62,8 +62,18 @@ router.get('/:id/results', async (req, res) => {
     const options = Array.isArray(question.options?.choices) ? question.options.choices : [];
     const counts = Object.fromEntries(options.map((o) => [o, 0]));
     for (const v of votes) {
-      const opt = v.answer?.option;
-      if (opt !== undefined && counts[opt] !== undefined) counts[opt] += 1;
+      if (question.type === 'multiple_choice') {
+        // One voter can land in several buckets here — total stays the
+        // respondent count (for "N% of people picked X"), so bars can sum
+        // past 100%. That's correct for a multi-select, not a bug.
+        const opts = Array.isArray(v.answer?.options) ? v.answer.options : [];
+        for (const opt of opts) {
+          if (counts[opt] !== undefined) counts[opt] += 1;
+        }
+      } else {
+        const opt = v.answer?.option;
+        if (opt !== undefined && counts[opt] !== undefined) counts[opt] += 1;
+      }
     }
     results = { type: question.type, total, counts };
     if (question.type === 'quiz') {

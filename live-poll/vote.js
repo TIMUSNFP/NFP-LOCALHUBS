@@ -72,7 +72,7 @@ function renderChoiceQuestion(question, alreadyVoted) {
   const saved = alreadyVoted ? savedAnswer(question.id) : null;
   root.innerHTML = `
     <div class="fade-in">
-    <div class="q-eyebrow">${question.type === 'true_false' ? 'True or False' : question.type === 'single_choice' ? 'Single Choice' : 'Multiple Choice'}</div>
+    <div class="q-eyebrow">${question.type === 'true_false' ? 'True or False' : question.type === 'quiz' ? 'Quiz' : 'Single Choice'}</div>
     <div class="q-prompt">${escapeHtml(question.prompt)}</div>
     <div class="options" role="group" aria-label="Answer options">
       ${choices.map((c, i) => `
@@ -94,6 +94,56 @@ function renderChoiceQuestion(question, alreadyVoted) {
       });
     });
   }
+}
+
+// Multiple Choice is the one genuinely multi-select type (name matches
+// behavior: pick as many as apply) — everything else above/below locks in
+// on the first click. Needs its own explicit Submit since there's no single
+// click that means "done" the way there is for a single pick.
+function renderMultiChoiceQuestion(question, alreadyVoted) {
+  const choices = question.options?.choices || [];
+  const saved = alreadyVoted ? savedAnswer(question.id) : null;
+  const savedOptions = new Set(saved?.options || []);
+  const selected = new Set(savedOptions);
+
+  root.innerHTML = `
+    <div class="fade-in">
+    <div class="q-eyebrow">Multiple Choice — select all that apply</div>
+    <div class="q-prompt">${escapeHtml(question.prompt)}</div>
+    <div class="options" role="group" aria-label="Answer options">
+      ${choices.map((c, i) => `
+        <button type="button" class="option-btn${savedOptions.has(c) ? ' selected' : ''}" data-choice="${escapeHtml(c)}" ${alreadyVoted ? 'disabled' : ''}>
+          <span class="letter">${letterFor(i)}</span>
+          <span>${escapeHtml(c)}</span>
+        </button>
+      `).join('')}
+    </div>
+    ${alreadyVoted
+      ? '<p style="margin-top:16px; color:var(--success); font-weight:700; font-size:14px;">✓ Answer submitted — waiting for results…</p>'
+      : '<button class="btn btn-primary" id="multi-choice-submit" style="margin-top:16px;" disabled><span class="btn-label">Submit</span></button>'}
+    </div>
+  `;
+  if (alreadyVoted) return;
+
+  const submitBtn = document.getElementById('multi-choice-submit');
+  root.querySelectorAll('.option-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const choice = btn.dataset.choice;
+      if (selected.has(choice)) {
+        selected.delete(choice);
+        btn.classList.remove('selected');
+      } else {
+        selected.add(choice);
+        btn.classList.add('selected');
+      }
+      submitBtn.disabled = selected.size === 0;
+    });
+  });
+  submitBtn.addEventListener('click', () => {
+    root.querySelectorAll('.option-btn').forEach((b) => (b.disabled = true));
+    submitBtn.disabled = true;
+    submitVote(question.id, { options: [...selected] }, () => renderMultiChoiceQuestion(question, true));
+  });
 }
 
 function renderRatingQuestion(question, alreadyVoted) {
@@ -246,7 +296,9 @@ function renderRankingQuestion(question, alreadyVoted) {
 
 function renderQuestion(question) {
   const alreadyVoted = votedQuestionIds.has(question.id);
-  if (question.type === 'multiple_choice' || question.type === 'single_choice' || question.type === 'true_false' || question.type === 'quiz') {
+  if (question.type === 'multiple_choice') {
+    renderMultiChoiceQuestion(question, alreadyVoted);
+  } else if (question.type === 'single_choice' || question.type === 'true_false' || question.type === 'quiz') {
     renderChoiceQuestion(question, alreadyVoted);
   } else if (question.type === 'rating') {
     renderRatingQuestion(question, alreadyVoted);

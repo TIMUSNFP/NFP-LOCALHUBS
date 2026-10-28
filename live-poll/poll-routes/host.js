@@ -376,7 +376,8 @@ router.get('/sessions/:id/export.csv', async (req, res) => {
   for (const r of rows) {
     const answer =
       r.answer?.text ?? r.answer?.option ?? r.answer?.value ??
-      (Array.isArray(r.answer?.order) ? r.answer.order.join(' > ') : JSON.stringify(r.answer));
+      (Array.isArray(r.answer?.options) ? r.answer.options.join(' + ') :
+        Array.isArray(r.answer?.order) ? r.answer.order.join(' > ') : JSON.stringify(r.answer));
     const circle = r.circle_name ? `${r.circle_name}${r.circle_city ? ` — ${r.circle_city}` : ''}` : '';
     lines.push(
       [
