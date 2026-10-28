@@ -10,10 +10,18 @@ const codeContinueBtn = document.getElementById('code-continue');
 const identifyBanner = document.getElementById('identify-banner');
 const identifySubmitBtn = document.getElementById('identify-submit');
 const pollTitleEyebrow = document.getElementById('poll-title-eyebrow');
-const circleSelect = document.getElementById('circle-select');
+const circleSelect = document.getElementById('circle-select'); // hidden input: holds the chosen hubs.id
+const circleSearch = document.getElementById('circle-search');
+const circleResults = document.getElementById('circle-results');
 
 let currentCode = null;
 let circlesLoaded = false;
+let allCircles = [];
+let activeResultIndex = -1;
+
+function circleLabel(l) {
+  return `${l.fullName} — ${l.area ? `${l.area}, ` : ''}${l.city}`;
+}
 
 // Populated once per page load (the approved-Circles list barely changes
 // during a live event) — fetched lazily the first time step 2 is shown,
@@ -23,14 +31,87 @@ async function loadCircles() {
   if (circlesLoaded) return;
   circlesLoaded = true;
   try {
-    const leaders = await apiFetch('/api/leaders');
-    circleSelect.innerHTML = '<option value="">-- Select your Circle --</option>' +
-      leaders.map((l) => `<option value="${l.id}">${escapeHtml(l.fullName)} — ${escapeHtml(l.area ? `${l.area}, ` : '')}${escapeHtml(l.city)}</option>`).join('');
+    allCircles = await apiFetch('/api/leaders');
+    circleSearch.disabled = false;
+    circleSearch.placeholder = 'Type your city, area, or Circle Leader\'s name…';
   } catch (e) {
-    circleSelect.innerHTML = '<option value="">Could not load Circles — try refreshing</option>';
+    circleSearch.placeholder = 'Could not load Circles — try refreshing';
     circlesLoaded = false; // allow a retry next time step 2 is shown
   }
 }
+
+// Filters allCircles against the typed query (case-insensitive, matches
+// name/area/city) and renders up to 50 matches — a full unfiltered list on
+// an empty query would be the same "scroll through everything" problem this
+// search box exists to avoid, so it shows nothing until the user types.
+function renderCircleResults(query) {
+  const q = query.trim().toLowerCase();
+  activeResultIndex = -1;
+  if (!q) {
+    circleResults.hidden = true;
+    circleResults.innerHTML = '';
+    return;
+  }
+  const matches = allCircles
+    .filter((l) => circleLabel(l).toLowerCase().includes(q))
+    .slice(0, 50);
+
+  circleResults.innerHTML = matches.length
+    ? matches.map((l, i) => `
+        <button type="button" class="circle-result" data-id="${l.id}" data-index="${i}">
+          ${escapeHtml(l.fullName)}
+          <span class="circle-result-sub">${escapeHtml(l.area ? `${l.area}, ` : '')}${escapeHtml(l.city)}</span>
+        </button>`).join('')
+    : '<div class="circle-result-empty">No matching Circle — check the spelling or pick the closest city.</div>';
+  circleResults.hidden = false;
+
+  circleResults.querySelectorAll('.circle-result').forEach((btn) => {
+    btn.addEventListener('click', () => selectCircle(btn.dataset.id));
+  });
+}
+
+function selectCircle(id) {
+  const circle = allCircles.find((l) => l.id === id);
+  if (!circle) return;
+  circleSelect.value = id;
+  circleSearch.value = circleLabel(circle);
+  circleResults.hidden = true;
+  circleResults.innerHTML = '';
+}
+
+circleSearch.addEventListener('input', () => {
+  // Any manual edit invalidates a previous selection — re-require an
+  // explicit pick (typing a letter shouldn't silently keep the old value).
+  circleSelect.value = '';
+  renderCircleResults(circleSearch.value);
+});
+circleSearch.addEventListener('keydown', (e) => {
+  const items = [...circleResults.querySelectorAll('.circle-result')];
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeResultIndex = Math.min(activeResultIndex + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeResultIndex = Math.max(activeResultIndex - 1, 0);
+  } else if (e.key === 'Enter' && activeResultIndex >= 0) {
+    e.preventDefault();
+    selectCircle(items[activeResultIndex].dataset.id);
+    return;
+  } else {
+    return;
+  }
+  items.forEach((el, i) => el.classList.toggle('active', i === activeResultIndex));
+  items[activeResultIndex].scrollIntoView({ block: 'nearest' });
+});
+// Clicking a result fires this too (blur after mousedown) — delay the hide
+// so the result button's own click handler still gets to run first.
+circleSearch.addEventListener('blur', () => {
+  setTimeout(() => { circleResults.hidden = true; }, 150);
+});
+circleSearch.addEventListener('focus', () => {
+  if (circleSearch.value) renderCircleResults(circleSearch.value);
+});
 
 function setBanner(el, message, type) {
   el.innerHTML = message ? `<div class="banner banner-${type}">${escapeHtml(message)}</div>` : '';

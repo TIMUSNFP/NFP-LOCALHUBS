@@ -62,11 +62,11 @@
             <option value="Guest">Guest</option>
           </select>
         </div>
-        <div class="field">
-          <label for="circle-select">Which Circle are you from?</label>
-          <select id="circle-select" name="circleLeaderHubId" required>
-            <option value="">Loading Circles…</option>
-          </select>
+        <div class="field circle-field">
+          <label for="circle-search">Which Circle are you from?</label>
+          <input type="text" id="circle-search" autocomplete="off" placeholder="Loading Circles…" disabled>
+          <input type="hidden" id="circle-select" name="circleLeaderHubId">
+          <div id="circle-results" class="circle-results" hidden></div>
         </div>
       </form>
 
