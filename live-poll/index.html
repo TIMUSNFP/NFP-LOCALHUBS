@@ -48,6 +48,21 @@
           <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="e.g. 9876543210">
         </div>
         <div class="field">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="e.g. priya@example.com">
+        </div>
+        <div class="field">
+          <label for="membership-select">Membership type</label>
+          <select id="membership-select" name="membership" required>
+            <option value="">-- Select your membership --</option>
+            <option value="NFP ProMember">NFP ProMember</option>
+            <option value="QPFP ProMember">QPFP ProMember</option>
+            <option value="Only QPFP">Only QPFP</option>
+            <option value="Provisional Member">Provisional Member</option>
+            <option value="Guest">Guest</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="circle-select">Which Circle are you from?</label>
           <select id="circle-select" name="circleLeaderHubId" required>
             <option value="">Loading Circles…</option>

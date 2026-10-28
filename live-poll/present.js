@@ -86,7 +86,7 @@ function renderQuestionResults(question, results) {
   lastRenderedKey = key;
 
   let body = '';
-  if (question.type === 'multiple_choice' || question.type === 'true_false' || question.type === 'quiz' || question.type === 'pulse') {
+  if (question.type === 'multiple_choice' || question.type === 'single_choice' || question.type === 'true_false' || question.type === 'quiz' || question.type === 'pulse') {
     body = barsMarkup(results.counts || {}, results.total || 0, results.correctOption);
   } else if (question.type === 'rating') {
     body = `

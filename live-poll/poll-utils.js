@@ -85,6 +85,8 @@ function participantRowToJson(row) {
     sessionId: row.session_id,
     fullName: row.full_name,
     phone: row.phone,
+    email: row.email,
+    membership: row.membership,
     joinSource: row.join_source,
     circleLeaderHubId: row.circle_leader_hub_id,
     joinedAt: row.joined_at,

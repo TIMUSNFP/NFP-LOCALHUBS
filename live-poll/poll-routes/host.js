@@ -17,7 +17,7 @@ const {
 
 const router = express.Router();
 
-const VALID_TYPES = ['multiple_choice', 'true_false', 'rating', 'word_cloud', 'open_text', 'quiz', 'ranking', 'pulse'];
+const VALID_TYPES = ['multiple_choice', 'single_choice', 'true_false', 'rating', 'word_cloud', 'open_text', 'quiz', 'ranking', 'pulse'];
 
 function nowIso() {
   return new Date().toISOString();
@@ -359,7 +359,7 @@ router.get('/sessions/:id/export.csv', async (req, res) => {
   if (!session) return res.status(404).json({ error: 'Session not found.' });
 
   const rows = await db.all(
-    `SELECT q.order_index, q.type, q.prompt, p.full_name, p.phone,
+    `SELECT q.order_index, q.type, q.prompt, p.full_name, p.phone, p.email, p.membership,
             h.full_name AS circle_name, h.city AS circle_city,
             v.answer, v.submitted_at
      FROM poll_votes v
@@ -371,7 +371,7 @@ router.get('/sessions/:id/export.csv', async (req, res) => {
     [session.id]
   );
 
-  const header = ['Question #', 'Type', 'Question', 'Participant Name', 'Phone', 'Circle', 'Answer', 'Submitted At'];
+  const header = ['Question #', 'Type', 'Question', 'Participant Name', 'Phone', 'Email', 'Membership', 'Circle', 'Answer', 'Submitted At'];
   const lines = [header.map(csvEscape).join(',')];
   for (const r of rows) {
     const answer =
@@ -385,6 +385,8 @@ router.get('/sessions/:id/export.csv', async (req, res) => {
         r.prompt,
         r.full_name,
         r.phone || '',
+        r.email || '',
+        r.membership || '',
         circle,
         answer,
         r.submitted_at,
@@ -396,6 +398,51 @@ router.get('/sessions/:id/export.csv', async (req, res) => {
 
   res.set('Content-Type', 'text/csv; charset=utf-8');
   res.set('Content-Disposition', `attachment; filename="${session.code}-poll-results.csv"`);
+  res.send(lines.join('\n'));
+});
+
+// GET /api/host/sessions/:id/attendance.csv — one row per participant (who
+// showed up), not per-vote like export.csv above. This is the actual
+// "take attendance" file: every joiner is in it regardless of whether they
+// answered any question. Optional ?hubId=<hubs.id> scopes it to one Circle,
+// so a single session's attendance can be split into a separate file per
+// Circle Leader without re-querying anything by hand.
+router.get('/sessions/:id/attendance.csv', async (req, res) => {
+  const session = await db.get('SELECT * FROM poll_sessions WHERE id = $1', [req.params.id]);
+  if (!session) return res.status(404).json({ error: 'Session not found.' });
+
+  const hubId = req.query.hubId ? String(req.query.hubId).trim() : null;
+  const params = [session.id];
+  let hubFilter = '';
+  if (hubId) {
+    params.push(hubId);
+    hubFilter = ` AND p.circle_leader_hub_id = $${params.length}`;
+  }
+
+  const rows = await db.all(
+    `SELECT p.full_name, p.phone, p.email, p.membership, p.joined_at,
+            h.full_name AS circle_name, h.city AS circle_city
+     FROM poll_participants p
+     LEFT JOIN hubs h ON h.id = p.circle_leader_hub_id
+     WHERE p.session_id = $1${hubFilter}
+     ORDER BY h.full_name ASC NULLS LAST, p.joined_at ASC`,
+    params
+  );
+
+  const header = ['Name', 'Email', 'Phone Number', 'Membership', 'Circle', 'Joined At'];
+  const lines = [header.map(csvEscape).join(',')];
+  for (const r of rows) {
+    const circle = r.circle_name ? `${r.circle_name}${r.circle_city ? ` — ${r.circle_city}` : ''}` : '';
+    lines.push(
+      [r.full_name, r.email || '', r.phone || '', r.membership || '', circle, r.joined_at]
+        .map(csvEscape)
+        .join(',')
+    );
+  }
+
+  const suffix = hubId ? `-${hubId}` : '';
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="${session.code}-attendance${suffix}.csv"`);
   res.send(lines.join('\n'));
 });
 

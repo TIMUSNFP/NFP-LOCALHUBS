@@ -58,7 +58,7 @@ router.get('/:id/results', async (req, res) => {
   const total = votes.length;
 
   let results;
-  if (question.type === 'multiple_choice' || question.type === 'true_false' || question.type === 'quiz') {
+  if (question.type === 'multiple_choice' || question.type === 'single_choice' || question.type === 'true_false' || question.type === 'quiz') {
     const options = Array.isArray(question.options?.choices) ? question.options.choices : [];
     const counts = Object.fromEntries(options.map((o) => [o, 0]));
     for (const v of votes) {

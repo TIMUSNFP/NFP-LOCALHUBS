@@ -109,16 +109,26 @@ identifySubmitBtn.addEventListener('click', async () => {
 
   const fullName = document.getElementById('full-name').value.trim();
   const phone = document.getElementById('phone').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const membership = document.getElementById('membership-select').value;
   const circleLeaderHubId = circleSelect.value;
   if (!fullName || !phone) {
     setBanner(identifyBanner, 'Enter your name and phone number.', 'error');
+    return;
+  }
+  if (!email) {
+    setBanner(identifyBanner, 'Enter your email address.', 'error');
+    return;
+  }
+  if (!membership) {
+    setBanner(identifyBanner, 'Select your membership type.', 'error');
     return;
   }
   if (!circleLeaderHubId) {
     setBanner(identifyBanner, 'Select which Circle you\'re from.', 'error');
     return;
   }
-  const payload = { fullName, phone, circleLeaderHubId };
+  const payload = { fullName, phone, email, membership, circleLeaderHubId };
 
   const existingToken = getDeviceToken(currentCode);
   if (existingToken) payload.deviceToken = existingToken;

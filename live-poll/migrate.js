@@ -41,6 +41,8 @@ create table if not exists poll_participants (
   joined_at text not null,
   unique (session_id, device_token)
 );
+alter table poll_participants add column if not exists email text;
+alter table poll_participants add column if not exists membership text;
 
 create table if not exists poll_votes (
   id text primary key,

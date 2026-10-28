@@ -16,10 +16,13 @@ function nowIso() {
 }
 
 // POST /api/sessions/:code/join
-// body: { deviceToken?, fullName, phone, circleLeaderHubId }. Every attendee
-// joins the same way, including a Circle's own leader — they just pick their
-// own Circle off the same list. circleLeaderHubId is still the hubs.id of
-// the Circle they selected (field name kept for minimal churn).
+// body: { deviceToken?, fullName, phone, email, membership, circleLeaderHubId }.
+// Every attendee joins the same way, including a Circle's own leader — they
+// just pick their own Circle off the same list. circleLeaderHubId is still
+// the hubs.id of the Circle they selected (field name kept for minimal
+// churn). email/membership exist purely for attendance tracking — the host
+// CSV export is the "take attendance" mechanism, not a poll question type,
+// since it needs to cover every joiner regardless of which questions run.
 // Idempotent per device: replaying the same deviceToken for the same session
 // returns the same participant instead of creating a duplicate.
 router.post('/:code/join', async (req, res) => {
@@ -48,27 +51,36 @@ router.post('/:code/join', async (req, res) => {
 
   const fullName = String(body.fullName || '').trim();
   const phone = String(body.phone || '').trim();
+  const email = body.email ? String(body.email).trim() : null;
+  const membership = body.membership ? String(body.membership).trim() : null;
   const circleLeaderHubId = body.circleLeaderHubId ? String(body.circleLeaderHubId).trim() : null;
 
-  // Every attendee joins the same way: just name and phone.
   if (!fullName) {
     return res.status(400).json({ error: 'Name is required.' });
   }
   if (!phone) {
     return res.status(400).json({ error: 'Phone number is required.' });
   }
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+  if (!membership) {
+    return res.status(400).json({ error: 'Membership type is required.' });
+  }
 
   const id = generateParticipantId();
   const result = await db.run(
     `INSERT INTO poll_participants
-       (id, session_id, full_name, phone, join_source, circle_leader_hub_id, device_token, joined_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (id, session_id, full_name, phone, email, membership, join_source, circle_leader_hub_id, device_token, joined_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
     [
       id,
       session.id,
       fullName,
       phone,
+      email,
+      membership,
       'manual',
       circleLeaderHubId,
       deviceToken,

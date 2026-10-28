@@ -74,6 +74,7 @@
     <button class="btn btn-ghost btn-sm" id="back-to-list">&larr; All polls</button>
     <span class="brand-tag" id="detail-code-badge" style="margin-left:auto;">Code ——————</span>
     <button class="btn btn-ghost btn-sm" id="change-code-btn" title="Change join code">Edit code</button>
+    <button class="btn btn-danger btn-sm" id="topbar-end-poll" title="Ends the poll for every participant and the host — this cannot be undone" style="display:none;">End Poll</button>
   </header>
 
   <main class="host-main host-detail-grid">
@@ -90,6 +91,7 @@
         <a id="link-present" target="_blank" class="btn btn-outline btn-sm">Open Presenter Screen ↗</a>
         <a id="link-join" target="_blank" class="btn btn-outline btn-sm">Open Join Page ↗</a>
         <button class="btn btn-outline btn-sm" id="export-btn">Export CSV</button>
+        <button class="btn btn-outline btn-sm" id="export-attendance-btn">Export Attendance</button>
       </div>
 
       <div class="host-control-bar" id="control-bar"></div>
@@ -103,6 +105,7 @@
           <label for="q-type">Question type</label>
           <select id="q-type">
             <option value="multiple_choice">Multiple Choice</option>
+            <option value="single_choice">Single Choice</option>
             <option value="true_false">True / False</option>
             <option value="rating">Rating / Likert Scale</option>
             <option value="word_cloud">Word Cloud (one/two words)</option>

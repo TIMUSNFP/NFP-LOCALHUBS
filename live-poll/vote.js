@@ -72,7 +72,7 @@ function renderChoiceQuestion(question, alreadyVoted) {
   const saved = alreadyVoted ? savedAnswer(question.id) : null;
   root.innerHTML = `
     <div class="fade-in">
-    <div class="q-eyebrow">${question.type === 'true_false' ? 'True or False' : 'Multiple Choice'}</div>
+    <div class="q-eyebrow">${question.type === 'true_false' ? 'True or False' : question.type === 'single_choice' ? 'Single Choice' : 'Multiple Choice'}</div>
     <div class="q-prompt">${escapeHtml(question.prompt)}</div>
     <div class="options" role="group" aria-label="Answer options">
       ${choices.map((c, i) => `
@@ -246,7 +246,7 @@ function renderRankingQuestion(question, alreadyVoted) {
 
 function renderQuestion(question) {
   const alreadyVoted = votedQuestionIds.has(question.id);
-  if (question.type === 'multiple_choice' || question.type === 'true_false' || question.type === 'quiz') {
+  if (question.type === 'multiple_choice' || question.type === 'single_choice' || question.type === 'true_false' || question.type === 'quiz') {
     renderChoiceQuestion(question, alreadyVoted);
   } else if (question.type === 'rating') {
     renderRatingQuestion(question, alreadyVoted);

@@ -227,7 +227,6 @@ function renderControlBar(session) {
       parts.push(`<span class="cb-empty">Open a question below to go live with it.</span>`);
     }
     parts.push(`<button class="btn btn-outline btn-sm" id="cb-next">Next (clear screen)</button>`);
-    parts.push(`<button class="btn btn-danger btn-sm" id="cb-end">End Poll</button>`);
     parts.push(restartBtn);
     bar.innerHTML = parts.join('');
     if (session.currentQuestionId) {
@@ -235,10 +234,6 @@ function renderControlBar(session) {
         runAction(e.currentTarget, `/api/host/sessions/${session.id}/questions/${session.currentQuestionId}/close`, 'Close & Reveal Results'));
     }
     document.getElementById('cb-next').addEventListener('click', (e) => runAction(e.currentTarget, `/api/host/sessions/${session.id}/next`, 'Next'));
-    document.getElementById('cb-end').addEventListener('click', (e) => {
-      if (!confirm('End this poll? Participants will see it as ended.')) return;
-      runAction(e.currentTarget, `/api/host/sessions/${session.id}/end`, 'End Poll');
-    });
   } else {
     bar.innerHTML = `<span class="cb-empty">This poll has ended.</span>` + restartBtn;
   }
@@ -250,6 +245,18 @@ function renderControlBar(session) {
       runAction(e.currentTarget, `/api/host/sessions/${session.id}/restart`, 'Restart Poll');
     });
   }
+
+  // End Poll lives in the top-right corner of the header (see topbar-end-poll
+  // in index.html), deliberately separated from this row — it's the one
+  // irreversible action here (ends the poll for the host AND every
+  // participant) and used to sit shoulder-to-shoulder with "Next", which was
+  // too easy to misclick.
+  const endBtn = document.getElementById('topbar-end-poll');
+  endBtn.style.display = session.status === 'live' ? '' : 'none';
+  endBtn.onclick = () => {
+    if (!confirm('End this poll? This ends it for you AND every participant — they will immediately see it as ended. This cannot be undone.')) return;
+    runAction(endBtn, `/api/host/sessions/${session.id}/end`, 'End Poll');
+  };
 }
 
 async function runAction(btn, path, label) {
@@ -265,14 +272,14 @@ async function runAction(btn, path, label) {
 }
 
 const TYPE_LABELS = {
-  multiple_choice: 'Multiple Choice', true_false: 'True / False', rating: 'Rating',
+  multiple_choice: 'Multiple Choice', single_choice: 'Single Choice', true_false: 'True / False', rating: 'Rating',
   word_cloud: 'Word Cloud', open_text: 'Open Question', quiz: 'Quiz', ranking: 'Ranking', pulse: 'Pulse Check',
 };
 
 // Short human-readable preview of a question's options, shown under the
 // prompt in the list so the host doesn't have to open each one to see them.
 function optionsPreview(q) {
-  if (q.type === 'multiple_choice' || q.type === 'true_false' || q.type === 'quiz' || q.type === 'pulse') {
+  if (q.type === 'multiple_choice' || q.type === 'single_choice' || q.type === 'true_false' || q.type === 'quiz' || q.type === 'pulse') {
     const choices = q.options?.choices || [];
     if (!choices.length) return '';
     let text = choices.join(' · ');
@@ -397,7 +404,7 @@ function choiceRowsMarkup(values) {
 // first and overwriting afterward would attach the choice-row listeners
 // twice (each "+ Add option" click would then add two rows instead of one).
 function renderTypeFields(type, prefill) {
-  if (type === 'multiple_choice' || type === 'quiz') {
+  if (type === 'multiple_choice' || type === 'single_choice' || type === 'quiz') {
     const choices = prefill?.choices?.length ? prefill.choices : ['', ''];
     qTypeFields.innerHTML = `
       <div class="field"><label>Answer options</label><div id="choice-rows">${choiceRowsMarkup(choices)}</div>
@@ -517,7 +524,7 @@ document.getElementById('add-question-btn').addEventListener('click', async (e) 
   let options = {};
   let correctOption = null;
 
-  if (type === 'multiple_choice' || type === 'quiz') {
+  if (type === 'multiple_choice' || type === 'single_choice' || type === 'quiz') {
     const choices = [...document.querySelectorAll('#choice-rows input')].map((i) => i.value.trim()).filter(Boolean);
     if (choices.length < 2) { setBanner(banner, 'Add at least 2 answer options.'); return; }
     options = { choices };
@@ -646,6 +653,27 @@ document.getElementById('export-btn').addEventListener('click', async (e) => {
     showToast(err.message);
   } finally {
     setBusy(e.currentTarget, false, 'Export CSV');
+  }
+});
+
+document.getElementById('export-attendance-btn').addEventListener('click', async (e) => {
+  setBusy(e.currentTarget, true, 'Export Attendance');
+  try {
+    const res = await fetch(`${API_BASE}/api/host/sessions/${currentSessionId}/attendance.csv`, {
+      headers: { Authorization: `Bearer ${token()}` },
+    });
+    if (!res.ok) throw new Error('Export failed.');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'attendance.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    setBusy(e.currentTarget, false, 'Export Attendance');
   }
 });
 
