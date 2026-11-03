@@ -17,7 +17,23 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.55 var(--body);padding:20px 16px 48px}
 .wrap{max-width:560px;margin:0 auto}
-.logo{display:block;width:132px;height:auto;margin:4px 0 22px}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;margin:4px 0 26px}
+.pres{margin:0;font-size:13px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.logo{display:block;width:160px;height:auto}
+.mark{margin:0;font:700 clamp(40px,9vw,60px)/1 var(--head);color:var(--accent-dark)}
+.qr{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
+.qr img{width:220px;height:220px;display:block}
+.scan{margin:0;font:700 20px var(--body);color:var(--ink)}
+.dl{font-size:14px;color:var(--accent-dark)}
+@media (max-width:719px){.qr{display:none}}
+/* ?screen=1 is the projector view: big QR, nothing else. */
+body.screen form,body.screen .done,body.screen .top,body.screen .foot{display:none}
+body.screen .wrap{max-width:none}
+body.screen .qr{display:flex;border:0;background:transparent}
+body.screen .qr img{width:min(70vw,58vh);height:min(70vw,58vh)}
+body.screen .scan{font-size:clamp(28px,4vw,48px)}
+body.screen .dl{display:none}
+body.screen .mark{font-size:clamp(48px,8vw,96px)}
 h1{font:700 clamp(30px,8vw,40px)/1.12 var(--head);color:var(--ink);margin:0 0 10px;text-wrap:balance}
 h1 em{color:var(--accent-dark);font-style:normal}
 .lead{margin:0 0 22px;color:var(--muted)}
@@ -50,9 +66,18 @@ button[disabled]{background:#6B6B6B;cursor:wait}
 </head>
 <body>
 <div class="wrap">
-  <img class="logo" src="/participant/Images/NetworkFP Logo.png" alt="Network FP" width="132">
-  <h1>NFP Circles, <em>edition 3.</em></h1>
-  <p class="lead">Join a Circle in your city, or host one. It takes about a minute.</p>
+  <header class="hero">
+    <p class="pres">Network FP presents</p>
+    <img class="logo" src="/participant/Images/NetworkFP Logo.png" alt="Network FP" width="160">
+    <p class="mark">NFP Circles</p>
+    <div class="qr">
+      <img src="qr.svg" alt="QR code to register for NFP Circles" width="220" height="220">
+      <p class="scan">Scan to register</p>
+      <a class="dl" href="qr.png" download="NFP-Circles-QR.png">Download QR</a>
+    </div>
+  </header>
+  <h1 class="top">Join or host a Circle, <em>edition 3.</em></h1>
+  <p class="lead top">Join a Circle in your city, or host one. It takes about a minute.</p>
 
   <form id="f" novalidate>
     <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
@@ -129,6 +154,7 @@ button[disabled]{background:#6B6B6B;cursor:wait}
 
 <script>
 (function () {
+  if (/[?&]screen=1/.test(location.search)) document.body.className = 'screen';
   var f = document.getElementById('f'), msg = document.getElementById('msg'), go = document.getElementById('go');
   var $ = function (id) { return document.getElementById(id); };
   var forceVenue = false; // set when the server could not find the earlier circle, so the address is needed
