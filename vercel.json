@@ -5,7 +5,8 @@
   "redirects": [
     { "source": "/", "destination": "/participant/", "permanent": false },
     { "source": "/participant", "destination": "/participant/", "permanent": true },
-    { "source": "/circle-leaders", "destination": "/circle-leaders/", "permanent": true }
+    { "source": "/circle-leaders", "destination": "/circle-leaders/", "permanent": true },
+    { "source": "/nationals", "destination": "/nationals/", "permanent": true }
   ],
   "functions": {
     "api/index.js": {

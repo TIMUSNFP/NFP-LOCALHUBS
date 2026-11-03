@@ -290,3 +290,30 @@ alter table public.poll_sessions      enable row level security;
 alter table public.poll_questions     enable row level security;
 alter table public.poll_participants  enable row level security;
 alter table public.poll_votes         enable row level security;
+
+-- NFP Nationals sign-up (/nationals): one row per person per edition, upserted on mobile.
+create table if not exists nationals_responses (
+  id bigserial primary key,
+  edition integer not null,
+  submitted_at timestamptz not null default now(),
+  updated_at timestamptz,
+  submissions integer not null default 1,
+  full_name text not null,
+  mobile text not null,                 -- last 10 digits
+  email text not null,
+  city text not null,
+  pincode text not null,
+  led_before text not null,             -- 'yes' | 'no'
+  previous_hub_id text,                 -- earlier circle matched by email/mobile
+  has_office boolean not null,
+  same_venue text,                      -- returning leaders: 'yes' | 'no'
+  address text,
+  venue_type text,
+  capacity integer,
+  host_intent text not null,            -- 'yes' | 'if_demand' | 'maybe' | 'no'
+  role text not null,                   -- Leader | Leader if demand | Participant, may host | Participant
+  status text not null default 'New',
+  rm_notes text,
+  unique (edition, mobile)
+);
+alter table public.nationals_responses enable row level security;
