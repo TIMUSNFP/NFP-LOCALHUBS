@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/participant/Images/NetworkFP Logo.png">
+<title>NFP Circles | Scan to register</title>
+<style>
+/* Projector page: logos and one large QR. Nothing else, so it reads from the back of the hall. */
+@font-face{font-family:'The Youngest Serif';src:url('/participant/Fonts-20260608T063024Z-3-001/Fonts/The Youngest Serif-D.ttf') format('truetype');font-weight:700;font-display:swap}
+@font-face{font-family:'Lato';src:url('/participant/Fonts-20260608T063024Z-3-001/Fonts/Lato-Medium.ttf') format('truetype');font-weight:500;font-display:swap}
+:root{--bg:#F7F3EC;--ink:#1C1C1C;--muted:#5F5F5F;--accent-dark:#C93D00;--head:'The Youngest Serif',Georgia,serif;--body:'Lato',Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center}
+.pres{margin:0;font-size:clamp(13px,1.6vw,22px);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.logo{width:clamp(130px,18vw,240px);height:auto}
+.mark{margin:0;font:700 clamp(44px,8vw,110px)/1 var(--head);color:var(--accent-dark)}
+.qr{width:min(78vw,52vh);height:min(78vw,52vh);background:#fff;border-radius:16px;padding:14px;margin-top:6px}
+.scan{margin:0;font:700 clamp(24px,3.6vw,52px) var(--body)}
+.back{font-size:14px;color:var(--muted)}
+</style>
+</head>
+<body>
+<p class="pres">Network FP presents</p>
+<img class="logo" src="/participant/Images/NetworkFP Logo.png" alt="Network FP">
+<p class="mark">NFP Circles</p>
+<img class="qr" src="/nationals/qr.svg" alt="QR code to register for NFP Circles">
+<p class="scan">Scan to register</p>
+<a class="back" href="/nationals/">Back to the form</a>
+</body>
+</html>
