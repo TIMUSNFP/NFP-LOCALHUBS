@@ -1,6 +1,7 @@
 // nationalsMatch.js — turns /nationals sign-ups into an Excel work list for the RMs.
 //   node backend/nationalsMatch.js [nationalsEdition=3] [hubEdition=<active edition>] [outFile]
-// Participants get their 3 nearest Approved circles with seats left (by distance from their pincode).
+// Participants get their 3 nearest Approved circles with seats left (by distance from the place they typed,
+// else their pincode, else their city).
 // Leaders get how many participant leads wait within 10 km. Cities with waiting participants and no
 // circle nearby are listed as "needs a leader". Read-only: nothing is written except the pincode cache.
 const path = require('path');
@@ -36,16 +37,28 @@ async function coordsFor(pincode) {
        FROM hubs h WHERE h.status = 'Approved' AND h.edition = $1 AND h.lat IS NOT NULL AND h.lng IS NOT NULL`, [hEd]);
   hubs.forEach((h) => { const cap = parseInt(String(h.capacity).replace(/[^0-9]/g, ''), 10); h.left = cap ? Math.max(cap - h.filled, 0) : 99; });
 
-  const pc = {};
-  for (const p of [...new Set(leads.map((l) => l.pincode))]) pc[p] = await coordsFor(p);
-  leads.forEach((l) => { l.xy = pc[l.pincode]; });
+  // Where each person wants to attend: the place they typed, else their pincode, else just their city.
+  // Place and city lookups are remembered for this run; an unfound place falls through to the next source.
+  const memo = {};
+  const place = async (q) => {
+    if (!(q in memo)) { memo[q] = await geocodeQuery(`${q}, India`); await sleep(1100); }
+    return memo[q];
+  };
+  for (const l of leads) {
+    const area = (l.preferred_area || '').trim();
+    let xy = null, by = '';
+    if (area) { xy = await place(`${area}, ${l.city}`); by = 'Preferred area'; }
+    if (!xy && l.pincode) { xy = await coordsFor(l.pincode); by = 'Pincode'; }
+    if (!xy) { xy = await place(l.city); by = 'City centre only'; }
+    l.xy = xy; l.by = xy ? by : 'Not found, check by hand';
+  }
 
   const isPart = (l) => l.role.startsWith('Participant');
   const parts = leads.filter(isPart);
 
   const partRows = parts.map((l) => {
     const near = (l.xy ? hubs.filter((h) => h.left > 0).map((h) => ({ h, km: haversineKm(l.xy[0], l.xy[1], h.lat, h.lng) })).filter((x) => x.km <= NEAR_KM).sort((a, b) => a.km - b.km).slice(0, 3) : []);
-    const row = { Name: l.full_name, Mobile: l.mobile, Email: l.email, City: l.city, Pincode: l.pincode, 'May host': l.role === 'Participant, may host' ? 'Yes' : '', 'Circles nearby': near.length || 'None within ' + NEAR_KM + ' km' };
+    const row = { Name: l.full_name, Mobile: l.mobile, Email: l.email, City: l.city, Pincode: l.pincode || '', 'Preferred area': l.preferred_area || '', 'Located by': l.by, 'May host': l.role === 'Participant, may host' ? 'Yes' : '', 'Circles nearby': near.length || 'None within ' + NEAR_KM + ' km' };
     [0, 1, 2].forEach((i) => {
       const n = near[i];
       row[`Circle ${i + 1}`] = n ? `${n.h.full_name}, ${n.h.area}` : '';
@@ -56,7 +69,7 @@ async function coordsFor(pincode) {
   });
 
   const leaderRows = leads.filter((l) => !isPart(l)).map((l) => ({
-    Name: l.full_name, Mobile: l.mobile, Email: l.email, City: l.city, Pincode: l.pincode, Type: l.role,
+    Name: l.full_name, Mobile: l.mobile, Email: l.email, City: l.city, Pincode: l.pincode || '', Type: l.role,
     'Led before': l.led_before === 'yes' ? 'Yes' : 'No', 'Earlier circle': l.previous_hub_id || '', 'Same venue': l.same_venue || '',
     Address: l.address || '', 'Venue type': l.venue_type || '', Capacity: l.capacity || '',
     'Participants waiting within 10 km': l.xy ? parts.filter((p) => p.xy && haversineKm(l.xy[0], l.xy[1], p.xy[0], p.xy[1]) <= DEMAND_KM).length : '',

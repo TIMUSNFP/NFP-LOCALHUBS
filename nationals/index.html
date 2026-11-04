@@ -72,8 +72,12 @@ button[disabled]{background:#6B6B6B;cursor:wait}
     </div>
     <div class="row">
       <div class="f"><label for="city">City</label><input type="text" id="city" name="city" autocomplete="address-level2" required></div>
-      <div class="f"><label for="pincode">Pincode</label><input type="text" id="pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required></div>
+      <div class="f"><label for="pincode">Pincode <span class="hint">(optional)</span></label><input type="text" id="pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" required></div>
     </div>
+
+    <div class="f"><label for="preferredArea">Where would you like to attend a Circle?</label>
+      <input type="text" id="preferredArea" name="preferredArea" placeholder="Area or city, e.g. Andheri, Mumbai" autocomplete="off">
+      <p class="hint">The place near your home or office. We use it to find the closest Circle.</p></div>
 
     <fieldset><legend>Did you lead an NFP Circle before?</legend>
       <div class="opts">
@@ -166,7 +170,7 @@ button[disabled]{background:#6B6B6B;cursor:wait}
     var office = val('hasOffice');
     var body = {
       website: f.website.value, fullName: f.fullName.value, mobile: f.mobile.value, email: f.email.value,
-      city: f.city.value, pincode: f.pincode.value, ledBefore: val('ledBefore'), hasOffice: office,
+      city: f.city.value, pincode: f.pincode.value, preferredArea: f.preferredArea.value, ledBefore: val('ledBefore'), hasOffice: office,
       sameVenue: val('sameVenue'), address: f.address.value, venueType: f.venueType.value, capacity: f.capacity.value,
       hostIntent: office === 'yes' ? val('hostOffice') : office === 'no' ? val('hostNoOffice') : ''
     };

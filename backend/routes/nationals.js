@@ -31,6 +31,7 @@ router.post('/', async (req, res) => {
     const fullName = clean(b.fullName, 120);
     const city = clean(b.city, 80);
     const pincode = clean(b.pincode, 6);
+    const preferredArea = clean(b.preferredArea, 120);
     const ledBefore = clean(b.ledBefore, 3);
     const hasOffice = clean(b.hasOffice, 3);
     const intent = clean(b.hostIntent, 12);
@@ -40,10 +41,13 @@ router.post('/', async (req, res) => {
     if (mobile.length !== 10) return res.status(400).json({ error: 'Please enter a 10 digit mobile number.' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Please enter a valid email.' });
     if (!city) return res.status(400).json({ error: 'Please enter your city.' });
-    if (!/^[0-9]{6}$/.test(pincode)) return res.status(400).json({ error: 'Please enter a 6 digit pincode.' });
+    // Pincode is optional: most people remember a place, not a pincode. Space owners still give one (the venue address needs it).
+    if (pincode && !/^[0-9]{6}$/.test(pincode)) return res.status(400).json({ error: 'Pincode must be 6 digits, or leave it empty.' });
     if (!YES_NO.includes(ledBefore)) return res.status(400).json({ error: 'Please tell us if you led a Circle before.' });
     if (!YES_NO.includes(hasOffice)) return res.status(400).json({ error: 'Please tell us if you have a space.' });
     if (!INTENTS.includes(intent)) return res.status(400).json({ error: 'Please answer the hosting question.' });
+
+    if (hasOffice === 'yes' && !pincode) return res.status(400).json({ error: 'Please enter the pincode of your venue.' });
 
     // Link a returning leader to their latest earlier circle so the RM can carry it over.
     const prev = ledBefore === 'yes'
@@ -68,16 +72,16 @@ router.post('/', async (req, res) => {
     await db.run(
       `INSERT INTO nationals_responses
          (edition, full_name, mobile, email, city, pincode, led_before, previous_hub_id, has_office, same_venue,
-          address, venue_type, capacity, host_intent, role)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+          address, venue_type, capacity, host_intent, role, preferred_area)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        ON CONFLICT (edition, mobile) DO UPDATE SET
          full_name = EXCLUDED.full_name, email = EXCLUDED.email, city = EXCLUDED.city, pincode = EXCLUDED.pincode,
          led_before = EXCLUDED.led_before, previous_hub_id = EXCLUDED.previous_hub_id, has_office = EXCLUDED.has_office,
          same_venue = EXCLUDED.same_venue, address = EXCLUDED.address, venue_type = EXCLUDED.venue_type,
-         capacity = EXCLUDED.capacity, host_intent = EXCLUDED.host_intent, role = EXCLUDED.role,
+         capacity = EXCLUDED.capacity, host_intent = EXCLUDED.host_intent, role = EXCLUDED.role, preferred_area = EXCLUDED.preferred_area,
          updated_at = now(), submissions = nationals_responses.submissions + 1`,
       [NATIONALS_EDITION, fullName, mobile, email, city, pincode, ledBefore, prev ? prev.id : null, hasOffice === 'yes',
-       sameVenue || null, address || null, venueType || null, capacity, intent, roleFor(hasOffice === 'yes', intent)]
+       sameVenue || null, address || null, venueType || null, capacity, intent, roleFor(hasOffice === 'yes', intent), preferredArea || null]
     );
     res.status(201).json({ ok: true, role: roleFor(hasOffice === 'yes', intent) });
   } catch (e) {

@@ -314,6 +314,7 @@ create table if not exists nationals_responses (
   role text not null,                   -- Leader | Leader if demand | Participant, may host | Participant
   status text not null default 'New',
   rm_notes text,
+  preferred_area text,                  -- free text: where they would like to attend (a locality or city)
   unique (edition, mobile)
 );
 alter table public.nationals_responses enable row level security;
