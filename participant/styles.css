@@ -2555,3 +2555,32 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
     }
     .participants-table tbody td.ptable-msg::before { content: none; }
 }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE NAV FIX (≤768px)
+   .nav-cta (which carried margin-left:auto) is hidden on phones and the
+   menu is position:fixed, so the hamburger sat next to the logo. The logo
+   was also 72px tall inside a 64px bar.
+══════════════════════════════════════════════════════ */
+.nav-link-mobile-cta { display: none; }
+@media (max-width: 768px) {
+    .nav-container { padding: 0 12px 0 16px; gap: 12px; }
+    .logo-img-nav { height: 46px; }
+    .hamburger {
+        display: flex; margin-left: auto;
+        width: 44px; height: 44px; padding: 0;
+        align-items: center; justify-content: center;
+    }
+    .nav-menu { max-height: calc(100vh - var(--nav-height)); overflow-y: auto; gap: 2px; }
+    .nav-link { min-height: 46px; display: flex; align-items: center; }
+    .nav-link-mobile-cta {
+        display: flex; justify-content: center; margin-top: 8px;
+        border: 1.5px solid var(--primary); color: var(--primary); font-weight: 700;
+        border-radius: 999px; opacity: 1;
+    }
+    .nav-link-mobile-cta.primary { background: var(--primary); color: #fff; margin-top: 12px; }
+    .nav-link-mobile-cta.primary:hover { background: var(--brand-dark); color: #fff; }
+}
+@media (max-width: 380px) {
+    .logo-img-nav { height: 40px; }
+}
