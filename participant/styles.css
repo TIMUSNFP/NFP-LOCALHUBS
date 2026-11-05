@@ -2389,3 +2389,169 @@ select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http
 }
 .nav-link:hover { background: rgba(255, 80, 0, 0.08); color: var(--brand-ink); opacity: 1; }
 .nav-cta .btn-primary { border-radius: 999px; padding: 9px 20px; box-shadow: 0 8px 18px -10px rgba(255, 80, 0, 0.7); }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE CLEAN-UP (≤768px) — final overrides
+   Hero was inheriting a 56px desktop left padding, so badge, eyebrow,
+   headline and stats sat off-centre. Everything below re-centres the
+   hero, tightens vertical rhythm and keeps tap targets comfortable.
+══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    html, body { overflow-x: hidden; }
+
+    /* Hero: one centred column with even gutters */
+    .lh-hero-inner { grid-template-columns: 1fr; }
+    .lh-hero-content {
+        padding: 28px 20px 8px;
+        align-items: center;
+        text-align: center;
+    }
+    .launch-banner { align-self: center; margin-bottom: 18px; text-align: center; }
+    .lh-hero-eyebrow {
+        display: block;
+        text-align: center;
+        letter-spacing: 1.4px;
+        line-height: 1.5;
+        margin-bottom: 12px;
+    }
+    .lh-eyebrow-dot { display: inline-block; vertical-align: middle; margin-right: 8px; }
+    .lh-hero-title { font-size: clamp(36px, 11vw, 48px); line-height: 1.06; letter-spacing: -0.8px; margin-bottom: 14px; }
+    .lh-hero-mission { font-size: 22px; margin-bottom: 18px; }
+    .lh-hero-sub { max-width: 34em; margin: 0 auto 22px; font-size: 15px; }
+    .lh-hero-actions { width: 100%; margin-bottom: 22px; }
+    .lh-cta-primary { width: 100%; max-width: 360px; min-height: 48px; justify-content: center; }
+
+    /* Stats: three equal, centred columns instead of a ragged stack */
+    .lh-hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        width: 100%;
+        padding-top: 18px;
+    }
+    .lh-stat { text-align: center; }
+    .lh-stat-num { font-size: 20px; }
+    .lh-stat-lbl { font-size: 11px; line-height: 1.3; }
+    .lh-stat-divider { display: none; }
+
+    /* Map: less dead space above and below */
+    .lh-hero-map { padding: 4px 16px 0; }
+    .india-map-container { max-width: 300px; margin: 0 auto; }
+    .lh-hero-scroll-hint { padding: 8px 20px 24px; }
+
+    /* Section rhythm */
+    .lh-what-section, .lh-why-section, .lh-for-section, .lh-community-section,
+    .lh-means-section, .lh-where-section, .lh-leader-section,
+    .lh-journey-section, .lh-testimonials-section { padding: 56px 0; }
+    .lh-edition-section { padding: 48px 0; }
+    .lh-next-circle-section { padding: 48px 0 64px; }
+    .lh-section-header { margin-bottom: 28px; }
+    .lh-section-title { font-size: clamp(24px, 7vw, 30px); }
+    .lh-section-sub { font-size: 15px; line-height: 1.6; }
+
+    /* Section pill: hug its text and stay centred (was stretching full-width) */
+    .lh-why-content .lh-section-tag { display: table; margin: 0 auto 12px; }
+    .lh-section-tag { max-width: 100%; letter-spacing: 1.4px; }
+
+    /* Cards */
+    .lh-what-grid { gap: 14px; }
+    .lh-community-values { justify-content: center; padding: 16px 12px; }
+    .lh-cv-item { padding: 8px 10px; }
+
+    /* Photo carousel: smaller tiles so more than one fits on screen */
+    .lh-edition-viewport { --col-w: 200px; margin-top: 24px; }
+    .lh-edition-track { gap: 10px; }
+
+    /* Footer */
+    .footer-col a { display: inline-block; padding: 4px 0; }
+}
+@media (max-width: 380px) {
+    .lh-hero-content { padding: 24px 16px 8px; }
+    .lh-stat-num { font-size: 18px; }
+    .lh-hero-eyebrow { letter-spacing: 1px; font-size: 10.5px; }
+}
+
+/* ══════════════════════════════════════════════════════
+   PARTICIPANTS LIST — MOBILE CARDS (≤768px)
+   The 6-column fixed-width table can't fit a phone (columns were a few
+   px wide, text wrapped letter-by-letter). Rows become stacked cards and
+   the filter row becomes a compact filter panel. Markup/JS unchanged.
+══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .ppage-title-row .ppage-title { font-size: clamp(22px, 6.5vw, 28px); line-height: 1.2; }
+    .participants-note { margin-top: 16px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5; }
+    .participants-stats-bar { justify-content: stretch; gap: 8px; margin-top: 14px; }
+    .pstat-chip {
+        flex: 1 1 0; min-width: 0; padding: 10px 6px; text-align: center;
+        font-size: 12px; white-space: normal; line-height: 1.3;
+    }
+    .pstat-chip strong { display: block; margin: 0 0 2px; font-size: 18px; }
+
+    .participants-table-wrap { overflow: visible; border: 0; box-shadow: none; background: transparent; margin: 14px 0 40px; }
+    .participants-table, .participants-table thead, .participants-table tbody,
+    .participants-table tr, .participants-table td { display: block; width: 100%; }
+    .participants-table .ptable-header-row { display: none; }
+
+    /* Filter panel */
+    .participants-table .ptable-filter-row {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        padding: 12px; margin-bottom: 14px;
+        background: var(--white); border: 1px solid var(--border); border-radius: 14px;
+    }
+    .participants-table .ptable-filter-row td { padding: 0; border: 0; width: auto !important; min-width: 0; }
+    .participants-table .ptable-filter-row td:nth-child(1) { display: none; }
+    .participants-table .ptable-filter-row td:nth-child(2) { grid-column: 1 / -1; }
+    .ptable-filter-input, .ptable-filter-select {
+        min-height: 44px; padding: 10px 12px; font-size: 16px; /* 16px stops iOS zoom-on-focus */
+        border-radius: 10px; width: 100%;
+    }
+
+    /* Each row = a card */
+    .participants-table tbody tr {
+        display: grid;
+        grid-template-columns: 30px 1fr auto;
+        grid-template-areas: "num name status" "city city city" "circle circle circle" "type type type";
+        gap: 6px 10px; align-items: center;
+        padding: 14px 16px; margin-bottom: 10px;
+        background: var(--white); border: 1px solid var(--border); border-radius: 14px;
+        box-shadow: var(--shadow-sm);
+    }
+    .participants-table tbody tr:hover { background: var(--white); }
+    .participants-table tbody td {
+        display: block; width: auto !important; min-width: 0; padding: 0; border: 0;
+        font-size: 14px; line-height: 1.4; overflow-wrap: anywhere;
+    }
+    .participants-table tbody td:nth-child(1) {
+        grid-area: num; width: 26px; height: 26px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--secondary); color: var(--muted); font-size: 11px; font-weight: 700;
+    }
+    .participants-table tbody td:nth-child(2) { grid-area: name; font-weight: 700; color: var(--dark); font-size: 15px; }
+    .participants-table tbody td:nth-child(6) { grid-area: status; justify-self: end; }
+    .participants-table tbody td:nth-child(3) { grid-area: city; }
+    .participants-table tbody td:nth-child(4) { grid-area: circle; }
+    .participants-table tbody td:nth-child(5) { grid-area: type; white-space: normal; overflow: visible; text-overflow: clip; }
+    .participants-table tbody td:nth-child(3),
+    .participants-table tbody td:nth-child(4),
+    .participants-table tbody td:nth-child(5) {
+        display: flex; gap: 10px; padding-top: 6px; border-top: 1px solid var(--border);
+    }
+    .participants-table tbody td:nth-child(3)::before,
+    .participants-table tbody td:nth-child(4)::before,
+    .participants-table tbody td:nth-child(5)::before {
+        flex: 0 0 64px; font-size: 11px; font-weight: 700; letter-spacing: .6px;
+        text-transform: uppercase; color: var(--muted); padding-top: 2px;
+    }
+    .participants-table tbody td:nth-child(3)::before { content: "City"; }
+    .participants-table tbody td:nth-child(4)::before { content: "Circle"; }
+    .participants-table tbody td:nth-child(5)::before { content: "Type"; }
+    .participants-table tbody .status-badge { padding: 4px 10px; font-size: 11px; }
+
+    /* Loading / empty message spans the whole card */
+    .participants-table tbody tr:has(td.ptable-msg) { display: block; }
+    .participants-table tbody td.ptable-msg {
+        display: block; width: 100% !important; height: auto; border-radius: 0; background: none;
+        padding: 28px 8px !important; font-size: 14px; color: var(--muted); text-align: center;
+    }
+    .participants-table tbody td.ptable-msg::before { content: none; }
+}
